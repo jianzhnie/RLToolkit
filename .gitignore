@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+work_dir/
+work_dirs/
+.DS_Store
+logs/
+wandb/
+nohup.out
+protein_data
