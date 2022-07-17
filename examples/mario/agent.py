@@ -1,10 +1,15 @@
 import random
+import sys
 from collections import deque
 
 import numpy as np
 import torch
 
 from simplerl.models.ddqn import MarioNet
+
+sys.path.append('../../')
+
+sys.path.append('../../')
 
 
 class Mario(object):
@@ -90,17 +95,17 @@ class Mario(object):
         next_state = next_state.__array__()
 
         if self.use_cuda:
-            state = torch.tensor(state).cuda()
-            next_state = torch.tensor(next_state).cuda()
-            action = torch.tensor([action]).cuda()
-            reward = torch.tensor([reward]).cuda()
-            done = torch.tensor([done]).cuda()
+            state = torch.FloatTensor(state).cuda()
+            next_state = torch.FloatTensor(next_state).cuda()
+            action = torch.LongTensor([action]).cuda()
+            reward = torch.FloatTensor([reward]).cuda()
+            done = torch.BoolTensor([done]).cuda()
         else:
-            state = torch.tensor(state)
-            next_state = torch.tensor(next_state)
-            action = torch.tensor([action])
-            reward = torch.tensor([reward])
-            done = torch.tensor([done])
+            state = torch.FloatTensor(state)
+            next_state = torch.FloatTensor(next_state)
+            action = torch.LongTensor([action])
+            reward = torch.FloatTensor([reward])
+            done = torch.BoolTensor([done])
 
         self.memory.append((
             state,
