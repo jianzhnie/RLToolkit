@@ -52,12 +52,6 @@ OpenAI Spinning Up（ 五星推荐！）深度强化学习入门的最佳手册�
 
 代码库经过野蛮生长的年代后终于趋于稳定，在学习、科研、生产的不同阶段都有了十分成熟的代码库，成熟的代码库不仅指好用的代码，还需要清晰的文档，配套的工具等。在此各推荐一个（少即是多，浓缩才是精华）如下：
 
-- ](https://link.zhihu.com/?target=https%3A//github.com/kaixindelele/DRLib)
-
-  [@未入门的炼丹学徒](//www.zhihu.com/people/de8a8d88a5a13996c98658c5a2daab9e)
-
-  在此基础上集成了 HER、PER、更清晰的画图等功能：[DRLib](https://link.zhihu.com/?target=https%3A//github.com/kaixindelele/DRLib)
-
 ### OpenAI Gym
 
 目前强化学习编程实战常用的环境就是OpenAI的gym库了，支持Python语言编程。OpenAI Gym是一款用于研发和比较强化学习算法的工具包，它支持训练智能体（agent）做任何事——从行走到玩Pong或围棋之类的游戏都在范围中。
