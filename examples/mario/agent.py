@@ -9,8 +9,6 @@ from simplerl.models.ddqn import MarioNet
 
 sys.path.append('../../')
 
-sys.path.append('../../')
-
 
 class Mario(object):
     """Act according to the optimal action policy based on the current state
@@ -61,6 +59,7 @@ class Mario(object):
         action_idx (int): An integer representing which action Mario will perform
         """
         # EXPLORE
+        state = state.__array__()
         if np.random.rand() < self.exploration_rate:
             action_idx = np.random.randint(self.action_dim)
 
