@@ -1,5 +1,6 @@
 import datetime
 import os
+import sys
 from pathlib import Path
 
 import gym_super_mario_bros
@@ -8,77 +9,92 @@ from gym.wrappers import FrameStack, GrayScaleObservation, TransformObservation
 from nes_py.wrappers import JoypadSpace
 
 from simplerl.core.metrics import MetricLogger
-from simplerl.utils.wrappers import ResizeObservation, SkipFrame
+from simplerl.utils.gym_wrappers import ResizeObservation, SkipFrame
+
+sys.path.append('../../')
+
+sys.path.append('../../')
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
-# Initialize Super Mario environment
-env = gym_super_mario_bros.make('SuperMarioBros-1-1-v0')
 
-# Limit the action-space to
-#   0. walk right
-#   1. jump right
-env = JoypadSpace(env, [['right'], ['right', 'A']])
+def init_env():
+    # Initialize Super Mario environment
+    env = gym_super_mario_bros.make('SuperMarioBros-1-1-v0')
 
-# Apply Wrappers to environment
-env = SkipFrame(env, skip=4)
-env = GrayScaleObservation(env, keep_dim=False)
-env = ResizeObservation(env, shape=84)
-env = TransformObservation(env, f=lambda x: x / 255.)
-env = FrameStack(env, num_stack=4)
+    # Limit the action-space to
+    #   0. walk right
+    #   1. jump right
+    env = JoypadSpace(env, [['right'], ['right', 'A']])
 
-env.reset()
+    # Apply Wrappers to environment
+    env = SkipFrame(env, skip=4)
+    env = GrayScaleObservation(env)
+    env = ResizeObservation(env, shape=84)
+    env = TransformObservation(env, f=lambda x: x / 255.)
+    env = FrameStack(env, num_stack=4)
 
-save_dir = Path('checkpoints') / datetime.datetime.now().strftime(
-    '%Y-%m-%dT%H-%M-%S')
-save_dir.mkdir(parents=True)
+    env.reset()
 
-checkpoint = None  # Path('checkpoints/2020-10-21T18-25-27/mario.chkpt')
-mario = Mario(state_dim=(4, 84, 84),
-              action_dim=env.action_space.n,
-              save_dir=save_dir,
-              checkpoint=checkpoint)
+    return env
 
-logger = MetricLogger(save_dir)
 
-episodes = 40000
+def main():
+    env = init_env()
+    save_dir = Path('checkpoints') / datetime.datetime.now().strftime(
+        '%Y-%m-%dT%H-%M-%S')
+    save_dir.mkdir(parents=True)
 
-# for Loop that train the model num_episodes times by playing the game
-for e in range(episodes):
+    checkpoint = None  # Path('checkpoints/2020-10-21T18-25-27/mario.chkpt')
+    mario = Mario(state_dim=(4, 84, 84),
+                  action_dim=env.action_space.n,
+                  save_dir=save_dir,
+                  checkpoint=checkpoint)
 
-    state = env.reset()
+    logger = MetricLogger(save_dir)
 
-    # Play the game!
-    while True:
+    episodes = 40000
 
-        # 3. Show environment (the visual) [WIP]
-        # env.render()
+    # for Loop that train the model num_episodes times by playing the game
+    for e in range(episodes):
 
-        # 4. Run agent on the state
-        action = mario.act(state)
+        state = env.reset()
 
-        # 5. Agent performs action
-        next_state, reward, done, info = env.step(action)
+        # Play the game!
+        while True:
 
-        # 6. Remember
-        mario.cache(state, next_state, action, reward, done)
+            # 3. Show environment (the visual) [WIP]
+            # env.render()
 
-        # 7. Learn
-        q, loss = mario.learn()
+            # 4. Run agent on the state
+            action = mario.act(state)
 
-        # 8. Logging
-        logger.log_step(reward, loss, q)
+            # 5. Agent performs action
+            next_state, reward, done, info = env.step(action)
 
-        # 9. Update state
-        state = next_state
+            # 6. Remember
+            mario.cache(state, next_state, action, reward, done)
 
-        # 10. Check if end of game
-        if done or info['flag_get']:
-            break
+            # 7. Learn
+            q, loss = mario.learn()
 
-    logger.log_episode()
+            # 8. Logging
+            logger.log_step(reward, loss, q)
 
-    if e % 20 == 0:
-        logger.record(episode=e,
-                      epsilon=mario.exploration_rate,
-                      step=mario.curr_step)
+            # 9. Update state
+            state = next_state
+
+            # 10. Check if end of game
+            if done or info['flag_get']:
+                break
+
+        logger.log_episode()
+
+        if e % 20 == 0:
+            logger.record(episode=e,
+                          epsilon=mario.exploration_rate,
+                          step=mario.curr_step)
+
+
+if __name__ == '__main__':
+    main()
