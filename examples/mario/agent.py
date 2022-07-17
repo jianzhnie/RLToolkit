@@ -8,6 +8,13 @@ from simplerl.models.ddqn import MarioNet
 
 
 class Mario(object):
+    """Act according to the optimal action policy based on the current state
+    (of the environment).
+
+    Remember experiences. Experience = (current state, current action, reward, next state). Mario caches and later recalls \
+        his experiences to update his action policy.
+    Learn a better action policy over time
+    """
     def __init__(self, state_dim, action_dim, save_dir, checkpoint=None):
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -79,16 +86,21 @@ class Mario(object):
         reward (float),
         done(bool))
         """
-        state = torch.FloatTensor(
-            state).cuda() if self.use_cuda else torch.FloatTensor(state)
-        next_state = torch.FloatTensor(next_state).cuda(
-        ) if self.use_cuda else torch.FloatTensor(next_state)
-        action = torch.LongTensor(
-            [action]).cuda() if self.use_cuda else torch.LongTensor([action])
-        reward = torch.DoubleTensor(
-            [reward]).cuda() if self.use_cuda else torch.DoubleTensor([reward])
-        done = torch.BoolTensor(
-            [done]).cuda() if self.use_cuda else torch.BoolTensor([done])
+        state = state.__array__()
+        next_state = next_state.__array__()
+
+        if self.use_cuda:
+            state = torch.tensor(state).cuda()
+            next_state = torch.tensor(next_state).cuda()
+            action = torch.tensor([action]).cuda()
+            reward = torch.tensor([reward]).cuda()
+            done = torch.tensor([done]).cuda()
+        else:
+            state = torch.tensor(state)
+            next_state = torch.tensor(next_state)
+            action = torch.tensor([action])
+            reward = torch.tensor([reward])
+            done = torch.tensor([done])
 
         self.memory.append((
             state,
@@ -108,7 +120,8 @@ class Mario(object):
     def td_estimate(self, state, action):
         current_Q = self.net(state,
                              model='online')[np.arange(0, self.batch_size),
-                                             action]  # Q_online(s,a)
+                                             action]
+        # Q_online(s,a)
         return current_Q
 
     @torch.no_grad()
