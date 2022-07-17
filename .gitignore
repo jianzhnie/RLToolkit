@@ -134,3 +134,5 @@ logs/
 wandb/
 nohup.out
 protein_data
+**/checkpoints
+*.npy
