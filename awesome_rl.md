@@ -66,29 +66,44 @@ https://github.com/openai/baselinesgithub.com/openai/baselines
 
  [stable-baselines3](https//github.com/DLR-RM/stable-baselines3) 由 OpenAI 的 baselines 发展而来，因为 baselines 不够稳定，于是有了 [stable-baselines](https//github.com/hill-a/stable-baselines)，接着有了 v2，再有了 PyTorch 版的 v3，目前由 DLR-RM 维护。不仅[文档](https://stable-baselines3.readthedocs.io/)清晰，还提供了很多常用环境和RL算法的调优超参数：[RL Baselines3 Zoo](https://github.com/DLR-RM/rl-baselines3-zoo).实现了几乎所有的强化学习算法。
 
-### Gym-Duckietown
-
-<https://github.com/duckietown/gym-duckietowngithub.com/duckietown/gym-duckietown>
-
-### AirSim+DQN
-
-微软的AirSim也有自动驾驶的场景，场景比Torcs逼真一些。
-
-AirSim:
-
-[microsoft/AirSim](https//github.com/microsoft/AirSim)
-
-DQN：
-
-[microsoft/AirSim](https//github.com/Microsoft/AirSim/tree/master/PythonClient/reinforcement_learning)
-
 ### Ray/RLlib
 
 [ray/rllib](https://github.com/ray-project/ray)。UC Berkeley 出品，工业级的强化学习库，优势在于分布式计算和自动调参，支持 TensorFlow/PyTorch，很多大企业比如谷歌、亚马逊、蚂蚁金服都在用。
 
 ## PyTorch  + RL  Algorithms
 
+### 步步深入RL
+
+这份Pytorch强化学习教程一共有八章，从DQN（Deep Q-Learning）开始，步步深入，最后向你展示Rainbow到底是什么。
+
+不仅有Jupyter Notebook，作者还在Colab上配置好了代码，无需安装，你就能直观地感受到算法的效果，甚至还可以直接在手机上进行学习！
+
+Github 地址： <https://github.com/Curt-Park/rainbow-is-all-you-need>
+
+### CleanRL
+
+CleanRL (Clean Implementation of RL Algorithms)
+ tests ci   Code style: black Imports: isort
+
+CleanRL is a Deep Reinforcement Learning library that provides high-quality single-file implementation with research-friendly features. The implementation is clean and simple, yet we can scale it to run thousands of experiments using AWS Batch. The highlight features of CleanRL are:
+
+📜 Single-file implementation
+Every detail about an algorithm variant is put into a single standalone file.
+For example, our ppo_atari.py only has 340 lines of code but contains all implementation details on how PPO works with Atari games, so it is a great reference implementation to read for folks who do not wish to read an entire modular library.
+📊 Benchmarked Implementation (7+ algorithms and 34+ games at <https://benchmark.cleanrl.dev>)
+📈 Tensorboard Logging
+🪛 Local Reproducibility via Seeding
+🎮 Videos of Gameplay Capturing
+🧫 Experiment Management with Weights and Biases
+💸 Cloud Integration with docker and AWS
+
+Github 地址：  <https://github.com/vwxyzjn/cleanrl>
+
 ### Deep Reinforcement Learning Algorithms with PyTorch
+
+This repository contains PyTorch implementations of deep reinforcement learning algorithms and environments.
+
+(To help you remember things you learn about machine learning in general write them in [Save All](https://saveall.ai/shared/deck/140&4&3K3uXPazkg4&github_links) and try out the public deck there about Fast AI's machine learning textbook.)
 
 Github 地址： [p-christ/Deep-Reinforcement-Learning-Algorithms-with-PyTorch​](https://github.com/p-christ/Deep-Reinforcement-Learning-Algorithms-with-PyTorch.git)
 
@@ -112,14 +127,6 @@ Github 地址： [p-christ/Deep-Reinforcement-Learning-Algorithms-with-PyTorch�
 - Stochastic NNs for Hierarchical Reinforcement Learning (**SNN-HRL**) (Florensa et al. 2017)
 - Diversity Is All You Need (**DIAYN**) (Eyensbach et al. 2018)
 
-### 步步深入RL
-
-这份Pytorch强化学习教程一共有八章，从DQN（Deep Q-Learning）开始，步步深入，最后向你展示Rainbow到底是什么。
-
-不仅有Jupyter Notebook，作者还在Colab上配置好了代码，无需安装，你就能直观地感受到算法的效果，甚至还可以直接在手机上进行学习！
-
-Github 地址： https://github.com/Curt-Park/rainbow-is-all-you-need
-
 ### PFRL
 
 PFRL is a deep reinforcement learning library that implements various state-of-the-art deep reinforcement algorithms in Python using [PyTorch](https://github.com/pytorch/pytorch).
@@ -141,6 +148,25 @@ Github 地址：[GitHub - pfnet/pfrl: PFRL: a PyTorch-based deep reinforcement l
 | TRPO                           | ✓               | ✓                | ✓               | ✓              | x                  | ✓                  |
 | TD3                            | x               | ✓                | x               | ✓              | x                  | ✓                  |
 | SAC                            | x               | ✓                | x               | ✓              | x                  | ✓                  |
+
+### 清华天授（Tianshou）
+
+天授（Tianshou）是纯 基于 PyTorch 代码的强化学习框架，与目前现有基于 TensorFlow 的强化学习库不同，天授的类继承并不复杂，API 也不是很繁琐。最重要的是，天授的训练速度非常快，我们试用 Pythonic 的 API 就能快速构建与训练 RL [智能体]()。
+
+目前天授支持的 RL 算法有如下几种：
+
+- Policy Gradient (PG)
+- Deep Q-Network (DQN)
+- Double DQN (DDQN) with n-step returns
+- Advantage Actor-Critic (A2C)
+- Deep Deterministic Policy Gradient (DDPG)
+- Proximal Policy Optimization (PPO)
+- Twin Delayed DDPG (TD3)
+- Soft Actor-Critic (SAC)
+
+另外，对于以上代码天授还支持并行收集样本，并且所有算法均统一改写为基于 replay-buffer 的形式。
+
+github 地址：[https://github.com/thu-ml/tianshou](https://github.com/thu-ml/tianshou)
 
 ## 知乎专栏
 
