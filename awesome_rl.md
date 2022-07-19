@@ -168,6 +168,20 @@ Github 地址：[GitHub - pfnet/pfrl: PFRL: a PyTorch-based deep reinforcement l
 
 github 地址：[https://github.com/thu-ml/tianshou](https://github.com/thu-ml/tianshou)
 
+## Tutorial
+
+An Introduction to Reinforcement Learning Using OpenAI Gym
+<https://www.gocoder.one/blog/rl-tutorial-with-openai-gym>
+
+An Introduction to Reinforcement Learning with OpenAI Gym, RLlib, and Google Colab
+<https://www.anyscale.com/blog/an-introduction-to-reinforcement-learning-with-openai-gym-rllib-and-google>
+
+Intro to RLlib: Example Environments
+<https://medium.com/distributed-computing-with-ray/intro-to-rllib-example-environments-3a113f532c70>
+
+Ray and RLlib for Fast and Parallel Reinforcement Learning
+<https://towardsdatascience.com/ray-and-rllib-for-fast-and-parallel-reinforcement-learning-6d31ee21c96c>
+
 ## 知乎专栏
 
 - [强化学习知识大讲堂](https://zhuanlan.zhihu.com/sharerl)
