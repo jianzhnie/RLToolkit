@@ -99,6 +99,14 @@ For example, our ppo_atari.py only has 340 lines of code but contains all implem
 
 Github 地址：  <https://github.com/vwxyzjn/cleanrl>
 
+### openai - spinningup
+
+openai的spinningup：里面提供了经典Policy-based算法的复现，优点是写的通俗易懂上手简单，并且效果有保障，而且同时tf和Pytorch的支持；缺点是没有value-based的算法，做DQN系列的就没办法了
+
+### rlpyt
+
+UCB两个大佬开源的rlpyt：专门基于pytorch实现的rl框架，有单机/多机分配资源的黑科技，挂arxiv的paper里面介绍的也效果也不错。contributor以前也写过如何加速DQN训练的调参方法
+
 ### Deep Reinforcement Learning Algorithms with PyTorch
 
 This repository contains PyTorch implementations of deep reinforcement learning algorithms and environments.
@@ -153,6 +161,13 @@ Github 地址：[GitHub - pfnet/pfrl: PFRL: a PyTorch-based deep reinforcement l
 
 天授（Tianshou）是纯 基于 PyTorch 代码的强化学习框架，与目前现有基于 TensorFlow 的强化学习库不同，天授的类继承并不复杂，API 也不是很繁琐。最重要的是，天授的训练速度非常快，我们试用 Pythonic 的 API 就能快速构建与训练 RL [智能体]()。
 
+Tianshou的优势：
+
+- 实现简洁
+- 速度快
+- 模块化
+- 可复现性
+
 目前天授支持的 RL 算法有如下几种：
 
 - Policy Gradient (PG)
@@ -182,6 +197,8 @@ Intro to RLlib: Example Environments
 Ray and RLlib for Fast and Parallel Reinforcement Learning
 <https://towardsdatascience.com/ray-and-rllib-for-fast-and-parallel-reinforcement-learning-6d31ee21c96c>
 
+
+
 ## 知乎专栏
 
 - [强化学习知识大讲堂](https://zhuanlan.zhihu.com/sharerl)
@@ -195,3 +212,13 @@ Ray and RLlib for Fast and Parallel Reinforcement Learning
 - [神经网络与强化学习](https://zhuanlan.zhihu.com/c_101836530)
 
 - 该专栏主要是作者关于强化学习经典入门书籍《Reinforcement Learning : An introduction》的读书笔记，因此，非常适合在啃该书的时候参考该专栏，以有更深入的理解。
+
+
+
+## 强化学习算法学习流程概览：
+### 离散动作：（Value Gradient ）
+Q-table-learning -> DQN(Deep Q NetWork) -> Double DQN -> Dueling DQN ->Double Dueling DQN (D3QN) ->Twin Delayed DDPG (TD3 连续动作)
+
+### 连续动作：（Policy Gradient）
+
+Actor-Critic -> Advantage Actor-Critic(A2C) -> Asynchronus A2C (A3C) -> Deep Deterministic Policy Gradient (DDPG) -> Distributed Distributional DDPG (D4PG) -> Soft Actor-Critic (SAC) -> Trust Region Policy Optimization (TRPO) -> Generalized Advantage Estimation (GAE) -> Proximal Policy Optimization(PPO)
