@@ -6,8 +6,8 @@ from agent import Mario
 from gym.wrappers import FrameStack, GrayScaleObservation, TransformObservation
 from nes_py.wrappers import JoypadSpace
 
-from simplerl.core.metrics import MetricLogger
-from simplerl.utils.wrappers import ResizeObservation, SkipFrame
+from rltoolkit.core.metrics import MetricLogger
+from rltoolkit.utils.wrappers import ResizeObservation, SkipFrame
 
 env = gym_super_mario_bros.make('SuperMarioBros-1-1-v0')
 
@@ -26,10 +26,11 @@ save_dir = Path('checkpoints') / datetime.datetime.now().strftime(
 save_dir.mkdir(parents=True)
 
 checkpoint = Path('checkpoints/2020-10-21T18-25-27/mario.chkpt')
-mario = Mario(state_dim=(4, 84, 84),
-              action_dim=env.action_space.n,
-              save_dir=save_dir,
-              checkpoint=checkpoint)
+mario = Mario(
+    state_dim=(4, 84, 84),
+    action_dim=env.action_space.n,
+    save_dir=save_dir,
+    checkpoint=checkpoint)
 mario.exploration_rate = mario.exploration_rate_min
 
 logger = MetricLogger(save_dir)
@@ -60,6 +61,5 @@ for e in range(episodes):
     logger.log_episode()
 
     if e % 20 == 0:
-        logger.record(episode=e,
-                      epsilon=mario.exploration_rate,
-                      step=mario.curr_step)
+        logger.record(
+            episode=e, epsilon=mario.exploration_rate, step=mario.curr_step)

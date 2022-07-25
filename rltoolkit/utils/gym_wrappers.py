@@ -5,6 +5,7 @@ from skimage import transform
 
 
 class ResizeObservation(gym.ObservationWrapper):
+
     def __init__(self, env, shape):
         super().__init__(env)
         if isinstance(shape, int):
@@ -13,10 +14,8 @@ class ResizeObservation(gym.ObservationWrapper):
             self.shape = tuple(shape)
 
         obs_shape = self.shape + self.observation_space.shape[2:]
-        self.observation_space = Box(low=0,
-                                     high=255,
-                                     shape=obs_shape,
-                                     dtype=np.uint8)
+        self.observation_space = Box(
+            low=0, high=255, shape=obs_shape, dtype=np.uint8)
 
     def observation(self, observation):
         resize_obs = transform.resize(observation, self.shape)
@@ -27,6 +26,7 @@ class ResizeObservation(gym.ObservationWrapper):
 
 
 class SkipFrame(gym.Wrapper):
+
     def __init__(self, env, skip):
         """Return only every `skip`-th frame."""
         super().__init__(env)

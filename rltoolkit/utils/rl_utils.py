@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 
 class ReplayBuffer:
+
     def __init__(self, capacity):
         self.buffer = collections.deque(maxlen=capacity)
 
@@ -35,8 +36,8 @@ def moving_average(a, window_size):
 def train_on_policy_agent(env, agent, num_episodes):
     return_list = []
     for i in range(10):
-        with tqdm(total=int(num_episodes / 10),
-                  desc='Iteration %d' % i) as pbar:
+        with tqdm(
+                total=int(num_episodes / 10), desc='Iteration %d' % i) as pbar:
             for i_episode in range(int(num_episodes / 10)):
                 episode_return = 0
                 transition_dict = {
@@ -75,8 +76,8 @@ def train_off_policy_agent(env, agent, num_episodes, replay_buffer,
                            minimal_size, batch_size):
     return_list = []
     for i in range(10):
-        with tqdm(total=int(num_episodes / 10),
-                  desc='Iteration %d' % i) as pbar:
+        with tqdm(
+                total=int(num_episodes / 10), desc='Iteration %d' % i) as pbar:
             for i_episode in range(int(num_episodes / 10)):
                 episode_return = 0
                 state = env.reset()

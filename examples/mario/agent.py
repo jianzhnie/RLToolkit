@@ -5,7 +5,7 @@ from collections import deque
 import numpy as np
 import torch
 
-from simplerl.models.ddqn import MarioNet
+from rltoolkit.models.ddqn import MarioNet
 
 sys.path.append('../../')
 
@@ -18,6 +18,7 @@ class Mario(object):
         his experiences to update his action policy.
     Learn a better action policy over time
     """
+
     def __init__(self, state_dim, action_dim, save_dir, checkpoint=None):
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -122,9 +123,8 @@ class Mario(object):
         ), done.squeeze()
 
     def td_estimate(self, state, action):
-        current_Q = self.net(state,
-                             model='online')[np.arange(0, self.batch_size),
-                                             action]
+        current_Q = self.net(
+            state, model='online')[np.arange(0, self.batch_size), action]
         # Q_online(s,a)
         return current_Q
 
@@ -132,9 +132,9 @@ class Mario(object):
     def td_target(self, reward, next_state, done):
         next_state_Q = self.net(next_state, model='online')
         best_action = torch.argmax(next_state_Q, axis=1)
-        next_Q = self.net(next_state,
-                          model='target')[np.arange(0, self.batch_size),
-                                          best_action]
+        next_Q = self.net(
+            next_state, model='target')[np.arange(0, self.batch_size),
+                                        best_action]
         td_target = (reward + (1 - done.float()) * self.gamma * next_Q).float()
         return td_target
 
@@ -178,16 +178,17 @@ class Mario(object):
     def save(self):
         save_path = self.save_dir / f'mario_net_{int(self.curr_step // self.save_every)}.chkpt'
         torch.save(
-            dict(model=self.net.state_dict(),
-                 exploration_rate=self.exploration_rate), save_path)
+            dict(
+                model=self.net.state_dict(),
+                exploration_rate=self.exploration_rate), save_path)
         print(f'MarioNet saved to {save_path} at step {self.curr_step}')
 
     def load(self, load_path):
         if not load_path.exists():
             raise ValueError(f'{load_path} does not exist')
 
-        ckp = torch.load(load_path,
-                         map_location=('cuda' if self.use_cuda else 'cpu'))
+        ckp = torch.load(
+            load_path, map_location=('cuda' if self.use_cuda else 'cpu'))
         exploration_rate = ckp.get('exploration_rate')
         state_dict = ckp.get('model')
 

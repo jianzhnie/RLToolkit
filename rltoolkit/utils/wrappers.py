@@ -7,6 +7,7 @@ from gym.wrappers import FrameStack
 
 
 class ResizeObservation(gym.ObservationWrapper):
+
     def __init__(self, env, shape):
         super().__init__(env)
         if isinstance(shape, int):
@@ -15,10 +16,8 @@ class ResizeObservation(gym.ObservationWrapper):
             self.shape = tuple(shape)
 
         obs_shape = self.shape + self.observation_space.shape[2:]
-        self.observation_space = Box(low=0,
-                                     high=255,
-                                     shape=obs_shape,
-                                     dtype=np.uint8)
+        self.observation_space = Box(
+            low=0, high=255, shape=obs_shape, dtype=np.uint8)
 
     def observation(self, observation):
         transforms = T.Compose([T.Resize(self.shape), T.Normalize(0, 255)])
@@ -27,6 +26,7 @@ class ResizeObservation(gym.ObservationWrapper):
 
 
 class SkipFrame(gym.Wrapper):
+
     def __init__(self, env, skip):
         """Return only every `skip`-th frame."""
         super().__init__(env)
@@ -46,13 +46,12 @@ class SkipFrame(gym.Wrapper):
 
 
 class GrayScaleObservation(gym.ObservationWrapper):
+
     def __init__(self, env):
         super().__init__(env)
         obs_shape = self.observation_space.shape[:2]
-        self.observation_space = Box(low=0,
-                                     high=255,
-                                     shape=obs_shape,
-                                     dtype=np.uint8)
+        self.observation_space = Box(
+            low=0, high=255, shape=obs_shape, dtype=np.uint8)
 
     def permute_orientation(self, observation):
         # permute [H, W, C] array to [C, H, W] tensor
@@ -70,6 +69,7 @@ class GrayScaleObservation(gym.ObservationWrapper):
 if __name__ == '__main__':
     import gym_super_mario_bros
     from nes_py.wrappers import JoypadSpace
+
     # Apply Wrappers to environment
     # Initialize Super Mario environment
     env = gym_super_mario_bros.make('SuperMarioBros-1-1-v0')

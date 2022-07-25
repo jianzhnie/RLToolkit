@@ -7,6 +7,7 @@ import numpy as np
 
 
 class MetricLogger():
+
     def __init__(self, save_dir: Path):
         self.save_log = save_dir / 'log'
         with open(self.save_log, 'w') as f:
