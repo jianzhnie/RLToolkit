@@ -6,5 +6,5 @@ application-import-names = simplerl
 exclude =
     .git
     docs/
-    venv
-    build
+    venv/
+    build/
