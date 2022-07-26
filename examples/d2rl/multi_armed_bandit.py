@@ -4,6 +4,7 @@ import numpy as np
 
 class BernoulliBandit(object):
     """伯努利多臂老虎机,输入K表示拉杆个数."""
+
     def __init__(self, num_bandit):
         self.probs = np.random.uniform(
             size=num_bandit)  # 随机生成K个0～1的数,作为拉动每根拉杆的获奖概率
@@ -22,6 +23,7 @@ class BernoulliBandit(object):
 
 class Solver(object):
     """多臂老虎机算法基本框架."""
+
     def __init__(self, bandit):
         self.bandit = bandit
         self.counts = np.zeros(self.bandit.num_bandit)  # 每根拉杆的尝试次数
@@ -49,6 +51,7 @@ class Solver(object):
 
 class EpsilonGreedy(Solver):
     """epsilon贪婪算法,继承Solver类."""
+
     def __init__(self, bandit, epsilon=0.01, init_prob=1.0):
         super(EpsilonGreedy, self).__init__(bandit)
         self.epsilon = epsilon
@@ -61,13 +64,14 @@ class EpsilonGreedy(Solver):
         else:
             k = np.argmax(self.estimates)  # 选择期望奖励估值最大的拉杆
         reward = self.bandit.step(k)  # 得到本次动作的奖励
-        self.estimates[k] += 1. / (self.counts[k] + 1) * (reward -
-                                                          self.estimates[k])
+        self.estimates[k] += 1. / (self.counts[k] + 1) * (
+            reward - self.estimates[k])
         return k
 
 
 class DecayingEpsilonGreedy(Solver):
     """epsilon值随时间衰减的epsilon-贪婪算法,继承Solver类."""
+
     def __init__(self, bandit, init_prob=1.0):
         super(DecayingEpsilonGreedy, self).__init__(bandit)
         self.estimates = np.array([init_prob] * self.bandit.num_bandit)
@@ -81,14 +85,15 @@ class DecayingEpsilonGreedy(Solver):
             k = np.argmax(self.estimates)
 
         reward = self.bandit.step(k)
-        self.estimates[k] += 1. / (self.counts[k] + 1) * (reward -
-                                                          self.estimates[k])
+        self.estimates[k] += 1. / (self.counts[k] + 1) * (
+            reward - self.estimates[k])
 
         return k
 
 
 class UCB(Solver):
     """UCB算法,继承Solver类."""
+
     def __init__(self, bandit, coef, init_prob=1.0):
         super(UCB, self).__init__(bandit)
         self.total_count = 0
@@ -101,13 +106,14 @@ class UCB(Solver):
             np.log(self.total_count) / (2 * (self.counts + 1)))  # 计算上置信界
         k = np.argmax(ucb)  # 选出上置信界最大的拉杆
         r = self.bandit.step(k)
-        self.estimates[k] += 1. / (self.counts[k] + 1) * (r -
-                                                          self.estimates[k])
+        self.estimates[k] += 1. / (self.counts[k] + 1) * (
+            r - self.estimates[k])
         return k
 
 
 class ThompsonSampling(Solver):
     """汤普森采样算法,继承Solver类."""
+
     def __init__(self, bandit):
         super(ThompsonSampling, self).__init__(bandit)
         self._a = np.ones(self.bandit.num_bandit)  # 列表,表示每根拉杆奖励为1的次数
