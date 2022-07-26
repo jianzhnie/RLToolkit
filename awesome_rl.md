@@ -4,7 +4,7 @@
 
 ### 周博磊
 
-[https://www.bilibili.com/video/BV1LE411G7Xj?from=search&seid=9725909430531578664](https://link.zhihu.com/?target=https%3A//www.bilibili.com/video/BV1LE411G7Xj%3Ffrom%3Dsearch%26seid%3D9725909430531578664)
+[https://www.bilibili.com/video/BV1LE411G7Xj?from=search&seid=9725909430531578664](https://www.bilibili.com/video/BV1LE411G7Xj%3Ffrom%3Dsearch%26seid%3D9725909430531578664)
 
 ### 李宏毅
 
