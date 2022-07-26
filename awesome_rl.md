@@ -40,7 +40,7 @@
 
 - **配套视频课程：**
 
-[DAVID SILVER] (<https://www.davidsilver.uk/>)
+\[DAVID SILVER\] (<https://www.davidsilver.uk/>)
 
 ### openai  spinningup
 
@@ -64,7 +64,7 @@ https://github.com/openai/baselinesgithub.com/openai/baselines
 
 ### stable-baselines3
 
- [stable-baselines3](https//github.com/DLR-RM/stable-baselines3) 由 OpenAI 的 baselines 发展而来，因为 baselines 不够稳定，于是有了 [stable-baselines](https//github.com/hill-a/stable-baselines)，接着有了 v2，再有了 PyTorch 版的 v3，目前由 DLR-RM 维护。不仅[文档](https://stable-baselines3.readthedocs.io/)清晰，还提供了很多常用环境和RL算法的调优超参数：[RL Baselines3 Zoo](https://github.com/DLR-RM/rl-baselines3-zoo).实现了几乎所有的强化学习算法。
+[stable-baselines3](https//github.com/DLR-RM/stable-baselines3) 由 OpenAI 的 baselines 发展而来，因为 baselines 不够稳定，于是有了 [stable-baselines](https//github.com/hill-a/stable-baselines)，接着有了 v2，再有了 PyTorch 版的 v3，目前由 DLR-RM 维护。不仅[文档](https://stable-baselines3.readthedocs.io/)清晰，还提供了很多常用环境和RL算法的调优超参数：[RL Baselines3 Zoo](https://github.com/DLR-RM/rl-baselines3-zoo).实现了几乎所有的强化学习算法。
 
 ### Ray/RLlib
 
@@ -83,7 +83,7 @@ Github 地址： <https://github.com/Curt-Park/rainbow-is-all-you-need>
 ### CleanRL
 
 CleanRL (Clean Implementation of RL Algorithms)
- tests ci   Code style: black Imports: isort
+tests ci   Code style: black Imports: isort
 
 CleanRL is a Deep Reinforcement Learning library that provides high-quality single-file implementation with research-friendly features. The implementation is clean and simple, yet we can scale it to run thousands of experiments using AWS Batch. The highlight features of CleanRL are:
 
@@ -143,23 +143,23 @@ Github 地址：[GitHub - pfnet/pfrl: PFRL: a PyTorch-based deep reinforcement l
 
 实现的  RL Algorithms
 
-| Algorithm                      | Discrete Action | Continous Action | Recurrent Model | Batch Training | CPU Async Training | Pretrained models* |
-| ------------------------------ | --------------- | ---------------- | --------------- | -------------- | ------------------ | ------------------ |
-| DQN (including DoubleDQN etc.) | ✓               | ✓ (NAF)          | ✓               | ✓              | x                  | ✓                  |
-| Categorical DQN                | ✓               | x                | ✓               | ✓              | x                  | x                  |
-| Rainbow                        | ✓               | x                | ✓               | ✓              | x                  | ✓                  |
-| IQN                            | ✓               | x                | ✓               | ✓              | x                  | ✓                  |
-| DDPG                           | x               | ✓                | x               | ✓              | x                  | ✓                  |
-| A3C                            | ✓               | ✓                | ✓               | ✓ (A2C)        | ✓                  | ✓                  |
-| ACER                           | ✓               | ✓                | ✓               | x              | ✓                  | x                  |
-| PPO                            | ✓               | ✓                | ✓               | ✓              | x                  | ✓                  |
-| TRPO                           | ✓               | ✓                | ✓               | ✓              | x                  | ✓                  |
-| TD3                            | x               | ✓                | x               | ✓              | x                  | ✓                  |
-| SAC                            | x               | ✓                | x               | ✓              | x                  | ✓                  |
+| Algorithm                      | Discrete Action | Continuous Action | Recurrent Model | Batch Training | CPU Async Training | Pretrained models\* |
+| ------------------------------ | --------------- | ----------------- | --------------- | -------------- | ------------------ | ------------------- |
+| DQN (including DoubleDQN etc.) | ✓               | ✓ (NAF)           | ✓               | ✓              | x                  | ✓                   |
+| Categorical DQN                | ✓               | x                 | ✓               | ✓              | x                  | x                   |
+| Rainbow                        | ✓               | x                 | ✓               | ✓              | x                  | ✓                   |
+| IQN                            | ✓               | x                 | ✓               | ✓              | x                  | ✓                   |
+| DDPG                           | x               | ✓                 | x               | ✓              | x                  | ✓                   |
+| A3C                            | ✓               | ✓                 | ✓               | ✓ (A2C)        | ✓                  | ✓                   |
+| ACER                           | ✓               | ✓                 | ✓               | x              | ✓                  | x                   |
+| PPO                            | ✓               | ✓                 | ✓               | ✓              | x                  | ✓                   |
+| TRPO                           | ✓               | ✓                 | ✓               | ✓              | x                  | ✓                   |
+| TD3                            | x               | ✓                 | x               | ✓              | x                  | ✓                   |
+| SAC                            | x               | ✓                 | x               | ✓              | x                  | ✓                   |
 
 ### 清华天授（Tianshou）
 
-天授（Tianshou）是纯 基于 PyTorch 代码的强化学习框架，与目前现有基于 TensorFlow 的强化学习库不同，天授的类继承并不复杂，API 也不是很繁琐。最重要的是，天授的训练速度非常快，我们试用 Pythonic 的 API 就能快速构建与训练 RL [智能体]()。
+天授（Tianshou）是纯 基于 PyTorch 代码的强化学习框架，与目前现有基于 TensorFlow 的强化学习库不同，天授的类继承并不复杂，API 也不是很繁琐。最重要的是，天授的训练速度非常快，我们试用 Pythonic 的 API 就能快速构建与训练 RL [智能体](<>)。
 
 Tianshou的优势：
 
@@ -197,13 +197,11 @@ Intro to RLlib: Example Environments
 Ray and RLlib for Fast and Parallel Reinforcement Learning
 <https://towardsdatascience.com/ray-and-rllib-for-fast-and-parallel-reinforcement-learning-6d31ee21c96c>
 
-
-
 ## 知乎专栏
 
 - [强化学习知识大讲堂](https://zhuanlan.zhihu.com/sharerl)
 
-- 该专栏作者即为《[深入浅出强化学习：原理入门]()》一书的作者，专栏的讲解包括：入门篇、进阶篇、前沿篇和实践篇，深入浅出，内容翔实，是专门针对强化学习的知识大讲堂。
+- 该专栏作者即为《[深入浅出强化学习：原理入门](<>)》一书的作者，专栏的讲解包括：入门篇、进阶篇、前沿篇和实践篇，深入浅出，内容翔实，是专门针对强化学习的知识大讲堂。
 
 - [智能单元](https://zhuanlan.zhihu.com/intelligentunit)
 
@@ -213,10 +211,10 @@ Ray and RLlib for Fast and Parallel Reinforcement Learning
 
 - 该专栏主要是作者关于强化学习经典入门书籍《Reinforcement Learning : An introduction》的读书笔记，因此，非常适合在啃该书的时候参考该专栏，以有更深入的理解。
 
-
-
 ## 强化学习算法学习流程概览：
+
 ### 离散动作：（Value Gradient ）
+
 Q-table-learning -> DQN(Deep Q NetWork) -> Double DQN -> Dueling DQN ->Double Dueling DQN (D3QN) ->Twin Delayed DDPG (TD3 连续动作)
 
 ### 连续动作：（Policy Gradient）
