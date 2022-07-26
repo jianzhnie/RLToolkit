@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 class Qnet(torch.nn.Module):
     """只有一层隐藏层的Q网络."""
+
     def __init__(self, state_dim, hidden_dim, action_dim):
         super(Qnet, self).__init__()
         self.fc1 = torch.nn.Linear(state_dim, hidden_dim)
@@ -17,6 +18,7 @@ class Qnet(torch.nn.Module):
 
 class ConvolutionalQnet(torch.nn.Module):
     """加入卷积层的Q网络."""
+
     def __init__(self, action_dim, in_channels=4):
         super(ConvolutionalQnet, self).__init__()
         self.conv1 = torch.nn.Conv2d(in_channels, 32, kernel_size=8, stride=4)
@@ -36,6 +38,7 @@ class ConvolutionalQnet(torch.nn.Module):
 
 class CartPole(object):
     """DQN算法."""
+
     def __init__(self, state_dim, hidden_dim, action_dim, learning_rate, gamma,
                  epsilon, target_update, device):
         self.action_dim = action_dim
@@ -45,8 +48,8 @@ class CartPole(object):
         self.target_q_net = ConvolutionalQnet(state_dim, hidden_dim,
                                               self.action_dim).to(device)
         # 使用Adam优化器
-        self.optimizer = torch.optim.Adam(self.q_net.parameters(),
-                                          lr=learning_rate)
+        self.optimizer = torch.optim.Adam(
+            self.q_net.parameters(), lr=learning_rate)
         self.gamma = gamma  # 折扣因子
         self.epsilon = epsilon  # epsilon-贪婪策略
         self.target_update = target_update  # 目标网络更新频率
@@ -62,16 +65,18 @@ class CartPole(object):
         return action
 
     def update(self, transition_dict):
-        states = torch.tensor(transition_dict['states'],
-                              dtype=torch.float).to(self.device)
+        states = torch.tensor(
+            transition_dict['states'], dtype=torch.float).to(self.device)
         actions = torch.tensor(transition_dict['actions']).view(-1, 1).to(
             self.device)
-        rewards = torch.tensor(transition_dict['rewards'],
-                               dtype=torch.float).view(-1, 1).to(self.device)
-        next_states = torch.tensor(transition_dict['next_states'],
-                                   dtype=torch.float).to(self.device)
-        dones = torch.tensor(transition_dict['dones'],
-                             dtype=torch.float).view(-1, 1).to(self.device)
+        rewards = torch.tensor(
+            transition_dict['rewards'],
+            dtype=torch.float).view(-1, 1).to(self.device)
+        next_states = torch.tensor(
+            transition_dict['next_states'], dtype=torch.float).to(self.device)
+        dones = torch.tensor(
+            transition_dict['dones'],
+            dtype=torch.float).view(-1, 1).to(self.device)
 
         q_values = self.q_net(states).gather(1, actions)  # Q值
         # 下个状态的最大Q值
