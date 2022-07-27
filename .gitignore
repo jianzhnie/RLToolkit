@@ -134,3 +134,4 @@ nohup.out
 protein_data
 **/checkpoints
 *.npy
+hub/
