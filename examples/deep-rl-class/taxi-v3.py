@@ -144,14 +144,17 @@ def load_from_hub(repo_id: str, filename: str) -> str:
     return downloaded_model_file
 
 
-def push_to_hub(repo_name,
+def push_to_hub(repo_id,
                 model,
                 env,
                 video_fps=1,
                 local_repo_path='hub',
                 commit_message='Push Q-Learning agent to Hub',
                 token=None):
+    _, repo_name = repo_id.split('/')
+
     eval_env = env
+
     # Step 1: Clone or create the repo
     # Create the repo (or clone its content if it's nonempty)
     api = HfApi()
@@ -244,7 +247,7 @@ def push_to_hub(repo_name,
   ```python
   """
 
-    model_card += f"""model = load_from_hub(repo_id="{repo_name}", filename="q-learning.pkl")
+    model_card += f"""model = load_from_hub(repo_id="{repo_id}", filename="q-learning.pkl")
 
   # Don't forget to check if you need to add additional attributes (is_slippery=False etc)
   env = gym.make(model["env_id"])
@@ -361,4 +364,4 @@ if __name__ == '__main__':
     notebook_login()
     username = 'jianzhnie'  # FILL THIS
     repo_name = 'q-Taxi-v3'
-    push_to_hub(repo_name=f'{repo_name}', model=model, env=env)
+    push_to_hub(repo_id=f'{username}/{repo_name}', model=model, env=env)
