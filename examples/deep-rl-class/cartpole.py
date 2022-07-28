@@ -298,6 +298,7 @@ if __name__ == '__main__':
     mean_reward, std_reward = evaluate_agent(
         eval_env, cartpole_hyperparameters['max_t'],
         cartpole_hyperparameters['n_evaluation_episodes'], cartpole_policy)
+    print(mean_reward, std_reward)
 
     from huggingface_hub import notebook_login
     notebook_login()
