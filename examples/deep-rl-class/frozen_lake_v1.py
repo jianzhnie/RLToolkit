@@ -135,9 +135,7 @@ def push_to_hub(repo_name,
                 local_repo_path='hub',
                 commit_message='Push Q-Learning agent to Hub',
                 token=None):
-
     eval_env = env
-
     # Step 1: Clone or create the repo
     # Create the repo (or clone its content if it's nonempty)
     api = HfApi()
@@ -182,6 +180,7 @@ def push_to_hub(repo_name,
     evaluate_data = {
         'env_id': model['env_id'],
         'mean_reward': mean_reward,
+        'std_reward': std_reward,
         'n_eval_episodes': model['n_eval_episodes'],
         'eval_datetime': eval_form_datetime,
     }
@@ -220,25 +219,26 @@ def push_to_hub(repo_name,
     metadata = {**metadata, **eval}
 
     model_card = f"""
-    # **Q-Learning** Agent playing **{env_id}**
-    This is a trained model of a **Q-Learning** agent playing **{env_id}** .
-    """
+  # **Q-Learning** Agent playing **{env_id}**
+  This is a trained model of a **Q-Learning** agent playing **{env_id}** .
+  """
 
     model_card += """
-    ## Usage
-    ```python
-    """
+  ## Usage
+  ```python
+  """
+
     model_card += f"""model = load_from_hub(repo_id="{repo_name}", filename="q-learning.pkl")
 
-    # Don't forget to check if you need to add additional attributes (is_slippery=False etc)
-    env = gym.make(model["env_id"])
+  # Don't forget to check if you need to add additional attributes (is_slippery=False etc)
+  env = gym.make(model["env_id"])
 
-    evaluate_agent(env, model["max_steps"], model["n_eval_episodes"], model["qtable"], model["eval_seed"])
-    """
+  evaluate_agent(env, model["max_steps"], model["n_eval_episodes"], model["qtable"], model["eval_seed"])
+  """
 
     model_card += """
-    ```
-    """
+  ```
+  """
 
     readme_path = repo_local_path / 'README.md'
     readme = ''
@@ -336,4 +336,4 @@ if __name__ == '__main__':
     notebook_login()
     username = 'jianzhnie'  # FILL THIS
     repo_name = 'q_FrozenLake_v1_4x4_noSlippery'
-    push_to_hub(repo_id=f'{repo_name}', model=model, env=env)
+    push_to_hub(repo_name=f'{repo_name}', model=model, env=env)
