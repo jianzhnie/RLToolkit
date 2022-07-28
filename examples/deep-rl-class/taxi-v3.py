@@ -310,15 +310,15 @@ if __name__ == '__main__':
     # Step 4: Define the greedy policy 🤖
     # Step 5: Define the hyperparameters ⚙️
     # Training parameters
-    n_training_episodes = 30000  # Total training episodes
-    learning_rate = 0.7  # Learning rate
+    n_training_episodes = 10000  # Total training episodes
+    learning_rate = 0.25  # Learning rate
 
     # Evaluation parameters
     n_eval_episodes = 100  # Total number of test episodes
 
     # Environment parameters
     env_id = 'Taxi-v3'  # Name of the environment
-    max_steps = 300  # Max steps per episode
+    max_steps = 100  # Max steps per episode
     gamma = 0.95  # Discounting rate
     eval_seed = [
         16, 54, 165, 177, 191, 191, 120, 80, 149, 178, 48, 38, 6, 125, 174, 73,
