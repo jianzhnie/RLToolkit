@@ -1,11 +1,18 @@
+import datetime
+import json
+import os
 from collections import deque
+from pathlib import Path
 
 import gym
+import imageio
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from huggingface_hub import HfApi, Repository
+from huggingface_hub.repocard import metadata_eval_result, metadata_save
 from torch.distributions import Categorical
 
 
@@ -15,10 +22,13 @@ class Policy(nn.Module):
         super(Policy, self).__init__()
         self.fc1 = nn.Linear(s_size, h_size)
         self.fc2 = nn.Linear(h_size, a_size)
+        self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
+        x = self.fc1(x)
+        x = self.relu(x)
         x = self.fc2(x)
+
         return F.softmax(x, dim=1)
 
     def act(self, state):
@@ -85,7 +95,6 @@ def evaluate_agent(env, max_steps, n_eval_episodes, policy):
     episode_rewards = []
     for episode in range(n_eval_episodes):
         state = env.reset()
-        step = 0
         done = False
         total_rewards_ep = 0
 
@@ -102,6 +111,139 @@ def evaluate_agent(env, max_steps, n_eval_episodes, policy):
     std_reward = np.std(episode_rewards)
 
     return mean_reward, std_reward
+
+
+def record_video(env, policy, out_directory, fps=30):
+    images = []
+    done = False
+    state = env.reset()
+    img = env.render(mode='rgb_array')
+    images.append(img)
+    while not done:
+        # Take the action (index) that have the maximum expected future reward given that state
+        action, _ = policy.act(state)
+        state, reward, done, info = env.step(action)
+        # We directly put next_state = state for recording logic
+        img = env.render(mode='rgb_array')
+        images.append(img)
+    imageio.mimsave(
+        out_directory, [np.array(img) for i, img in enumerate(images)],
+        fps=fps)
+
+
+def package_to_hub(repo_id,
+                   model,
+                   hyperparameters,
+                   eval_env,
+                   video_fps=30,
+                   local_repo_path='hub',
+                   commit_message='Push Reinforce agent to the Hub',
+                   token=None):
+    _, repo_name = repo_id.split('/')
+
+    # Step 1: Clone or create the repo
+    # Create the repo (or clone its content if it's nonempty)
+    api = HfApi()
+
+    repo_url = api.create_repo(
+        name=repo_name,
+        token=token,
+        private=False,
+        exist_ok=True,
+    )
+
+    # Git pull
+    repo_local_path = Path(local_repo_path) / repo_name
+    repo = Repository(
+        repo_local_path, clone_from=repo_url, use_auth_token=True)
+    repo.git_pull()
+
+    repo.lfs_track(['*.mp4'])
+
+    # Step 1: Save the model
+    torch.save(model, os.path.join(repo_local_path, 'model.pt'))
+
+    # Step 2: Save the hyperparameters to JSON
+    with open(Path(repo_local_path) / 'hyperparameters.json', 'w') as outfile:
+        json.dump(hyperparameters, outfile)
+
+    # Step 2: Evaluate the model and build JSON
+    mean_reward, std_reward = evaluate_agent(
+        eval_env, hyperparameters['max_t'],
+        hyperparameters['n_evaluation_episodes'], model)
+
+    # First get datetime
+    eval_datetime = datetime.datetime.now()
+    eval_form_datetime = eval_datetime.isoformat()
+
+    evaluate_data = {
+        'env_id': hyperparameters['env_id'],
+        'mean_reward': mean_reward,
+        'std_reward': std_reward,
+        'n_evaluation_episodes': hyperparameters['n_evaluation_episodes'],
+        'eval_datetime': eval_form_datetime,
+        'hyperparameters': hyperparameters,
+    }
+    # Write a JSON file
+    with open(Path(repo_local_path) / 'results.json', 'w') as outfile:
+        json.dump(evaluate_data, outfile)
+
+    # Step 3: Create the model card
+    # Env id
+    env_name = hyperparameters['env_id']
+
+    metadata = {}
+    metadata['tags'] = [
+        env_name, 'reinforce', 'reinforcement-learning',
+        'custom-implementation', 'deep-rl-class'
+    ]
+
+    # Add metrics
+    eval = metadata_eval_result(
+        model_pretty_name=repo_name,
+        task_pretty_name='reinforcement-learning',
+        task_id='reinforcement-learning',
+        metrics_pretty_name='mean_reward',
+        metrics_id='mean_reward',
+        metrics_value=f'{mean_reward:.2f} +/- {std_reward:.2f}',
+        dataset_pretty_name=env_name,
+        dataset_id=env_name,
+    )
+
+    # Merges both dictionaries
+    metadata = {**metadata, **eval}
+
+    model_card = f"""
+  # **Reinforce** Agent playing **{env_id}**
+  This is a trained model of a **Reinforce** agent playing **{env_id}** .
+  To learn to use this model and train yours check Unit 5 of the Deep Reinforcement Learning Class: https://github.com/huggingface/deep-rl-class/tree/main/unit5
+  """
+
+    readme_path = repo_local_path / 'README.md'
+    readme = ''
+    if readme_path.exists():
+        with readme_path.open('r', encoding='utf8') as f:
+            readme = f.read()
+    else:
+        readme = model_card
+
+    with readme_path.open('w', encoding='utf-8') as f:
+        f.write(readme)
+
+    # Save our metrics to Readme metadata
+    metadata_save(readme_path, metadata)
+
+    # Step 4: Record a video
+    video_path = repo_local_path / 'replay.mp4'
+    record_video(env, model, video_path, video_fps)
+
+    # Push everything to hub
+    print(f'Pushing repo {repo_name} to the Hugging Face Hub')
+    repo.push_to_hub(commit_message=commit_message)
+
+    print(
+        f'Your model is pushed to the hub. You can view your model here: {repo_url}'
+    )
 
 
 if __name__ == '__main__':
@@ -130,11 +272,11 @@ if __name__ == '__main__':
           env.action_space.sample())  # Take a random action
 
     cartpole_hyperparameters = {
-        'h_size': 16,
-        'n_training_episodes': 1000,
-        'n_evaluation_episodes': 10,
+        'h_size': 32,
+        'n_training_episodes': 10000,
+        'n_evaluation_episodes': 100,
         'max_t': 1000,
-        'gamma': 1.0,
+        'gamma': 0.995,
         'lr': 1e-2,
         'env_id': env_id,
         'state_space': s_size,
@@ -153,6 +295,22 @@ if __name__ == '__main__':
                        cartpole_hyperparameters['max_t'],
                        cartpole_hyperparameters['gamma'], 100)
 
-    evaluate_agent(eval_env, cartpole_hyperparameters['max_t'],
-                   cartpole_hyperparameters['n_evaluation_episodes'],
-                   cartpole_policy)
+    mean_reward, std_reward = evaluate_agent(
+        eval_env, cartpole_hyperparameters['max_t'],
+        cartpole_hyperparameters['n_evaluation_episodes'], cartpole_policy)
+
+    from huggingface_hub import notebook_login
+    notebook_login()
+
+    username = 'jianzhnie'
+    repo_name = f'Reinforce-{env_id}'
+    repo_id = f'{username}/{repo_name}'
+    package_to_hub(
+        repo_id,
+        cartpole_policy,  # The model we want to save
+        cartpole_hyperparameters,  # Hyperparameters
+        eval_env,  # Evaluation environment
+        video_fps=30,
+        local_repo_path='hub',
+        commit_message='Push Reinforce agent to the Hub',
+    )
