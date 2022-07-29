@@ -1,4 +1,5 @@
 import gym
+# import pybullet_envs
 from huggingface_hub import notebook_login
 from huggingface_sb3 import package_to_hub
 from stable_baselines3 import A2C
@@ -34,23 +35,24 @@ if __name__ == '__main__':
         gamma=0.99,
         learning_rate=0.00096,
         max_grad_norm=0.5,
-        n_steps=8,
+        n_steps=5,
         vf_coef=0.4,
         ent_coef=0.0,
-        tensorboard_log='./tensorboard',
+        tensorboard_log=f'work_dirs/{env_id}/tensorboard',
         policy_kwargs=dict(log_std_init=-2, ortho_init=False),
         normalize_advantage=False,
         use_rms_prop=True,
         use_sde=True,
         verbose=1)
-    model.learn(2_000_000)
+    model.learn(200000)
     # Save the model and  VecNormalize statistics when saving the agent
-    model.save('a2c-AntBulletEnv-v0')
-    env.save('vec_normalize.pkl')
+    model.save(f'work_dirs/{env_id}/a2c-AntBulletEnv-v0')
+    env.save(f'work_dirs/{env_id}/vec_normalize.pkl')
 
     # Load the saved statistics
     eval_env = DummyVecEnv([lambda: gym.make('AntBulletEnv-v0')])
-    eval_env = VecNormalize.load('vec_normalize.pkl', eval_env)
+    eval_env = VecNormalize.load(f'work_dirs/{env_id}/vec_normalize.pkl',
+                                 eval_env)
 
     #  do not update them at test time
     eval_env.training = False
@@ -58,7 +60,7 @@ if __name__ == '__main__':
     eval_env.norm_reward = False
 
     # Load the agent
-    model = A2C.load('a2c-AntBulletEnv-v0')
+    model = A2C.load(f'work_dirs/{env_id}/a2c-AntBulletEnv-v0')
 
     mean_reward, std_reward = evaluate_policy(model, env)
 
@@ -71,6 +73,6 @@ if __name__ == '__main__':
         model_architecture='A2C',
         env_id=env_id,
         eval_env=eval_env,
-        repo_id=f'ThomasSimonini/a2c-{env_id}',
+        repo_id=f'jianzhnie/a2c-v1-{env_id}',
         commit_message='Initial commit',
-    )
+        logs=f'work_dirs/{env_id}')
