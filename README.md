@@ -1,4 +1,4 @@
-# Awesome Reinforcement Learning  [![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/sindresorhus/awesome)
+# Awesome Reinforcement Learning
 
 This is a collection of resources for deep reinforcement learning, including the following sections: **Books**, **Surveys and Reports**, **Courses**, **Tutorials and Talks**, **Conferences, Journals and Workshops**, **Blogs,** and, **Benchmarks and Testbeds**. This blog is very long, with lots of resources. See \[**Table of Contents**\](#Table of Contents).
 
