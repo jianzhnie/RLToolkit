@@ -1,4 +1,3 @@
-import collections
 import random
 import sys
 
@@ -12,24 +11,6 @@ from tqdm import tqdm
 
 sys.path.append('../../')
 from rltoolkit.utils import rl_utils
-
-
-class ReplayBuffer:
-    """经验回放池."""
-
-    def __init__(self, capacity):
-        self.buffer = collections.deque(maxlen=capacity)  # 队列,先进先出
-
-    def add(self, state, action, reward, next_state, done):  # 将数据加入buffer
-        self.buffer.append((state, action, reward, next_state, done))
-
-    def sample(self, batch_size):  # 从buffer中采样数据,数量为batch_size
-        transitions = random.sample(self.buffer, batch_size)
-        state, action, reward, next_state, done = zip(*transitions)
-        return np.array(state), action, reward, np.array(next_state), done
-
-    def size(self):  # 目前buffer中数据的数量
-        return len(self.buffer)
 
 
 class Qnet(torch.nn.Module):
@@ -73,8 +54,8 @@ class DQN:
     def __init__(self, state_dim, hidden_dim, action_dim, learning_rate, gamma,
                  epsilon, target_update, device):
         self.action_dim = action_dim
-        self.q_net = Qnet(state_dim, hidden_dim,
-                          self.action_dim).to(device)  # Q网络
+        # Q网络
+        self.q_net = Qnet(state_dim, hidden_dim, self.action_dim).to(device)
         # 目标网络
         self.target_q_net = Qnet(state_dim, hidden_dim,
                                  self.action_dim).to(device)
@@ -146,7 +127,7 @@ if __name__ == '__main__':
     np.random.seed(0)
     env.seed(0)
     torch.manual_seed(0)
-    replay_buffer = ReplayBuffer(buffer_size)
+    replay_buffer = rl_utils.ReplayBuffer(buffer_size)
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
     agent = DQN(state_dim, hidden_dim, action_dim, lr, gamma, epsilon,
