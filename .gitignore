@@ -135,3 +135,4 @@ protein_data
 **/checkpoints
 *.npy
 hub/
+周报/
