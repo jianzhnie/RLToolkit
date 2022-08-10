@@ -20,8 +20,10 @@ class PolicyNet(torch.nn.Module):
         self.fc2 = nn.Linear(hidden_dim, action_dim)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        return F.softmax(self.fc2(x), dim=1)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
+        return F.softmax(x, dim=1)
 
 
 class ValueNet(torch.nn.Module):
