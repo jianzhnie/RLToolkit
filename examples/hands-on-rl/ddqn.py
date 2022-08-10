@@ -5,11 +5,11 @@ import gym
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-
-sys.path.append('../../')
 from tqdm import tqdm
 
+sys.path.append('../../')
 from rltoolkit.utils import rl_utils
 
 
@@ -18,8 +18,8 @@ class Qnet(torch.nn.Module):
 
     def __init__(self, state_dim, hidden_dim, action_dim):
         super(Qnet, self).__init__()
-        self.fc1 = torch.nn.Linear(state_dim, hidden_dim)
-        self.fc2 = torch.nn.Linear(hidden_dim, action_dim)
+        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, action_dim)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -40,7 +40,9 @@ class DQN:
                  device,
                  dqn_type='VanillaDQN'):
         self.action_dim = action_dim
+        # Q网络
         self.q_net = Qnet(state_dim, hidden_dim, self.action_dim).to(device)
+        # 目标网络
         self.target_q_net = Qnet(state_dim, hidden_dim,
                                  self.action_dim).to(device)
         self.optimizer = torch.optim.Adam(
@@ -167,8 +169,8 @@ if __name__ == '__main__':
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    env_name = 'Pendulum-v0'
-    env = gym.make(env_name)
+    env_name = 'Pendulum-v1'
+    env = gym.make(env_name, g=9.81)
     state_dim = env.observation_space.shape[0]
     action_dim = 11  # 将连续动作分成11个离散动作
 
@@ -198,4 +200,32 @@ if __name__ == '__main__':
     plt.xlabel('Frames')
     plt.ylabel('Q value')
     plt.title('DQN on {}'.format(env_name))
+    plt.show()
+
+    random.seed(0)
+    np.random.seed(0)
+    env.seed(0)
+    torch.manual_seed(0)
+    replay_buffer = rl_utils.ReplayBuffer(buffer_size)
+    agent = DQN(state_dim, hidden_dim, action_dim, lr, gamma, epsilon,
+                target_update, device, 'DoubleDQN')
+    return_list, max_q_value_list = train_DQN(agent, env, num_episodes,
+                                              replay_buffer, minimal_size,
+                                              batch_size)
+
+    episodes_list = list(range(len(return_list)))
+    mv_return = rl_utils.moving_average(return_list, 5)
+    plt.plot(episodes_list, mv_return)
+    plt.xlabel('Episodes')
+    plt.ylabel('Returns')
+    plt.title('Double DQN on {}'.format(env_name))
+    plt.show()
+
+    frames_list = list(range(len(max_q_value_list)))
+    plt.plot(frames_list, max_q_value_list)
+    plt.axhline(0, c='orange', ls='--')
+    plt.axhline(10, c='red', ls='--')
+    plt.xlabel('Frames')
+    plt.ylabel('Q value')
+    plt.title('Double DQN on {}'.format(env_name))
     plt.show()
