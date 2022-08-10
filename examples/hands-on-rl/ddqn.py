@@ -97,8 +97,8 @@ class DQN:
         self.optimizer.step()
 
         if self.count % self.target_update == 0:
-            self.target_q_net.load_state_dict(
-                self.q_net.state_dict())  # 更新目标网络
+            self.target_q_net.load_state_dict(self.q_net.state_dict())
+        # 更新目标网络
         self.count += 1
 
 
