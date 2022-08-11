@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import Adam
 
 sys.path.append('../../')
 from rltoolkit.utils import rl_utils
@@ -96,10 +97,8 @@ class DDPG:
         self.target_critic.load_state_dict(self.critic.state_dict())
         # 初始化目标策略网络并设置和策略相同的参数
         self.target_actor.load_state_dict(self.actor.state_dict())
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.parameters(), lr=actor_lr)
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(), lr=critic_lr)
+        self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
         self.gamma = gamma
         # 高斯噪声的标准差,均值直接设为0
         self.sigma = sigma
