@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import Adam
 
 sys.path.append('../../')
 from rltoolkit.utils import rl_utils
@@ -21,19 +22,22 @@ class PolicyNet(nn.Module):
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc2(x)
-        return F.softmax(x, dim=1)
+        x = F.softmax(x, dim=1)
+        return x
 
 
 class ValueNet(nn.Module):
 
     def __init__(self, state_dim, hidden_dim):
         super(ValueNet, self).__init__()
-        self.fc1 = torch.nn.Linear(state_dim, hidden_dim)
-        self.fc2 = torch.nn.Linear(hidden_dim, 1)
+        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, 1)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        return self.fc2(x)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
+        return x
 
 
 class PPO:
@@ -43,10 +47,8 @@ class PPO:
                  lmbda, epochs, eps, gamma, device):
         self.actor = PolicyNet(state_dim, hidden_dim, action_dim).to(device)
         self.critic = ValueNet(state_dim, hidden_dim).to(device)
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.parameters(), lr=actor_lr)
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(), lr=critic_lr)
+        self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
         self.gamma = gamma
         self.lmbda = lmbda
         self.epochs = epochs  # 一条序列的数据用来训练轮数
@@ -59,6 +61,16 @@ class PPO:
         action_dist = torch.distributions.Categorical(probs)
         action = action_dist.sample()
         return action.item()
+
+    def compute_advantage(self, gamma, lmbda, td_delta):
+        td_delta = td_delta.detach().numpy()
+        advantage_list = []
+        advantage = 0.0
+        for delta in td_delta[::-1]:
+            advantage = gamma * lmbda * advantage + delta
+            advantage_list.append(advantage)
+        advantage_list.reverse()
+        return torch.tensor(advantage_list, dtype=torch.float)
 
     def update(self, transition_dict):
         states = torch.tensor(
@@ -73,6 +85,7 @@ class PPO:
         dones = torch.tensor(
             transition_dict['dones'],
             dtype=torch.float).view(-1, 1).to(self.device)
+
         td_target = rewards + self.gamma * self.critic(next_states) * (1 -
                                                                        dones)
         td_delta = td_target - self.critic(states)
@@ -84,6 +97,7 @@ class PPO:
         for _ in range(self.epochs):
             log_probs = torch.log(self.actor(states).gather(1, actions))
             ratio = torch.exp(log_probs - old_log_probs)
+
             surr1 = ratio * advantage
             # 截断
             surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantage
