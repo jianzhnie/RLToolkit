@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import Adam
 
 sys.path.append('../../')
 from rltoolkit.utils import rl_utils
@@ -48,10 +49,8 @@ class PPOContinuous:
         self.actor = PolicyNetContinuous(state_dim, hidden_dim,
                                          action_dim).to(device)
         self.critic = ValueNet(state_dim, hidden_dim).to(device)
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.parameters(), lr=actor_lr)
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(), lr=critic_lr)
+        self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
         self.gamma = gamma
         self.lmbda = lmbda
         self.epochs = epochs
@@ -97,9 +96,11 @@ class PPOContinuous:
             log_probs = action_dists.log_prob(actions)
 
             ratio = torch.exp(log_probs - old_log_probs)
-            surr1 = ratio * advantage
-            surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantage
 
+            surr1 = ratio * advantage
+            # 截断
+            surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantage
+            # PPO损失函数
             actor_loss = torch.mean(-torch.min(surr1, surr2))
             critic_loss = torch.mean(
                 F.mse_loss(self.critic(states), td_target.detach()))
