@@ -101,9 +101,12 @@ class DDPG:
         self.critic_optimizer = torch.optim.Adam(
             self.critic.parameters(), lr=critic_lr)
         self.gamma = gamma
-        self.sigma = sigma  # 高斯噪声的标准差,均值直接设为0
-        self.action_bound = action_bound  # action_bound是环境可以接受的动作最大值
-        self.tau = tau  # 目标网络软更新参数
+        # 高斯噪声的标准差,均值直接设为0
+        self.sigma = sigma
+        # action_bound是环境可以接受的动作最大值
+        self.action_bound = action_bound
+        # 目标网络软更新参数
+        self.tau = tau
         self.action_dim = num_out_actor
         self.device = device
 
@@ -139,25 +142,26 @@ class DDPG:
             torch.cat(
                 [next_states, self.target_actor(next_states)], dim=1))
         q_targets = rewards + self.gamma * next_q_values * (1 - dones)
+
+        # MSE损失函数
         critic_loss = torch.mean(
             F.mse_loss(
-                # MSE损失函数
-                self.critic(torch.cat([states, actions], dim=1)),
-                q_targets))
+                self.critic(torch.cat([states, actions], dim=1)), q_targets))
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
 
+        # 策略网络就是为了使得Q值最大化
         actor_loss = -torch.mean(
-            self.critic(
-                # 策略网络就是为了使得Q值最大化
-                torch.cat([states, self.actor(states)], dim=1)))
+            self.critic(torch.cat([states, self.actor(states)], dim=1)))
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
-        self.soft_update(self.actor, self.target_actor)  # 软更新策略网络
-        self.soft_update(self.critic, self.target_critic)  # 软更新价值网络
+        # 软更新策略网络
+        self.soft_update(self.actor, self.target_actor)
+        # 软更新价值网络
+        self.soft_update(self.critic, self.target_critic)
 
 
 if __name__ == '__main__':
