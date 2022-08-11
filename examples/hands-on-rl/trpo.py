@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.optim import Adam
 
 sys.path.append('../../')
 from rltoolkit.utils import rl_utils
@@ -22,7 +23,8 @@ class PolicyNet(nn.Module):
         x = self.fc1(x)
         x = F.relu(x)
         x = self.fc2(x)
-        return F.softmax(x, dim=1)
+        x = F.softmax(x, dim=1)
+        return x
 
 
 class ValueNet(nn.Module):
@@ -33,8 +35,10 @@ class ValueNet(nn.Module):
         self.fc2 = nn.Linear(hidden_dim, 1)
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        return self.fc2(x)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
+        return x
 
 
 def compute_advantage(gamma, lmbda, td_delta):
@@ -48,7 +52,7 @@ def compute_advantage(gamma, lmbda, td_delta):
     return torch.tensor(advantage_list, dtype=torch.float)
 
 
-class TRPO:
+class TRPO(object):
     """TRPO算法."""
 
     def __init__(self, hidden_dim, state_space, action_space, lmbda,
@@ -58,8 +62,7 @@ class TRPO:
         # 策略网络参数不需要优化器更新
         self.actor = PolicyNet(state_dim, hidden_dim, action_dim).to(device)
         self.critic = ValueNet(state_dim, hidden_dim).to(device)
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(), lr=critic_lr)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
         self.gamma = gamma
         self.lmbda = lmbda  # GAE参数
         self.kl_constraint = kl_constraint  # KL距离最大限制
@@ -76,9 +79,10 @@ class TRPO:
     def hessian_matrix_vector_product(self, states, old_action_dists, vector):
         # 计算黑塞矩阵和一个向量的乘积
         new_action_dists = torch.distributions.Categorical(self.actor(states))
+        # 计算平均KL距离
         kl = torch.mean(
             torch.distributions.kl.kl_divergence(old_action_dists,
-                                                 new_action_dists))  # 计算平均KL距离
+                                                 new_action_dists))
         kl_grad = torch.autograd.grad(
             kl, self.actor.parameters(), create_graph=True)
         kl_grad_vector = torch.cat([grad.view(-1) for grad in kl_grad])
@@ -89,7 +93,8 @@ class TRPO:
         grad2_vector = torch.cat([grad.view(-1) for grad in grad2])
         return grad2_vector
 
-    def conjugate_gradient(self, grad, states, old_action_dists):  # 共轭梯度法求解方程
+    def conjugate_gradient(self, grad, states, old_action_dists):
+        # 共轭梯度法求解方程
         x = torch.zeros_like(grad)
         r = grad.clone()
         p = grad.clone()
