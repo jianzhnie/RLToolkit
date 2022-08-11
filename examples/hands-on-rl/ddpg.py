@@ -18,11 +18,14 @@ class PolicyNet(nn.Module):
         super(PolicyNet, self).__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, action_dim)
-        self.action_bound = action_bound  # action_bound是环境可以接受的动作最大值
+        # action_bound是环境可以接受的动作最大值
+        self.action_bound = action_bound
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        return torch.tanh(self.fc2(x)) * self.action_bound
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
+        return torch.tanh(x) * self.action_bound
 
 
 class QValueNet(nn.Module):
@@ -33,7 +36,8 @@ class QValueNet(nn.Module):
         self.fc2 = nn.Linear(hidden_dim, 1)
 
     def forward(self, x, a):
-        cat = torch.cat([x, a], dim=1)  # 拼接状态和动作
+        # 拼接状态和动作
+        cat = torch.cat([x, a], dim=1)
         x = F.relu(self.fc1(cat))
         return self.fc2(x)
 
