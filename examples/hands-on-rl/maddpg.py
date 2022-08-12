@@ -26,7 +26,7 @@ def make_env(scenario_name):
 
 
 def onehot_from_logits(logits, eps=0.01):
-    """生成最优动作的独热（one-hot）形式."""
+    """生成最优动作的独热(one-hot)形式."""
     argmax_acs = (logits == logits.max(1, keepdim=True)[0]).float()
     # 生成随机动作,转换成独热形式
     rand_acs = torch.autograd.Variable(
@@ -155,6 +155,7 @@ class MADDPG(object):
         target_critic_value = rew[i_agent].view(
             -1, 1) + self.gamma * cur_agent.target_critic(
                 target_critic_input) * (1 - done[i_agent].view(-1, 1))
+
         critic_input = torch.cat((*obs, *act), dim=1)
         critic_value = cur_agent.critic(critic_input)
         critic_loss = self.critic_criterion(critic_value,
