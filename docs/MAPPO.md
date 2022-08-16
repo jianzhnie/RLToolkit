@@ -8,7 +8,7 @@
 
 `MAPPO`采用一种中心式的值函数方式来考虑全局信息，属于`CTDE`框架范畴内的一种方法，通过一个全局的值函数来使得各个单个的`PPO`智能体相互配合。它有一个前身`IPPO`，是一个完全分散式的`PPO`算法，类似`IQL`算法。
 
-`MAPPO`中每个智能体i基于局部观测$$o\_{i}$$和一个共享策略(这里的共享策略是针对智能体是同类型的情况而言的，对于非同类型的，可以拥有自己独立的`actor`和`critic`网络)$$\\pi\_{\\theta}(a\_{i}|o\_{i}$$)去生成一个动作$$a\_{i}$$来最大化折扣累积奖励：$$J(\\theta)=\\mathbb{E}_{a^{t}, s^{t}}\\left\[\\sum_{t} \\gamma^{t} R\\left(s^{t}, a^{t}\\right)\\right\]$$。基于全局的状态s来学习一个中心式的值函数$$V\_{\\phi}(s)$$。
+`MAPPO`中每个智能体i基于局部观测$$o_{i}$$和一个共享策略(这里的共享策略是针对智能体是同类型的情况而言的，对于非同类型的，可以拥有自己独立的`actor`和`critic`网络)$$\pi_{\theta}(a_{i}|o_{i}$$)去生成一个动作$$a_{i}$$来最大化折扣累积奖励：$$J(\theta)=\mathbb{E}_{a^{t}, s^{t}}\left[\sum_{t} \gamma^{t} R\left(s^{t}, a^{t}\right)\right]$$。基于全局的状态s来学习一个中心式的值函数$$V_{\phi}(s)$$。
 
 MAPPO的思路和MADDPG是一样的，都是基于decentralized actor centralized critc的方式，同样是critic可以使用全局的状态信息，而actor只使用局部的状态信息。不同的是PPO是一个on policy算法，之前的multi-agent  policy gradient的算法一般都是基于off policy的算法，但是MAPPO经过简单的超参数调整就能获得比较好的成绩。
 
@@ -30,25 +30,25 @@ MAPPO的思路和MADDPG是一样的，都是基于decentralized actor centralize
 
 ![img](MAPPO.assets/mappo_1.jpg)
 
-也就是说有两个网络，策略$$\\pi\_{\\theta}$$和值函数 $$V\_{\\phi}$$ 值函数$$V\_{\\phi}$$需要学习一个映射：$$S \\rightarrow \\mathbb{R}$$。策略函数$$\\pi\_{\\theta}$$学习一个映射从观测$$o\_{t}^{(a)}$$到一个范围的分布或者是映射到一个[高斯函数](<>)的动作均值和方差用于之后采样动作。
+也就是说有两个网络，策略$$\pi_{\theta}$$和值函数 $$V_{\phi}$$ 值函数$$V_{\phi}$$需要学习一个映射：$$S \rightarrow \mathbb{R}$$。策略函数$$\pi_{\theta}$$学习一个映射从观测$$o_{t}^{(a)}$$到一个范围的分布或者是映射到一个[高斯函数]()的动作均值和方差用于之后采样动作。
 
 > 作者在文献附录中有谈到说如果智能体是同种类的就采用相同的网络参数，对于每个智能体内部也可以采用各自的`actor`和`critic`网络，但是作者为了符号的便利性，直接就用的一个网络参数来表示。
 
 - `Actor`网络优化目标为：
 
 $$
-\\begin{array}{l} L(\\theta) = {\\left\[\\frac{1}{B n} \\sum\_{i=1}^{B} \\sum\_{k=1}^{n} \\min \\left(r\_{\\theta, i}^{(k)} A\_{i}^{(k)}, \\operatorname{clip}\\left(r\_{\\theta, i}^{(k)}, 1-\\epsilon, 1+\\epsilon\\right) A\_{i}^{(k)}\\right)\\right\]} \\ \\left.+\\sigma \\frac{1}{B n} \\sum\_{i=1}^{B} \\sum\_{k=1}^{n} S\\left\[\\pi\_{\\theta}\\left(o\_{i}^{(k)}\\right)\\right)\\right\], \\text { where } r\_{\\theta, i}^{(k)}=\\frac{\\pi\_{\\theta}\\left(a\_{i}^{(k)} \\mid o\_{i}^{(k)}\\right)}{\\pi\_{\\theta\_{\\text {old }}}\\left(a\_{i}^{(k)} \\mid o\_{i}^{(k)}\\right)} . \\end{array}
+\begin{array}{l} L(\theta) = {\left[\frac{1}{B n} \sum_{i=1}^{B} \sum_{k=1}^{n} \min \left(r_{\theta, i}^{(k)} A_{i}^{(k)}, \operatorname{clip}\left(r_{\theta, i}^{(k)}, 1-\epsilon, 1+\epsilon\right) A_{i}^{(k)}\right)\right]} \\ \left.+\sigma \frac{1}{B n} \sum_{i=1}^{B} \sum_{k=1}^{n} S\left[\pi_{\theta}\left(o_{i}^{(k)}\right)\right)\right], \text { where } r_{\theta, i}^{(k)}=\frac{\pi_{\theta}\left(a_{i}^{(k)} \mid o_{i}^{(k)}\right)}{\pi_{\theta_{\text {old }}}\left(a_{i}^{(k)} \mid o_{i}^{(k)}\right)} . \end{array}
 $$
 
-其中优势函数$$A\_{i}^{(k)}$$是采用`GAE`方法的，S 表示策略的熵，$$\\sigma$$ 是控制熵系数的一个超参数。
+  其中优势函数$$A_{i}^{(k)}$$是采用`GAE`方法的，S 表示策略的熵，$$\sigma$$ 是控制熵系数的一个超参数。
 
 - `Critic`网络优化目标为：
 
 $$
-\\begin{array}{l} L(\\phi)=\\frac{1}{B n} \\sum\_{i=1}^{B} \\sum\_{k=1}^{n}\\left(\\operatorname { m a x } \\left\[\\left(V\_{\\phi}\\left(s\_{i}^{(k)}\\right)-\\right.\\right.\\right.\\left.\\hat{R}_{i}\\right)^{2}, \\  \\left(\\operatorname{clip}\\left(V_{\\phi}\\left(s\_{i}^{(k)}\\right), V\_{\\phi\_{\\text {old }}}\\left(s\_{i}^{(k)}\\right)-\\varepsilon, V\_{\\phi\_{\\text {old }}}\\left(s\_{i}^{(k)}\\right)+\\varepsilon\\right)-\\right.\\left.\\left.\\hat{R}\_{i}\\right)^{2}\\right\] \\end{array}
+\begin{array}{l} L(\phi)=\frac{1}{B n} \sum_{i=1}^{B} \sum_{k=1}^{n}\left(\operatorname { m a x } \left[\left(V_{\phi}\left(s_{i}^{(k)}\right)-\right.\right.\right.\left.\hat{R}_{i}\right)^{2}, \\  \left(\operatorname{clip}\left(V_{\phi}\left(s_{i}^{(k)}\right), V_{\phi_{\text {old }}}\left(s_{i}^{(k)}\right)-\varepsilon, V_{\phi_{\text {old }}}\left(s_{i}^{(k)}\right)+\varepsilon\right)-\right.\left.\left.\hat{R}_{i}\right)^{2}\right] \end{array}
 $$
 
-其中$$\\hat{R}\_{i}$$是折扣奖励。B 表示`batch_size`的大小，$n$ 表示智能体的数量。
+  其中$$\hat{R}_{i}$$是折扣奖励。B 表示`batch_size`的大小，$n$ 表示智能体的数量。
 
 ## **MAPPO实战技巧**
 
@@ -66,7 +66,7 @@ $$
 
 对于多智能体算法而言，大部分的工作都在处理值函数这一块，因为大部分算法都是通过值函数来实现各个子智能体的相互配合。普遍认为，对于centralized value functions来说，观察到full global state 会使得一个部分可观测马尔可夫决策问题(`POMDP`)转化为了一个马尔可夫决策问题(`MDP`)。因此value learning也会更加容易，而一个正确的value function也会提升policy learning。
 
-`Multi-agent actor-critic for mixed cooperative-competitive environment`中提出将所有智能体地局部观测信息拼接起来$$\\left(o\_{1}, \\ldots, o\_{n}\\right)$$作为`Critic`的输入，存在的问题就是智能体数量太多之后，尤其是值函数的输入维度远高于策略函数的输入维度的时候，会使得值函数的学习变得更加困难。还有一种方法是用环境直接提供的全局信息，然而有的global state可能包含的信息比local obs更少，这个会使得value learning更加困难。
+`Multi-agent actor-critic for mixed cooperative-competitive environment`中提出将所有智能体地局部观测信息拼接起来$$\left(o_{1}, \ldots, o_{n}\right)$$作为`Critic`的输入，存在的问题就是智能体数量太多之后，尤其是值函数的输入维度远高于策略函数的输入维度的时候，会使得值函数的学习变得更加困难。还有一种方法是用环境直接提供的全局信息，然而有的global state可能包含的信息比local obs更少，这个会使得value learning更加困难。
 
 `SMAC`环境有提供一个包含所有智能体和敌方的全局信息，但是这个信息并不完整。虽然每个智能体的局部信息中会缺失敌方的信息，但是会有一些智能体特有的信息，像智能体的`ID`、可选动作、相对距离等等，这些在全局状态信息中是没有的。因此作者构建了一个带有智能体特征的全局状态信息，包含所有的全局信息和一些必须的局部智能体特有的状态特征。
 
@@ -80,11 +80,11 @@ IPPO算法说明了将PPO应用到多智能体系统中是十分有效的。本�
 
 ### **Action Masking**
 
-由于游戏规则的限制, 多智能体任务中经常出现 agent 无法执行某些 action 的情况。当计算动作概率$$\\pi\_{\\theta}\\left(a\_{i} \\mid o\_{i}\\right)$$的时候，我们将不被允许的动作直接`mask`掉，这样在前向和反向传播的过程中，这些动作将永远为`0`，作者发现这种做法能够加速训练。
+由于游戏规则的限制, 多智能体任务中经常出现 agent 无法执行某些 action 的情况。当计算动作概率$$\pi_{\theta}\left(a_{i} \mid o_{i}\right)$$的时候，我们将不被允许的动作直接`mask`掉，这样在前向和反向传播的过程中，这些动作将永远为`0`，作者发现这种做法能够加速训练。
 
 ### **Death Masking**
 
-在多智能体任务中，也经常会出现agent死亡的情况。当 agent 死亡后，在`Agent-Specific`特征中直接用一个`0`向量来描述即可， 后续的状态输入只保留其 agent id，其他信息全部置为0。
+ 在多智能体任务中，也经常会出现agent死亡的情况。当 agent 死亡后，在`Agent-Specific`特征中直接用一个`0`向量来描述即可， 后续的状态输入只保留其 agent id，其他信息全部置为0。
 
 ## **代码解析**
 
@@ -92,7 +92,7 @@ IPPO算法说明了将PPO应用到多智能体系统中是十分有效的。本�
 
 ### **总体理解**
 
-每个局部智能体接收一个局部的观察`obs`，输出一个动作概率，所有的`actor`智能体都采用一个`actor`网络。`critic`网络接收所有智能体的观测`obs`，$$cent_obs_space= n \\times obs_space$$ 其中 n 为智能体的个数，输出为一个 V 值，这个V值用于`actor`的更新。`actor`的`loss`和`PPO`的`loss`类似，有添加一个熵的`loss`。`Critic`的`loss`更多的是对`value`的值做`normalizer`，并且在计算`episode`的折扣奖励的时候不是单纯的算折扣奖励，有采用`gae`算折扣回报的方式。
+每个局部智能体接收一个局部的观察`obs`，输出一个动作概率，所有的`actor`智能体都采用一个`actor`网络。`critic`网络接收所有智能体的观测`obs`，$$cent\_obs\_space= n \times obs\_space$$ 其中 n 为智能体的个数，输出为一个 V 值，这个V值用于`actor`的更新。`actor`的`loss`和`PPO`的`loss`类似，有添加一个熵的`loss`。`Critic`的`loss`更多的是对`value`的值做`normalizer`，并且在计算`episode`的折扣奖励的时候不是单纯的算折扣奖励，有采用`gae`算折扣回报的方式。
 
 - 网络定义
 
