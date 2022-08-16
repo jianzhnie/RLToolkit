@@ -8,7 +8,7 @@
 
 `MAPPO`采用一种中心式的值函数方式来考虑全局信息，属于`CTDE`框架范畴内的一种方法，通过一个全局的值函数来使得各个单个的`PPO`智能体相互配合。它有一个前身`IPPO`，是一个完全分散式的`PPO`算法，类似`IQL`算法。
 
-`MAPPO`中每个智能体 i 基于局部观测$$o\_{i}$$和一个共享策略(这里的共享策略是针对智能体是同类型的情况而言的，对于非同类型的，可以拥有自己独立的`actor`和`critic`网络) $\\pi\_{\\theta}(a\_{i}|o\_{i})$去生成一个动作 $$a\_{i}$$ 来最大化折扣累积奖励：$J(\\theta)=\\mathbb{E}_{a^{t}, s^{t}}\\left\[\\sum_{t} \\gamma^{t} R\\left(s^{t}, a^{t}\\right)\\right\]$。基于全局的状态 $s$ 来学习一个中心式的值函数$V\_{\\phi}(s)$。
+`MAPPO`中每个智能体iii基于局部观测$$o\_{i}$$和一个共享策略(这里的共享策略是针对智能体是同类型的情况而言的，对于非同类型的，可以拥有自己独立的`actor`和`critic`网络)$$\\pi\_{\\theta}(a\_{i}|o\_{i})$$去生成一个动作$a\_{i}$来最大化折扣累积奖励：$$J(\\theta)=\\mathbb{E}_{a^{t}, s^{t}}\\left\[\\sum_{t} \\gamma^{t} R\\left(s^{t}, a^{t}\\right)\\right\]$$。基于全局的状态 s 来学习一个中心式的值函数 $$V\_{\\phi}(s)$$。
 
 ### **PPO实战技巧**
 
@@ -24,17 +24,19 @@
 
 也就是说有两个网络，策略$$π\_{\\theta}$$和值函数$$V\_{\\phi}$$。(作者在文献附录中有谈到说如果智能体是同种类的就采用相同的网络参数，对于每个智能体内部也可以采用各自的`actor`和`critic`网络，但是作者为了符号的便利性，直接就用的一个网络参数来表示)。
 
-值函数$$V\_{\\phi}$$需要学习一个映射：$$S \\rightarrow \\mathbb{R}$$。策略函数$$\\pi\_{\\theta}$$学习一个映射从观测 $$o\_{t}^{(a)}$$ 到一个范围的分布或者是映射到一个[高斯函数](https://www.zhihu.com/search?q=%E9%AB%98%E6%96%AF%E5%87%BD%E6%95%B0&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra=%7B%22sourceType%22%3A%22article%22%2C%22sourceId%22%3A%22386559032%22%7D)的动作均值和方差用于之后采样动作。
+值函数$$V\_{\\phi}$$需要学习一个映射：$$S \\rightarrow \\mathbb{R}$$。策略函数$$\\pi\_{\\theta}$$学习一个映射从观测 $$o\_{t}^{(a)}$$ 到一个范围的分布或者是映射到一个[高斯函数](<>)的动作均值和方差用于之后采样动作。
 
 - `Actor`网络优化目标为：
 
-$$\\\\begin{array}{l} L(\\theta) = {\\left\[\\frac{1}{B n} \\sum\_{i=1}^{B} \\sum\_{k=1}^{n} \\min \\left(r\_{\\theta, i}^{(k)} A\_{i}^{(k)}, \\operatorname{clip}\\left(r\_{\\theta, i}^{(k)}, 1-\\epsilon, 1+\\epsilon\\right) A\_{i}^{(k)}\\right)\\right\]} \\ \\left.+\\sigma \\frac{1}{B n} \\sum\_{i=1}^{B} \\sum\_{k=1}^{n} S\\left\[\\pi\_{\\theta}\\left(o\_{i}^{(k)}\\right)\\right)\\right\], \\text { where } r\_{\\theta, i}^{(k)}=\\frac{\\pi\_{\\theta}\\left(a\_{i}^{(k)} \\mid o\_{i}^{(k)}\\right)}{\\pi\_{\\theta\_{\\text {old }}}\\left(a\_{i}^{(k)} \\mid o\_{i}^{(k)}\\right)} . \\end{array} \\$$
+```latex
+L(\\theta) = {\\left\[\\frac{1}{B n} \\sum\_{i=1}^{B} \\sum\_{k=1}^{n} \\min \\left(r\_{\\theta, i}^{(k)} A\_{i}^{(k)}, \\operatorname{clip}\\left(r\_{\\theta, i}^{(k)}, 1-\\epsilon, 1+\\epsilon\\right) A\_{i}^{(k)}\\right)\\right\]} \\ \\left.+\\sigma \\frac{1}{B n} \\sum\_{i=1}^{B} \\sum\_{k=1}^{n} S\\left\[\\pi\_{\\theta}\\left(o\_{i}^{(k)}\\right)\\right)\\right\], \\text { where } r\_{\\theta, i}^{(k)}=\\frac{\\pi\_{\\theta}\\left(a\_{i}^{(k)} \\mid o\_{i}^{(k)}\\right)}{\\pi\_{\\theta\_{\\text {old }}}\\left(a\_{i}^{(k)} \\mid o\_{i}^{(k)}\\right)} . \\end{array}
+```
 
 其中优势函数$$A\_{i}^{(k)}$$是采用`GAE`方法的，S 表示策略的熵，$$\\sigma$$ 是控制熵系数的一个超参数。
 
 - `Critic`网络优化目标为：
 
-$$\\\\begin{array}{l} L(\\phi)=\\frac{1}{B n} \\sum\_{i=1}^{B} \\sum\_{k=1}^{n}\\left(\\operatorname { m a x } \\left\[\\left(V\_{\\phi}\\left(s\_{i}^{(k)}\\right)-\\right.\\right.\\right.\\left.\\hat{R}_{i}\\right)^{2}, \\  \\left(\\operatorname{clip}\\left(V_{\\phi}\\left(s\_{i}^{(k)}\\right), V\_{\\phi\_{\\text {old }}}\\left(s\_{i}^{(k)}\\right)-\\varepsilon, V\_{\\phi\_{\\text {old }}}\\left(s\_{i}^{(k)}\\right)+\\varepsilon\\right)-\\right.\\left.\\left.\\hat{R}\_{i}\\right)^{2}\\right\] \\end{array} \\$$
+$$\\begin{array}{l} L(\\phi)=\\frac{1}{B n} \\sum\_{i=1}^{B} \\sum\_{k=1}^{n}\\left(\\operatorname { m a x } \\left\[\\left(V\_{\\phi}\\left(s\_{i}^{(k)}\\right)-\\right.\\right.\\right.\\left.\\hat{R}_{i}\\right)^{2}, \\  \\left(\\operatorname{clip}\\left(V_{\\phi}\\left(s\_{i}^{(k)}\\right), V\_{\\phi\_{\\text {old }}}\\left(s\_{i}^{(k)}\\right)-\\varepsilon, V\_{\\phi\_{\\text {old }}}\\left(s\_{i}^{(k)}\\right)+\\varepsilon\\right)-\\right.\\left.\\left.\\hat{R}\_{i}\\right)^{2}\\right\] \\end{array} \\$$
 
 其中$$\\hat{R}\_{i}$$是折扣奖励。B 表示`batch_size`的大小，n 表示智能体的数量。
 
