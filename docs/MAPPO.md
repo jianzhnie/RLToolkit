@@ -1,6 +1,6 @@
 # MAPPO
 
-多智能体强化学习算法大致上可以分为两类，**[中心式](<>)** 和**分散式**。**中心式**的思想是考虑一个合作式的环境，直接将单智能体算法扩展，让其直接学习一个联合动作的输出，但是并不好给出单个智能体该如何进行决策。**分散式**是每个智能体独立学习自己的奖励函数，对于每个智能体来说，其它智能体就是环境的一部分，因此往往需要去考虑环境的非平稳态。并且分散式学习到的并不是全局的策略。
+多智能体强化学习算法大致上可以分为两类，**[中心式](<>)** 和 **分散式**。**中心式**的思想是考虑一个合作式的环境，直接将单智能体算法扩展，让其直接学习一个联合动作的输出，但是并不好给出单个智能体该如何进行决策。**分散式**是每个智能体独立学习自己的奖励函数，对于每个智能体来说，其它智能体就是环境的一部分，因此往往需要去考虑环境的非平稳态。并且分散式学习到的并不是全局的策略。
 
 最近的一些工作提出了两种框架连接中心式和分散式这两种极端方法，从而得到折衷的办法：**中心式训练分散式执行**(`centealized training and decentralized execution CTDE`)和 **值分解** (`value decomposition VD`)。
 
@@ -8,9 +8,9 @@
 
 `MAPPO`采用一种中心式的值函数方式来考虑全局信息，属于`CTDE`框架范畴内的一种方法，通过一个全局的值函数来使得各个单个的`PPO`智能体相互配合。它有一个前身`IPPO`，是一个完全分散式的`PPO`算法，类似`IQL`算法。
 
-`MAPPO`中每个智能体i基于局部观测$$o_{i}$$和一个共享策略(这里的共享策略是针对智能体是同类型的情况而言的，对于非同类型的，可以拥有自己独立的`actor`和`critic`网络)$$\pi_{\theta}(a_{i}|o_{i}$$)去生成一个动作$$a_{i}$$来最大化折扣累积奖励：$$J(\theta)=\mathbb{E}_{a^{t}, s^{t}}\left[\sum_{t} \gamma^{t} R\left(s^{t}, a^{t}\right)\right]$$。基于全局的状态s来学习一个中心式的值函数$$V_{\phi}(s)$$。
+`MAPPO`中每个智能体i基于局部观测$$o_{i}$$和一个共享策略(这里的共享策略是针对智能体是同类型的情况而言的，对于非同类型的，可以拥有自己独立的`actor`和`critic`网络)  $$\pi_{\theta}(a_{i}|o_{i}$$)去生成一个动作$$a_{i}$$来最大化折扣累积奖励：$$J(\theta)=\mathbb{E}_{a^{t}, s^{t}}\left[\sum_{t} \gamma^{t} R\left(s^{t}, a^{t}\right)\right]$$。基于全局的状态s来学习一个中心式的值函数$$V_{\phi}(s)$$。
 
-MAPPO的思路和MADDPG是一样的，都是基于decentralized actor centralized critc的方式，同样是critic可以使用全局的状态信息，而actor只使用局部的状态信息。不同的是PPO是一个on policy算法，之前的multi-agent  policy gradient的算法一般都是基于off policy的算法，但是MAPPO经过简单的超参数调整就能获得比较好的成绩。
+MAPPO的思路和MADDPG是一样的，都是基于decentralized actor centralized critc的方式，同样是critic可以使用全局的状态信息，而actor只使用局部的状态信息。不同的是PPO是一个on policy 算法，之前的multi-agent  policy gradient的算法一般都是基于off policy的算法，但是MAPPO经过简单的超参数调整就能获得比较好的成绩。
 
 ## **PPO实战技巧**
 
@@ -30,7 +30,7 @@ MAPPO的思路和MADDPG是一样的，都是基于decentralized actor centralize
 
 ![img](MAPPO.assets/mappo_1.jpg)
 
-也就是说有两个网络，策略$$\pi_{\theta}$$和值函数 $$V_{\phi}$$ 值函数$$V_{\phi}$$需要学习一个映射：$$S \rightarrow \mathbb{R}$$。策略函数$$\pi_{\theta}$$学习一个映射从观测$$o_{t}^{(a)}$$到一个范围的分布或者是映射到一个[高斯函数]()的动作均值和方差用于之后采样动作。
+也就是说有两个网络，策略$$\pi_{\theta}$$和值函数 $$V_{\phi}$$ 值函数$$V_{\phi}$$需要学习一个映射：$$S \rightarrow \mathbb{R}$$。策略函数$$\pi_{\theta}$$学习一个映射从观测$$o_{t}^{(a)}$$到一个范围的分布或者是映射到一个[高斯函数]()的动作均值和方差用于之后采样动作。
 
 > 作者在文献附录中有谈到说如果智能体是同种类的就采用相同的网络参数，对于每个智能体内部也可以采用各自的`actor`和`critic`网络，但是作者为了符号的便利性，直接就用的一个网络参数来表示。
 
@@ -40,7 +40,7 @@ $$
 \begin{array}{l} L(\theta) = {\left[\frac{1}{B n} \sum_{i=1}^{B} \sum_{k=1}^{n} \min \left(r_{\theta, i}^{(k)} A_{i}^{(k)}, \operatorname{clip}\left(r_{\theta, i}^{(k)}, 1-\epsilon, 1+\epsilon\right) A_{i}^{(k)}\right)\right]} \\ \left.+\sigma \frac{1}{B n} \sum_{i=1}^{B} \sum_{k=1}^{n} S\left[\pi_{\theta}\left(o_{i}^{(k)}\right)\right)\right], \text { where } r_{\theta, i}^{(k)}=\frac{\pi_{\theta}\left(a_{i}^{(k)} \mid o_{i}^{(k)}\right)}{\pi_{\theta_{\text {old }}}\left(a_{i}^{(k)} \mid o_{i}^{(k)}\right)} . \end{array}
 $$
 
-  其中优势函数$$A_{i}^{(k)}$$是采用`GAE`方法的，S 表示策略的熵，$$\sigma$$ 是控制熵系数的一个超参数。
+  其中优势函数$$A_{i}^{(k)}$$是采用`GAE`方法的，S 表示策略的熵，$$\sigma$$ 是控制熵系数的一个超参数。
 
 - `Critic`网络优化目标为：
 
@@ -52,21 +52,23 @@ $$
 
 ## **MAPPO实战技巧**
 
+value normalization, value function inputs, training data usage, policy/value clipping, and batch size
+
 ### Value Normalization
 
 `PopArt`这个算法本来是用来处理多任务强化学习算法中，不同任务之间的奖励不一样的这样一个问题，将不同任务的奖励进行归一化处理， 只需要训练一个智能体就可以同时解决多种任务。例如，在[吃豆人](https://www.zhihu.com/search?q=%E5%90%83%E8%B1%86%E4%BA%BA&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra=%7B%22sourceType%22%3A%22article%22%2C%22sourceId%22%3A%22386559032%22%7D)(`Ms. Pac-Man`)游戏中，智能体的目标是收集小球，收集一颗奖励`10` 分，而吃掉幽灵则奖励`200`到`1600`分，这样智能体对于不同任务就会有偏重喜好。
 
-为了稳定value learning，本文借鉴了PopArt技术并且通过在value estimates中一个running average归一化value。具体来说，就是在value learning过程中，让value netwoek回归到一个normalized target value。当计算GAE时，将用这个running average 反归一化value network的输出以至于value outputs范围可以适当扩大。
+为了稳定价值函数`Value`学习，本文借鉴了PopArt技术并且通过使用价值目标的平均值和标准差的运行估计来标准化价值函数的目标。 具体来说，就是在价值学习过程中，让价值网络回归到归一化的目标值函数。
 
-`MAPPO`中采用这个技巧是用来稳定`Value`函数的学习，通过在`Value Estimates`中利用一些统计数据来归一化目标，值函数网络回归的目标就是归一化的目标值函数，但是当计算`GAE`的时候，又采用反归一化使得其放大到正常值。
+当计算GAE时，将用这个running average 对价值网络的输出进行反归一化，以便正确缩放价值输出。 发现使用值归一化不会损害训练，并且通常会显着提高 MAPPO 的最终性能。
 
 这个技巧来自文献：`Multi-task Deep Reinforcement Learning with popart`。
 
 ### **Agent-Specific Global State**
 
-对于多智能体算法而言，大部分的工作都在处理值函数这一块，因为大部分算法都是通过值函数来实现各个子智能体的相互配合。普遍认为，对于centralized value functions来说，观察到full global state 会使得一个部分可观测马尔可夫决策问题(`POMDP`)转化为了一个马尔可夫决策问题(`MDP`)。因此value learning也会更加容易，而一个正确的value function也会提升policy learning。
+对于多智能体算法而言，大部分的工作都在处理值函数这一块，因为大部分算法都是通过值函数来实现各个子智能体的相互配合。普遍认为，对于centralized value functions来说，观察到full global state 使一个部分可观测马尔可夫决策问题(`POMDP`)转化为了一个马尔可夫决策问题(`MDP`)。因此价值学习也会更加容易，而一个正确的value function也会提升policy learning。
 
-`Multi-agent actor-critic for mixed cooperative-competitive environment`中提出将所有智能体地局部观测信息拼接起来$$\left(o_{1}, \ldots, o_{n}\right)$$作为`Critic`的输入，存在的问题就是智能体数量太多之后，尤其是值函数的输入维度远高于策略函数的输入维度的时候，会使得值函数的学习变得更加困难。还有一种方法是用环境直接提供的全局信息，然而有的global state可能包含的信息比local obs更少，这个会使得value learning更加困难。
+`Multi-agent actor-critic for mixed cooperative-competitive environment`中提出将所有智能体地局部观测信息拼接起来$$\left(o_{1}, \ldots, o_{n}\right)$$作为`Critic`的输入，存在的问题就是智能体数量太多之后，尤其是值函数的输入维度远高于策略函数的输入维度的时候，会使得值函数的学习变得更加困难。还有一种方法是用环境直接提供的全局信息，然而有的global state可能包含的信息比local obs更少，这个会使得价值学习更加困难。
 
 `SMAC`环境有提供一个包含所有智能体和敌方的全局信息，但是这个信息并不完整。虽然每个智能体的局部信息中会缺失敌方的信息，但是会有一些智能体特有的信息，像智能体的`ID`、可选动作、相对距离等等，这些在全局状态信息中是没有的。因此作者构建了一个带有智能体特征的全局状态信息，包含所有的全局信息和一些必须的局部智能体特有的状态特征。
 
@@ -77,6 +79,14 @@ IPPO算法说明了将PPO应用到多智能体系统中是十分有效的。本�
 ### **Training Data Usage**
 
 防止同一份数据训练次数过多。简单任务中推荐使用 15 training epochs，而对于较难的任务，尝试 10 或者 5 training epochs。除此之外，尽量使用一整份的训练数据，而不要切成很多小份的mini-batch训练。
+
+### PPO Clipping
+
+PPO 的另一个核心特性是使用裁剪的重要性比率和价值损失来防止策略和价值函数在迭代之间发生剧烈变化。 裁剪强度由超参数 $epslion$ 控制：较大的 $epslion$  值允许对策略和值函数进行较大的更新。 与训练 epoch 的数量类似，我们假设策略和值裁剪可以控制训练期间所有Agent的策略变化引起的非平稳性。 对于小的 $epslion$ ，智能体的策略每次更新的变化可能会更少，我们认为这会提高整体学习稳定性，但可能会牺牲学习速度。 在单Agent设置中，常见值为 0.2。
+
+### PPO Batch Size
+
+在训练更新期间，PPO 对一组策略上的轨迹进行采样，这些轨迹用于估计策略和价值函数目标的梯度。 由于我们的训练中mini-batches的数量是固定的（参见第 5.3 节），更大的批量通常会导致更准确的梯度，从而更好地更新价值函数和策略。 但是，批次的累积受到可用计算量和内存量的限制：收集大量轨迹需要广泛的并行性以提高效率，batch 需要存储在 GPU 内存中。因此，就所需的计算和样本效率而言，大批量可能会造成浪费。
 
 ### **Action Masking**
 
@@ -92,7 +102,7 @@ IPPO算法说明了将PPO应用到多智能体系统中是十分有效的。本�
 
 ### **总体理解**
 
-每个局部智能体接收一个局部的观察`obs`，输出一个动作概率，所有的`actor`智能体都采用一个`actor`网络。`critic`网络接收所有智能体的观测`obs`，$$cent\_obs\_space= n \times obs\_space$$ 其中 n 为智能体的个数，输出为一个 V 值，这个V值用于`actor`的更新。`actor`的`loss`和`PPO`的`loss`类似，有添加一个熵的`loss`。`Critic`的`loss`更多的是对`value`的值做`normalizer`，并且在计算`episode`的折扣奖励的时候不是单纯的算折扣奖励，有采用`gae`算折扣回报的方式。
+每个局部智能体接收一个局部的观察`obs`，输出一个动作概率，所有的`actor`智能体都采用一个`actor`网络。`critic`网络接收所有智能体的观测`obs`，$$cent\_obs\_space= n \times obs\_space$$ 其中 n 为智能体的个数，输出为一个 V 值，这个V值用于`actor`的更新。`actor`的`loss`和`PPO`的`loss`类似，有添加一个熵的`loss`。`Critic`的`loss`更多的是对`value`的值做`normalizer`，并且在计算`episode`的折扣奖励的时候不是单纯的算折扣奖励，有采用`gae`算折扣回报的方式。
 
 - 网络定义
 
