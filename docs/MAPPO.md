@@ -104,11 +104,11 @@ PPO 的另一个核心特性是使用裁剪的重要性比率和价值损失来�
 
 每个局部智能体接收一个局部的观察`obs`，输出一个动作概率，所有的`actor`智能体都采用一个`actor`网络。`critic`网络接收所有智能体的观测`obs`，$$cent\_obs\_space= n \times obs\_space$$ 其中 n 为智能体的个数，输出为一个 V 值，这个V值用于`actor`的更新。`actor`的`loss`和`PPO`的`loss`类似，有添加一个熵的`loss`。`Critic`的`loss`更多的是对`value`的值做`normalizer`，并且在计算`episode`的折扣奖励的时候不是单纯的算折扣奖励，有采用`gae`算折扣回报的方式。
 
-- 网络定义
+#### 网络定义
 
-  代码定义在`onpolicy/algorithms/r_mappo/algorithm/rMAPPOPolicy.py`
+代码定义在`onpolicy/algorithms/r_mappo/algorithm/rMAPPOPolicy.py`
 
-  每一个智能体的观测`obs_space`为一个`14`维的向量，有两个智能体，`cent_obs_space`为一个`28`纬的向量，单个智能体的动作空间`act_space`为一个离散的`5`个维度的向量。
+每一个智能体的观测`obs_space`为一个`14`维的向量，有两个智能体，`cent_obs_space`为一个`28`纬的向量，单个智能体的动作空间`act_space`为一个离散的`5`个维度的向量。
 
 - **actor**
 
@@ -124,18 +124,33 @@ action_log_probs = action_logits.log_probs(actions)
 
 - **critic**
 
-`critic`输入维度为$$cent_obs_space= n \\times obs_space = 28$$。输出是一个特征值向量，也就是输出纬度为`1`。
+`critic`输入维度为cent_obs_space= n * obs_space = 28。输出是一个特征值向量，也就是输出纬度为`1`。
 
-### **采样流程**
+#### **采样流程**
 
 - **初始化初始的观测**
 
-  实例化`5`个环境：
+```python
+def make_train_env(all_args):
+    def get_env_fn(rank):
+        def init_env():
+            if all_args.env_name == "StarCraft2":
+                env = StarCraft2Env(all_args)
+            else:
+                print("Can not support the " + all_args.env_name + "environment.")
+                raise NotImplementedError
+            env.seed(all_args.seed + rank * 1000)
+            return env
 
-```python3
-# all_args.n_rollout_threads
-SubprocVecEnv([get_env_fn(i) for i in range(all_args.n_rollout_threads)])
+        return init_env
+
+    if all_args.n_rollout_threads == 1:
+        return ShareDummyVecEnv([get_env_fn(0)])
+    else:
+        return ShareSubprocVecEnv([get_env_fn(i) for i in range(all_args.n_rollout_threads)])
 ```
+
+根据参数实例化多个环境：  all_args.n_rollout_threads， 一般为32
 
 如果采用`centralized_V`值函数的训练方式，则需要初始化的时候构造出多个智能体的`share_obs`：
 
@@ -152,34 +167,88 @@ share_obs = np.expand_dims(share_obs, 1).repeat(self.num_agents, axis=1) # shape
 
   调用`self.trainer.prep_rollout()`函数将`actor`和`critic`都设置为`eval()`格式。然后用`np.concatenate()`函数将并行的环境的数据拼接在一起，这一步是将并行采样的那个纬度降掉：
 
+代码在 `on-policy/onpolicy/algorithms/r_mappo/r_mappo.py`
+
 ```python
-value, action, action_log_prob, rnn_states, rnn_states_critic \
-            = self.trainer.policy.get_actions(np.concatenate(self.buffer.share_obs[step]),
-                            np.concatenate(self.buffer.obs[step]),
-                            np.concatenate(self.buffer.rnn_states[step]),
-                            np.concatenate(self.buffer.rnn_states_critic[step]),
-                            np.concatenate(self.buffer.masks[step]))
+def prep_rollout(self):
+  self.policy.actor.eval()
+  self.policy.critic.eval()
+```
+
+代码在 `on-policy/onpolicy/runner/shared/smac_runner.py`
+
+```python
+@torch.no_grad()
+def collect(self, step):
+  self.trainer.prep_rollout()
+  value, action, action_log_prob, rnn_state, rnn_state_critic \
+  = self.trainer.policy.get_actions(np.concatenate(self.buffer.share_obs[step]),
+                                    np.concatenate(self.buffer.obs[step]),
+                                    np.concatenate(self.buffer.rnn_states[step]),
+                                    np.concatenate(self.buffer.rnn_states_critic[step]),
+                                    np.concatenate(self.buffer.masks[step]),
+                                    np.concatenate(self.buffer.available_actions[step]))
+  # [self.envs, agents, dim]
+  values = np.array(np.split(_t2n(value), self.n_rollout_threads))
+  actions = np.array(np.split(_t2n(action), self.n_rollout_threads))
+  action_log_probs = np.array(np.split(_t2n(action_log_prob), self.n_rollout_threads))
+  rnn_states = np.array(np.split(_t2n(rnn_state), self.n_rollout_threads))
+  rnn_states_critic = np.array(np.split(_t2n(rnn_state_critic), self.n_rollout_threads))
+
+  return values, actions, action_log_probs, rnn_states, rnn_states_critic
 ```
 
 上面的代码就是将数据传入总的`MAPPO`策略网络`R_MAPPOPolicy`(`onpolicy/algorithms/r_mappo/algorithm/rMAPPOPolicy.py`)中去获取一个时间步的数据。在`get_actions()`函数里面会调用`actor`去获取动作和动作的对数概率，`critic`网络去获取对于`cent_obs`的状态值函数的输出：
 
 ```python
-actions, action_log_probs, rnn_states_actor = self.actor(obs,
-            rnn_states_actor,
-            masks,
-            available_actions,
-            deterministic)
+def get_actions(self, cent_obs, obs, rnn_states_actor, rnn_states_critic, masks, available_actions=None,
+                deterministic=False):
+  """
+        Compute actions and value function predictions for the given inputs.
+        :param cent_obs (np.ndarray): centralized input to the critic.
+        :param obs (np.ndarray): local agent inputs to the actor.
+        :param rnn_states_actor: (np.ndarray) if actor is RNN, RNN states for actor.
+        :param rnn_states_critic: (np.ndarray) if critic is RNN, RNN states for critic.
+        :param masks: (np.ndarray) denotes points at which RNN states should be reset.
+        :param available_actions: (np.ndarray) denotes which actions are available to agent
+                                  (if None, all actions available)
+        :param deterministic: (bool) whether the action should be mode of distribution or should be sampled.
+
+        :return values: (torch.Tensor) value function predictions.
+        :return actions: (torch.Tensor) actions to take.
+        :return action_log_probs: (torch.Tensor) log probabilities of chosen actions.
+        :return rnn_states_actor: (torch.Tensor) updated actor network RNN states.
+        :return rnn_states_critic: (torch.Tensor) updated critic network RNN states.
+        """
+  actions, action_log_probs, rnn_states_actor = self.actor(obs,
+                                                           rnn_states_actor,
+                                                           masks,
+                                                           available_actions,
+                                                           deterministic)
+
+  values, rnn_states_critic = self.critic(cent_obs, rnn_states_critic, masks)
+  return values, actions, action_log_probs, rnn_states_actor, rnn_states_critic
 ```
 
 `obs`这里的`shape`是(`5*2, 14`)，输出`actions`的`shape`, 和`action_log_probs`的`shape`都为(`10 , 1`)。
 
 ```python
-values, rnn_states_critic = self.critic(cent_obs, rnn_states_critic, masks)
+def get_values(self, cent_obs, rnn_states_critic, masks):
+  """
+        Get value function predictions.
+        :param cent_obs (np.ndarray): centralized input to the critic.
+        :param rnn_states_critic: (np.ndarray) if critic is RNN, RNN states for critic.
+        :param masks: (np.ndarray) denotes points at which RNN states should be reset.
+
+        :return values: (torch.Tensor) value function predictions.
+        """
+  values, rnn_states_critic = self.critic(cent_obs, rnn_states_critic, masks)
+  return values
 ```
 
 `cent_obs`的`shape`是(`5*2, 28`)，输出是`shape=(10, 1)`。
 
-最后将(`10 , 1`)的`actions`转换成(`5, 2, 1`)的形式，方便之后并行送到并行的环境中去，作者这里还将动作进行了`one-hot`编码，最后变成了(`5, 2, 5`)的形式送入到环境中去。
+最后将(`10 , 1`)的`actions`转换成(`5, 2, 1`)的形式，方便之后并行送到并行的环境中去，作者这里还将动作进行了`one-hot`编码，最后变成了(`5, 2, 5`)的形式送入到环境中去。代码在 `smac_runner`(`on-policy/onpolicy/runner/shared/smac_runner.py`).
 
 ```python3
 obs, rewards, dones, infos = self.envs.step(actions_env)
@@ -188,7 +257,7 @@ data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states
 self.insert(data)
 ```
 
-环境下一次输出的`obs`还是(`5, 2, 14`)的形式，之后调`insert`方法将数据添加到`buffer`里面，在`insert`方法里面会将局部观测构造一个全局观测`share_obs`其shape=(`5, 2, 28`)出来：
+环境下一次输出的`obs`还是(`5, 2, 14`)的形式，  之后调`insert`方法将数据添加到`buffer`里面，在`insert`方法里面会将局部观测构造一个全局观测`share_obs`其shape=(`5, 2, 28`)出来：代码在 `smac_runner`(`on-policy/onpolicy/runner/shared/smac_runner.py`).
 
 ```python
 def insert(self, data):
@@ -215,6 +284,8 @@ def insert(self, data):
 - **计算优势函数**
 
 训练开始之前，首先调用`self.compute()`函数计算这个`episode`的折扣回报，在计算折扣回报之前，先算这个`episode`最后一个状态的状态值函数`next_values`，其`shape=(10, 1)`然后调用`compute_returns`函数计算折扣回报：
+
+代码在 `smac_runner`(`on-policy/onpolicy/runner/shared/smac_runner.py`).
 
 ```python
 def compute(self):
