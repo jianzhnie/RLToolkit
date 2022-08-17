@@ -1,5 +1,37 @@
 # MAPPO
 
+MAPPO是一种多代理最近策略优化深度强化学习算法，它是一种on-policy算法，采用的是经典的actor-critic架构，其最终目的是寻找一种最优策略，用于生成agent的最优动作。
+
+## 场景设定
+
+一般来说，多智能体强化学习有四种场景设定：
+
+![在这里插入图片描述](MAPPO.assets/84ffdc2f403a4103b3c65873290a5690.png)
+
+通过调整MAPPO算法可以实现不同场景的应用，但就此篇论文来说，其将MAPPO算法用于Fully cooperative场景中，在本文中所有Agent共享奖励（共用一个奖励函数)，即所有智能体的奖励由一套公式生成。
+
+## 通信架构
+
+现有的多 agent 深度强化学习算法通信方式主要由三种：
+
+- 全通信集中决策：联合感知，中心决策（神经网络内部通信）
+- 全通信自主决策：联合感知，独立决策（神经网络之前通信）
+- 欠通信自主决策：无信息交互，独立决策（一般用循环神经网络）
+
+不同的算法框架决定了不同的通信方式，MAPPO有中心式、分散式和混合式三种框架。
+
+![在这里插入图片描述](MAPPO.assets/cd48373eef194828b8bd518b7224f824.png)
+
+我们在应用MAPPO算法时，应该先明确算法框架，用的最多是混合式的框架，即中心化训练、去中心化执行的框架，刚开始时智能体将自己的状态观测数据传递给中心控制器，中央控制器得到全局状态S后对模型进行训练，得到最优分散控制策略后传给agent，训练完后智能体就可以不再与中心控制器通信，可以基于自己的局部观测状态通过自己的动作策略函数来产生最优动作。
+
+![在这里插入图片描述](MAPPO.assets/59097a747afd4da2836b931aced5d66d.png)
+
+值得注意的是，在这种框架中每个智能体有单独的actor-critic网络，训练时智能体自己的actor网络要接受每个critic的打分。
+
+![在这里插入图片描述](MAPPO.assets/20210710220735586.png)
+
+
+
 多智能体强化学习算法大致上可以分为两类，**[中心式](<>)** 和 **分散式**。**中心式**的思想是考虑一个合作式的环境，直接将单智能体算法扩展，让其直接学习一个联合动作的输出，但是并不好给出单个智能体该如何进行决策。**分散式**是每个智能体独立学习自己的奖励函数，对于每个智能体来说，其它智能体就是环境的一部分，因此往往需要去考虑环境的非平稳态。并且分散式学习到的并不是全局的策略。
 
 最近的一些工作提出了两种框架连接中心式和分散式这两种极端方法，从而得到折衷的办法：**中心式训练分散式执行**(`centealized training and decentralized execution CTDE`)和 **值分解** (`value decomposition VD`)。
@@ -12,17 +44,29 @@
 
 MAPPO的思路和MADDPG是一样的，都是基于decentralized actor centralized critc的方式，同样是critic可以使用全局的状态信息，而actor只使用局部的状态信息。不同的是PPO是一个on policy 算法，之前的multi-agent  policy gradient的算法一般都是基于off policy的算法，但是MAPPO经过简单的超参数调整就能获得比较好的成绩。
 
-## **PPO实战技巧**
+## MAPPO算法推导
 
-对于单个智能体来说，`PPO`中实战的技巧也都有采用过来：
+对于多智能体任务，我们的目标是确定最优分散策略π来最大化折扣回报η(π)，它等于状态价值函数的期望值。
 
-1. `Generalized Advantage Estimation`：这个技巧来自文献：Hign-dimensional continuous control using generalized advantage estimation。
-2. `Input Normalization`
-3. `Value Clipping`：与策略截断类似，将值函数进行一个截断。
-4. `Relu activation with Orthogonal Initialization`：
-5. `Gredient Clipping`：梯度更新不要太大。
-6. `Layer Normalization`：这个技巧来自文献：Regularization matters in policy optimization-an empirical study on continuous control。
-7. `Soft Trust-Region Penalty`：这个技巧来自文件：Revisiting design choices in proximal policy optimization。
+![在这里插入图片描述](MAPPO.assets/2021071021274089.png)
+
+
+
+那么找到最优分散策略（也即每个智能体的策略函数)使回报最大，成为模型训练的最终目的。
+
+# 参数更新
+
+跟单智能体通过迭代训练更新网络参数一样，MAPPO算法也是用一些策略梯度算法（不同文章可能采用不同的策略梯度）来更新神经网络参数ω、θ，因此训练的核心就成为了更新参数ω、θ。
+![在这里插入图片描述](MAPPO.assets/8ea17f2b8e304794b78bf92133dffec4.png)
+
+![在这里插入图片描述](MAPPO.assets/0460dffdf8be4326a4b436dfc8699b6d.png)
+
+
+
+![在这里插入图片描述](MAPPO.assets/ef7ae300e9584fea9e882e56cc86c414.png)
+![在这里插入图片描述](MAPPO.assets/2074dc24b0ea438eb81972d146727062.png)
+
+
 
 ## **MAPPO伪代码**
 
@@ -49,6 +93,32 @@ $$
 $$
 
   其中$$\hat{R}_{i}$$是折扣奖励。B 表示`batch_size`的大小，$n$ 表示智能体的数量。
+
+基本流程是：
+
+1. 初始化Q和π，神经网络参数ω、θ为超参数（ω、θ开始时随机初始化，通过训练来改进ω、θ）
+2.  初试化relay buffer D
+3. 在一个定义步长内，arent u执行策略函数π(old)产生的动作，得到reward r(t)和下一个状态s(t+1)
+4.  通过计算得到矩形框内数据
+5. 储存数据到buffer D中去
+6. 打乱D中的数据顺序，并从新编号（从而打破数据之间的相关性，从而稳定训练过程）
+7. 抽取数据并更新ω、θ，然后用更新后的参数去更新Q和π。
+
+
+
+## **PPO实战技巧**
+
+对于单个智能体来说，`PPO`中实战的技巧也都有采用过来：
+
+1. `Generalized Advantage Estimation`：这个技巧来自文献：Hign-dimensional continuous control using generalized advantage estimation。
+2. `Input Normalization`
+3. `Value Clipping`：与策略截断类似，将值函数进行一个截断。
+4. `Relu activation with Orthogonal Initialization`：
+5. `Gredient Clipping`：梯度更新不要太大。
+6. `Layer Normalization`：这个技巧来自文献：Regularization matters in policy optimization-an empirical study on continuous control。
+7. `Soft Trust-Region Penalty`：这个技巧来自文件：Revisiting design choices in proximal policy optimization。
+
+
 
 ## **MAPPO实战技巧**
 
@@ -281,7 +351,7 @@ def insert(self, data):
 
 ### **训练流程**
 
-- **计算优势函数**
+#### **计算优势函数**
 
 训练开始之前，首先调用`self.compute()`函数计算这个`episode`的折扣回报，在计算折扣回报之前，先算这个`episode`最后一个状态的状态值函数`next_values`，其`shape=(10, 1)`然后调用`compute_returns`函数计算折扣回报：
 
@@ -298,7 +368,7 @@ def compute(self):
     self.buffer.compute_returns(next_values, self.trainer.value_normalizer)
 ```
 
-有了数据之后就可以开始计算折扣回报了(这里有采用`gae`算折扣回报的方式，并且有将`value`做`normalizer`)。`compute_returns`函数在`onpolicy/utils/shared_buffer.py`文件中，核心代码如下：
+有了数据之后就可以开始计算折扣回报了 (这里有采用`gae`算折扣回报的方式，并且有将`value`做`normalizer`)。`compute_returns`函数在`onpolicy/utils/shared_buffer.py`文件中，核心代码如下：
 
 ```python
 self.value_preds[-1] = next_value
@@ -342,9 +412,9 @@ share_obs_batch, obs_batch, rnn_states_batch, rnn_states_critic_batch, actions_b
 
 拿到采样之后的数据，把`obs`送给`actor`网络，得到`action_log_probs`, `dist_entropy`。把`cent_obs`送到`critic`得到新的`values`。
 
-- **计算actor的loss**
+#### **计算actor的loss**
 
-  有了新老动作的概率分布和优势函数之后就可以更新`actor`网络了：
+有了新老动作的概率分布和优势函数之后就可以更新`actor`网络了：
 
 ```python
 # actor update
@@ -358,9 +428,9 @@ policy_action_loss = (-torch.sum(torch.min(surr1, surr2),
 (policy_loss - dist_entropy * self.entropy_coef).backward()
 ```
 
-- **计算critic的loss**
+#### **计算critic的loss**
 
-  新的`value`和老的`value_preds_batch`和计算的`return_batch`送到`onpolicy/algorithms/r_mappo/r_mappo.py`文件的`cal_value_loss`函数中去计算`critic`的`loss`：
+新的`value`和老的`value_preds_batch`和计算的`return_batch`送到`onpolicy/algorithms/r_mappo/r_mappo.py`文件的`cal_value_loss`函数中去计算`critic`的`loss`：
 
 ```python
 value_loss = self.cal_value_loss(values, value_preds_batch, return_batch, active_masks_batch)
@@ -394,5 +464,4 @@ value_loss_original = mse_loss(error_original)
 
 ## Reference
 
-- <https://arxiv.org/abs/2103.01955>
-- <https://github.com/marlbenchmark/on-policy>
+- The Surprising Effectiveness of MAPPO in Cooperative, Multi-Agent Games [paper]( https://arxiv.org/abs/2103.01955>)   [code](<https://github.com/marlbenchmark/on-policy>)
