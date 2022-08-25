@@ -1,3 +1,4 @@
+# ! <https://zhuanlan.zhihu.com/p/556843575>
 # MAPPO
 
 MAPPO是一种多代理最近策略优化深度强化学习算法，它是一种on-policy算法，采用的是经典的actor-critic架构，其最终目的是寻找一种最优策略，用于生成agent的最优动作。
@@ -320,7 +321,7 @@ def get_values(self, cent_obs, rnn_states_critic, masks):
 
 最后将(`10 , 1`)的`actions`转换成(`5, 2, 1`)的形式，方便之后并行送到并行的环境中去，作者这里还将动作进行了`one-hot`编码，最后变成了(`5, 2, 5`)的形式送入到环境中去。代码在 `smac_runner`(`on-policy/onpolicy/runner/shared/smac_runner.py`).
 
-```python3
+```python
 obs, rewards, dones, infos = self.envs.step(actions_env)
 data = obs, rewards, dones, infos, values, actions, action_log_probs, rnn_states, rnn_states_critic
 # insert data into buffer
