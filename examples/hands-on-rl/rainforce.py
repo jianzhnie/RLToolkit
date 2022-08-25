@@ -78,9 +78,31 @@ class REINFORCE:
             returns.insert(0, G)
 
         returns = torch.tensor(returns)
-        returns = (returns - returns.mean()) / (returns.std() + eps)
+        # returns = (returns - returns.mean()) / (returns.std() + eps)
         for log_prob, G in zip(log_prob_list, returns):
             policy_loss.append(-log_prob * G)
+
+        self.optimizer.zero_grad()
+        loss = torch.cat(policy_loss).sum()
+        loss.backward()  # 反向传播计算梯度
+        self.optimizer.step()  # 梯度下降
+
+    def update_with_baseline(self, transition_dict):
+        reward_list = transition_dict['rewards']
+        log_prob_list = transition_dict['log_probs']
+
+        G = 0
+        returns = []
+        policy_loss = []
+        for i in reversed(range(len(reward_list))):  # 从最后一步算起
+            reward = reward_list[i]
+            G = self.gamma * G + reward
+            returns.insert(0, G)
+
+        returns = torch.tensor(returns)
+        baseline = torch.mean(returns)
+        for log_prob, G in zip(log_prob_list, returns):
+            policy_loss.append(-log_prob * (G - baseline))
 
         self.optimizer.zero_grad()
         loss = torch.cat(policy_loss).sum()
@@ -90,7 +112,7 @@ class REINFORCE:
 
 if __name__ == '__main__':
     learning_rate = 1e-3
-    num_episodes = 80
+    num_episodes = 100
     hidden_dim = 128
     gamma = 0.98
     device = torch.device(
@@ -107,7 +129,7 @@ if __name__ == '__main__':
                       device)
 
     return_list = []
-    for i in range(20):
+    for i in range(10):
         with tqdm(int(num_episodes), desc='Iteration %d' % i) as pbar:
             for i_episode in range(int(num_episodes)):
                 episode_return = 0
@@ -133,7 +155,7 @@ if __name__ == '__main__':
                     state = next_state
                     episode_return += reward
                 return_list.append(episode_return)
-                agent.update(transition_dict)
+                agent.update_with_baseline(transition_dict)
                 if (i_episode + 1) % 10 == 0:
                     pbar.set_postfix({
                         'episode':
