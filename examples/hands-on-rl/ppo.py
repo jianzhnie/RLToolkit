@@ -89,8 +89,8 @@ class PPO:
         td_target = rewards + self.gamma * self.critic(next_states) * (1 -
                                                                        dones)
         td_delta = td_target - self.critic(states)
-        advantage = rl_utils.compute_advantage(self.gamma, self.lmbda,
-                                               td_delta.cpu()).to(self.device)
+        advantage = self.compute_advantage(self.gamma, self.lmbda,
+                                           td_delta.cpu()).to(self.device)
         old_log_probs = torch.log(self.actor(states).gather(1,
                                                             actions)).detach()
 

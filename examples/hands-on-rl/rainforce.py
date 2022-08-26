@@ -28,7 +28,7 @@ class PolicyNet(nn.Module):
         return x
 
 
-class REINFORCE:
+class REINFORCE(object):
 
     def __init__(self, state_dim, hidden_dim, action_dim, learning_rate, gamma,
                  device):
@@ -107,6 +107,25 @@ class REINFORCE:
         self.optimizer.zero_grad()
         loss = torch.cat(policy_loss).sum()
         loss.backward()  # 反向传播计算梯度
+        self.optimizer.step()  # 梯度下降
+
+    def update_with_baseline_(self, transition_dict):
+        reward_list = transition_dict['rewards']
+        log_prob_list = transition_dict['log_probs']
+
+        G = 0
+        returns = []
+        self.optimizer.zero_grad()
+        for i in reversed(range(len(reward_list))):  # 从最后一步算起
+            reward = reward_list[i]
+            G = self.gamma * G + reward
+            returns.insert(0, G)
+
+        returns = torch.tensor(returns)
+        baseline = torch.mean(returns)
+        for log_prob, G in zip(log_prob_list, returns):
+            loss = -log_prob * (G - baseline)  # 每一步的损失函数
+            loss.backward()  # 反向传播计算梯度
         self.optimizer.step()  # 梯度下降
 
 
