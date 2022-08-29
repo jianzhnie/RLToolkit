@@ -35,8 +35,10 @@ class REINFORCE(object):
         self.policy_net = PolicyNet(state_dim, hidden_dim,
                                     action_dim).to(device)
         self.optimizer = torch.optim.Adam(
-            self.policy_net.parameters(), lr=learning_rate)  # 使用Adam优化器
-        self.gamma = gamma  # 折扣因子
+            self.policy_net.parameters(), lr=learning_rate)
+        # 使用Adam优化器
+        self.gamma = gamma
+        # 折扣因子
         self.device = device
 
     def take_action(self, state):  # 根据动作概率分布随机采样
@@ -78,7 +80,7 @@ class REINFORCE(object):
             returns.insert(0, G)
 
         returns = torch.tensor(returns)
-        # returns = (returns - returns.mean()) / (returns.std() + eps)
+        returns = (returns - returns.mean()) / (returns.std() + eps)
         for log_prob, G in zip(log_prob_list, returns):
             policy_loss.append(-log_prob * G)
 
@@ -107,25 +109,6 @@ class REINFORCE(object):
         self.optimizer.zero_grad()
         loss = torch.cat(policy_loss).sum()
         loss.backward()  # 反向传播计算梯度
-        self.optimizer.step()  # 梯度下降
-
-    def update_with_baseline_(self, transition_dict):
-        reward_list = transition_dict['rewards']
-        log_prob_list = transition_dict['log_probs']
-
-        G = 0
-        returns = []
-        self.optimizer.zero_grad()
-        for i in reversed(range(len(reward_list))):  # 从最后一步算起
-            reward = reward_list[i]
-            G = self.gamma * G + reward
-            returns.insert(0, G)
-
-        returns = torch.tensor(returns)
-        baseline = torch.mean(returns)
-        for log_prob, G in zip(log_prob_list, returns):
-            loss = -log_prob * (G - baseline)  # 每一步的损失函数
-            loss.backward()  # 反向传播计算梯度
         self.optimizer.step()  # 梯度下降
 
 
