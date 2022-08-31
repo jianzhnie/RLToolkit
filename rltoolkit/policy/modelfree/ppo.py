@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 
-class PPO():
+class PPO(object):
 
     def __init__(self,
                  actor_critic,
@@ -49,8 +49,8 @@ class PPO():
                     advantages, self.num_mini_batch)
 
             for sample in data_generator:
-                obs_batch, recurrent_hidden_states_batch, actions_batch, value_preds_batch, return_batch, masks_batch, old_action_log_probs_batch, \
-                        adv_targ = sample
+                obs_batch, recurrent_hidden_states_batch, actions_batch, value_preds_batch, return_batch,\
+                     masks_batch, old_action_log_probs_batch, adv_targ = sample
 
                 # Reshape to do in a single forward pass for all steps
                 values, action_log_probs, dist_entropy, _ = self.actor_critic.evaluate_actions(
