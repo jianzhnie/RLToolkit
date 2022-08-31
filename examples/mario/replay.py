@@ -7,7 +7,7 @@ from gym.wrappers import FrameStack, GrayScaleObservation, TransformObservation
 from nes_py.wrappers import JoypadSpace
 
 from rltoolkit.core.metrics import MetricLogger
-from rltoolkit.utils.wrappers import ResizeObservation, SkipFrame
+from rltoolkit.env.gym_wrappers import ResizeObservation, SkipFrame
 
 env = gym_super_mario_bros.make('SuperMarioBros-1-1-v0')
 

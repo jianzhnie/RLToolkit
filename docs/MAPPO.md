@@ -1,4 +1,3 @@
-# ! <https://zhuanlan.zhihu.com/p/556843575>
 # MAPPO
 
 MAPPO是一种多代理最近策略优化深度强化学习算法，它是一种on-policy算法，采用的是经典的actor-critic架构，其最终目的是寻找一种最优策略，用于生成agent的最优动作。
@@ -41,9 +40,9 @@ MAPPO是一种多代理最近策略优化深度强化学习算法，它是一种
 
 `MAPPO`采用一种中心式的值函数方式来考虑全局信息，属于`CTDE`框架范畴内的一种方法，通过一个全局的值函数来使得各个单个的`PPO`智能体相互配合。它有一个前身`IPPO`，是一个完全分散式的`PPO`算法，类似`IQL`算法。
 
-`MAPPO`中每个智能体i基于局部观测$$o_{i}$$和一个共享策略(这里的共享策略是针对智能体是同类型的情况而言的，对于非同类型的，可以拥有自己独立的`actor`和`critic`网络)  $$\pi_{\theta}(a_{i}|o_{i}$$)去生成一个动作$$a_{i}$$来最大化折扣累积奖励：$$J(\theta)=\mathbb{E}_{a^{t}, s^{t}}\left[\sum_{t} \gamma^{t} R\left(s^{t}, a^{t}\right)\right]$$。基于全局的状态s来学习一个中心式的值函数$$V_{\phi}(s)$$。
+`MAPPO`中每个智能体i基于局部观测$$o_{i}$$和一个共享策略(这里的共享策略是针对智能体是同类型的情况而言的，对于非同类型的，可以拥有自己独立的`actor`和`critic`网络)  $$\pi_{\theta}(a_{i}|o_{i}$$)去生成一个动作$$a_{i}$$来最大化折扣累积奖励：$J(\theta)=\mathbb{E}_{a^{t}, s^{t}}\left[\sum_{t} \gamma^{t} R\left(s^{t}, a^{t}\right)\right]$$。基于全局的状态s来学习一个中心式的值函数$$V_{\phi}(s)$$。
 
-MAPPO的思路和MADDPG是一样的，都是基于decentralized actor centralized critc的方式，同样是critic可以使用全局的状态信息，而actor只使用局部的状态信息。不同的是PPO是一个on policy 算法，之前的multi-agent  policy gradient的算法一般都是基于off policy的算法，但是MAPPO经过简单的超参数调整就能获得比较好的成绩。
+MAPPO的思路和MADDPG是一样的，都是基于`decentralized actor centralized critc`的方式，同样是critic可以使用全局的状态信息，而actor只使用局部的状态信息。不同的是PPO是一个on policy 算法，之前的multi-agent  policy gradient的算法一般都是基于off policy的算法，但是MAPPO经过简单的超参数调整就能获得比较好的成绩。
 
 ## MAPPO算法推导
 
@@ -55,7 +54,7 @@ MAPPO的思路和MADDPG是一样的，都是基于decentralized actor centralize
 
 那么找到最优分散策略（也即每个智能体的策略函数)使回报最大，成为模型训练的最终目的。
 
-# 参数更新
+### 参数更新
 
 跟单智能体通过迭代训练更新网络参数一样，MAPPO算法也是用一些策略梯度算法（不同文章可能采用不同的策略梯度）来更新神经网络参数ω、θ，因此训练的核心就成为了更新参数ω、θ。
 ![在这里插入图片描述](MAPPO.assets/8ea17f2b8e304794b78bf92133dffec4.png)
@@ -75,7 +74,9 @@ MAPPO的思路和MADDPG是一样的，都是基于decentralized actor centralize
 
 ![img](MAPPO.assets/mappo_1.jpg)
 
-也就是说有两个网络，策略$$\pi_{\theta}$$和值函数 $$V_{\phi}$$ 值函数$$V_{\phi}$$需要学习一个映射：$$S \rightarrow \mathbb{R}$$。策略函数$$\pi_{\theta}$$学习一个映射从观测$$o_{t}^{(a)}$$到一个范围的分布或者是映射到一个[高斯函数]()的动作均值和方差用于之后采样动作。
+也就是说有两个网络，策略$\pi_{\theta}$和值函数 $V_{\phi}$$ 值函数$$V_{\phi}$$需要学习一个映射：$$S \rightarrow \mathbb{R}$$。策略函数$$\pi_{\theta}$$学习一个映射从观测$$o_{t}^{(a)}$到一个范围的分布或者是映射到一个[高斯函数]()的动作均值和方差用于之后采样动作。
+
+##
 
 > 作者在文献附录中有谈到说如果智能体是同种类的就采用相同的网络参数，对于每个智能体内部也可以采用各自的`actor`和`critic`网络，但是作者为了符号的便利性，直接就用的一个网络参数来表示。
 
