@@ -1,3 +1,12 @@
+'''
+Author: jianzhnie@126.com
+Date: 2022-08-31 18:26:44
+LastEditors: jianzhnie@126.com
+LastEditTime: 2022-09-01 12:28:21
+Description:
+
+Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
+'''
 import torch
 import torch.nn as nn
 

@@ -1,7 +1,16 @@
+'''
+Author: jianzhnie@126.com
+Date: 2022-08-31 18:06:47
+LastEditors: jianzhnie@126.com
+LastEditTime: 2022-09-01 12:28:02
+Description:
+
+Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
+'''
 import torch.nn as nn
 
+from ..core.models.net import CNNBase, MLPBase
 from .distributions import Bernoulli, Categorical, DiagGaussian
-from .net import CNNBase, MLPBase
 
 
 class ActorCrticAgent(nn.Module):
