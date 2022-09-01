@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from ...core.kfac import KFACOptimizer
+from ...core.optim.kfac import KFACOptimizer
 
 
 class A2C_ACKTR():
