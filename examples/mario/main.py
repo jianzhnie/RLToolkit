@@ -8,7 +8,7 @@ from agent import Mario
 from gym.wrappers import FrameStack, GrayScaleObservation, TransformObservation
 from nes_py.wrappers import JoypadSpace
 
-from rltoolkit.core.metrics import MetricLogger
+from rltoolkit.core.logger.metric_logger import MetricLogger
 from rltoolkit.utils.gym_wrappers import ResizeObservation, SkipFrame
 
 sys.path.append('../../')
