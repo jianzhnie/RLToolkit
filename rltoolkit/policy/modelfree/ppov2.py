@@ -2,7 +2,7 @@
 Author: jianzhnie@126.com
 Date: 2022-09-01 12:33:42
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 09:00:12
+LastEditTime: 2022-09-02 10:47:03
 Description:
 
 Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
@@ -180,7 +180,7 @@ class PPO(Algorithm):
         else:
             logits = self.model.policy(obs)
             dist = Categorical(logits=logits)
-            action = dist.probs.argmax(dim=-1, keepdim=True)
+            action = dist.probs.argmax(dim=-1)
         return action
 
     def value(self, obs):
