@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-01 15:16:40
 LastEditors: jianzhnie
-LastEditTime: 2022-09-01 15:24:32
+LastEditTime: 2022-09-02 10:49:43
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 
@@ -18,12 +18,11 @@ from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 class PPOAgent(Agent):
 
-    def __init__(self, algorithm, config):
+    def __init__(self, algorithm, config, device):
         super(PPOAgent, self).__init__(algorithm)
 
         self.config = config
-        self.device = torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = device
         if self.config['lr_decay']:
             self.lr_scheduler = LinearDecayScheduler(
                 self.config['initial_lr'], self.config['num_updates'])
@@ -31,7 +30,7 @@ class PPOAgent(Agent):
     def predict(self, obs):
         obs = torch.FloatTensor(obs).unsqueeze(0).to(self.device)
         action = self.alg.predict(obs)
-        action_numpy = action.cpu().detach().numpy().flatten()
+        action_numpy = action.cpu().detach().numpy()
         return action_numpy
 
     def sample(self, obs):
