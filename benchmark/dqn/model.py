@@ -2,14 +2,14 @@
 Author: jianzhnie
 Date: 2022-09-02 12:48:07
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 12:48:12
+LastEditTime: 2022-09-02 19:48:02
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
 
 import torch.nn as nn
 
-from rltoolkit.core.model import Model
+from rltoolkit.core.models.base_model import Model
 
 
 class AtariModel(Model):

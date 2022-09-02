@@ -1,7 +1,15 @@
+'''
+Author: jianzhnie
+Date: 2022-09-02 19:35:02
+LastEditors: jianzhnie
+LastEditTime: 2022-09-02 19:48:14
+Description:
+Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
+'''
 import torch.nn as nn
 import torch.nn.functional as F
 
-from rltoolkit.core.model import Model
+from rltoolkit.core.models.base_model import Model
 
 
 class ComaModel(Model):
