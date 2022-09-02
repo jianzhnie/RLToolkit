@@ -2,14 +2,10 @@
 Author: jianzhnie
 Date: 2022-09-02 12:53:53
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 12:55:13
+LastEditTime: 2022-09-02 14:25:29
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
-
-import warnings
-
-warnings.simplefilter('default')
 
 import copy
 
@@ -28,7 +24,7 @@ class DQN(Algorithm):
         """DQN algorithm.
 
         Args:
-            model (parl.Model): model defining forward network of Q function.
+            model (Model): model defining forward network of Q function.
             gamma (float): discounted factor for reward computation.
             lr (float): learning rate.
         """

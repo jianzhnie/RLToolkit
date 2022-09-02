@@ -1,21 +1,11 @@
-#   Copyright (c) 2019 PaddlePaddle Authors. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-import warnings
-
-warnings.simplefilter('default')
-
+'''
+Author: jianzhnie
+Date: 2022-09-02 14:18:50
+LastEditors: jianzhnie
+LastEditTime: 2022-09-02 14:28:30
+Description:
+Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
+'''
 import copy
 
 import torch
@@ -33,7 +23,7 @@ class DDQN(Algorithm):
         """Double DQN algorithm.
 
         Args:
-            model (parl.Model): model defining forward network of Q function.
+            model (Model): model defining forward network of Q function.
             gamma (float): discounted factor for reward computation.
             lr (float): learning rate.
         """
