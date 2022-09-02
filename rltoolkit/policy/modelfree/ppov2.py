@@ -2,7 +2,7 @@
 Author: jianzhnie@126.com
 Date: 2022-09-01 12:33:42
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 10:47:03
+LastEditTime: 2022-09-02 12:44:13
 Description:
 
 Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
@@ -86,6 +86,7 @@ class PPO(Algorithm):
             action_loss (float): policy loss
             entropy_loss (float): entropy loss
         """
+        self.model.train()
         values = self.model.value(batch_obs)
         if self.continuous_action:
             mean, std = self.model.policy(batch_obs)
@@ -175,6 +176,7 @@ class PPO(Algorithm):
             action (torch tensor): action, shape([batch_size] + action_shape),
                 noted that in the discrete case we take the argmax along the last axis as action
         """
+        self.model.eval()
         if self.continuous_action:
             action, _ = self.model.policy(obs)
         else:
