@@ -60,7 +60,7 @@ def check_model_method(model, method, algo):
     """check method existence for input model to algo.
 
     Args:
-        model(parl.Model): model for checking
+        model(rltoolkit.Model): model for checking
         method(str): method name
         algo(str): algorithm name
 
