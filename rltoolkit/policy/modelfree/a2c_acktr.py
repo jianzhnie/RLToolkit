@@ -1,3 +1,4 @@
+
 '''
 Author: jianzhnie jianzhnie@126.com
 Date: 2022-09-01 09:37:52
@@ -7,9 +8,11 @@ Description:
 
 Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
 '''
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
 
 from ...core.optim.kfac import KFACOptimizer
 

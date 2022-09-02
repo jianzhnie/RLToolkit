@@ -7,6 +7,7 @@ Description:
 
 Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
 '''
+
 import glob
 import os
 
@@ -54,7 +55,6 @@ def cleanup_log_dir(log_dir):
         files = glob.glob(os.path.join(log_dir, '*.monitor.csv'))
         for f in files:
             os.remove(f)
-
 
 def check_model_method(model, method, algo):
     """check method existence for input model to algo.
