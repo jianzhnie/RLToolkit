@@ -2,7 +2,7 @@
 Author: jianzhnie@126.com
 Date: 2022-09-01 12:33:42
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 12:44:13
+LastEditTime: 2022-09-02 19:43:30
 Description:
 
 Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
@@ -13,7 +13,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Categorical, Normal
 
-from rltoolkit.core.algorithm import Algorithm
+from rltoolkit.policy.base_policy import Algorithm
 from rltoolkit.utils.utils import check_model_method
 
 

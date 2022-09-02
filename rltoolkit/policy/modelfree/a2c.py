@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 14:44:14
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 14:44:18
+LastEditTime: 2022-09-02 19:43:28
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -12,7 +12,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 
-from rltoolkit.core.algorithm import Algorithm
+from rltoolkit.policy.base_policy import Algorithm
 from rltoolkit.utils.utils import check_model_method
 
 __all__ = ['A2C']

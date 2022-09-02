@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-01 15:05:48
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 19:31:27
+LastEditTime: 2022-09-02 19:43:48
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -15,7 +15,7 @@ import os
 
 import torch
 
-from ..core.algorithm import Algorithm
+from ..policy.base_policy import Algorithm
 
 __all__ = ['Agent']
 torch.set_num_threads(1)

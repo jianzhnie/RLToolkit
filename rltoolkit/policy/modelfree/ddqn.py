@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 14:18:50
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 14:28:30
+LastEditTime: 2022-09-02 19:43:20
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -11,7 +11,7 @@ import copy
 import torch
 import torch.optim as optim
 
-from rltoolkit.core.algorithm import Algorithm
+from rltoolkit.policy.base_policy import Algorithm
 from rltoolkit.utils.utils import check_model_method
 
 __all__ = ['DDQN']

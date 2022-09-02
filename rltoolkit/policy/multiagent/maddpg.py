@@ -3,7 +3,7 @@ from copy import deepcopy
 import torch
 import torch.nn.functional as F
 
-from rltoolkit.core.algorithm import Algorithm
+from rltoolkit.policy.base_policy import Algorithm
 from rltoolkit.utils.utils import check_model_method
 
 __all__ = ['MADDPG']

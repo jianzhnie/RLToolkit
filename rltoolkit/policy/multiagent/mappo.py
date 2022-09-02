@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 15:07:00
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 18:06:45
+LastEditTime: 2022-09-02 19:43:37
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Categorical
 
-from rltoolkit.core.algorithm import Algorithm
+from rltoolkit.policy.base_policy import Algorithm
 
 __all__ = ['MAPPO', 'PopArt']
 
