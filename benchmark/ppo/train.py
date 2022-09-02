@@ -2,6 +2,7 @@ import argparse
 import sys
 
 import numpy as np
+import torch
 
 sys.path.append('../../')
 from agent import PPOAgent
@@ -23,6 +24,7 @@ def run_evaluate_episodes(agent, eval_env, eval_episodes):
         done = False
         while not done:
             action = agent.predict(obs)
+            action = int(action)
             obs, reward, done, info = eval_env.step(action)
         if 'episode' in info.keys():
             eval_reward = info['episode']['r']
@@ -32,6 +34,8 @@ def run_evaluate_episodes(agent, eval_env, eval_episodes):
 
 def main():
     config = atari_config
+    device = torch.device(
+        'cuda') if torch.cuda.is_available() else torch.device('cpu')
     if args.env_num:
         config['env_num'] = args.env_num
     config['env'] = args.env
@@ -61,7 +65,7 @@ def main():
         entropy_coef=config['entropy_coef'],
         initial_lr=config['initial_lr'],
         continuous_action=config['continuous_action'])
-    agent = PPOAgent(ppo, config)
+    agent = PPOAgent(ppo, config, device=device)
 
     rollout = RolloutStorage(config['step_nums'], config['env_num'], obs_space,
                              act_space)
@@ -72,15 +76,13 @@ def main():
     test_flag = 0
     total_steps = 0
     for update in range(1, config['num_updates'] + 1):
-        for step in range(0, config['step_nums']):
+        for step in range(1, config['step_nums'] + 1):
             total_steps += 1 * config['env_num']
 
             value, action, logprob, _ = agent.sample(obs)
-            print(value, action, logprob, _)
             next_obs, reward, next_done, info = envs.step(action)
             rollout.append(obs, action, logprob, reward, done, value.flatten())
             obs, done = next_obs, next_done
-
             for k in range(config['env_num']):
                 if done[k] and 'episode' in info[k].keys():
                     logger.info(
@@ -124,7 +126,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--seed', type=int, default=None, help='seed of the experiment')
     parser.add_argument(
-        '--env_num', type=int, default=1, help='number of the environment.')
+        '--env_num', type=int, default=2, help='number of the environment.')
     parser.add_argument(
         '--continuous_action',
         action='store_true',
