@@ -14,12 +14,12 @@ __all__ = ['Model']
 
 
 class ModelBase(object):
-    """`ModelBase` is the base class of the `parl.Model` in different
+    """`ModelBase` is the base class of the `rltoolkit.Model` in different
     frameworks.
 
     This base class mainly do the following things:
-        1. Implements APIs to manage model_id of the `parl.Model`;
-        2. Defines common APIs that `parl.Model` should implement in different frameworks.
+        1. Implements APIs to manage model_id of the `rltoolkit.Model`;
+        2. Defines common APIs that `rltoolkit.Model` should implement in different frameworks.
     """
 
     def __init__(self):
@@ -51,11 +51,11 @@ class ModelBase(object):
 
 
 class Model(nn.Module, ModelBase):
-    """| `alias`: ``parl.Model``
+    """| `alias`: ``rltoolkit.Model``
 
-    | `alias`: ``parl.core.torch.agent.Model``
+    | `alias`: ``rltoolkit.core.torch.agent.Model``
 
-    | ``Model`` is a base class of PARL for the neural network. A ``Model`` is
+    | ``Model`` is a base class of rltoolkit for the neural network. A ``Model`` is
     usually a policy or Q-value function, which predicts an action or an
     estimate according to the environmental observation.
 
@@ -70,10 +70,10 @@ class Model(nn.Module, ModelBase):
 
     .. code-block:: python
 
-        import parl
+        import rltoolkit
         import torch.nn as nn
 
-        class Policy(parl.Model):
+        class Policy(rltoolkit.Model):
             def __init__(self):
                 super(Policy, self).__init__()
                 self.fc = nn.Linear(in_features=100, out_features=32)
@@ -108,7 +108,7 @@ class Model(nn.Module, ModelBase):
         current_model_weights
 
         Args:
-            target_model (`parl.Model`): an instance of ``Model`` that has the
+            target_model (`rltoolkit.Model`): an instance of ``Model`` that has the
             same neural network architecture as the current model.
             decay (float):  the rate of decline in copying parameters. 0 if no
             parameters decay when synchronizing the parameters.

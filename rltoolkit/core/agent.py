@@ -1,27 +1,12 @@
 '''
-Author: jianzhnie@126.com
-Date: 2022-09-01 11:10:45
-LastEditors: jianzhnie@126.com
-LastEditTime: 2022-09-01 14:41:21
+Author: jianzhnie
+Date: 2022-09-01 15:05:48
+LastEditors: jianzhnie
+LastEditTime: 2022-09-01 17:50:33
 Description:
-
-Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-modified from https://github.com/marlbenchmark/on-policy
-
+Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
+
 import warnings
 
 warnings.simplefilter('default')
@@ -29,17 +14,18 @@ warnings.simplefilter('default')
 import os
 
 import torch
-from algorithm import Algorithm
+
+from .algorithm import Algorithm
 
 __all__ = ['Agent']
 torch.set_num_threads(1)
 
 
 class AgentBase(object):
-    """`AgentBase` is the base class of the `parl.Agent` in different
+    """`AgentBase` is the base class of the `rltoolkit.Agent` in different
     frameworks.
 
-    `parl.Agent` is responsible for the general data flow outside the algorithm.
+    `rltoolkit.Agent` is responsible for the general data flow outside the algorithm.
     """
 
     def __init__(self, algorithm):
@@ -111,27 +97,27 @@ class AgentBase(object):
 
 
 class Agent(AgentBase):
-    """| `alias`: ``parl.Agent``
+    """| `alias`: ``rltoolkit.Agent``
 
-    | `alias`: ``parl.core.torch.agent.Agent``
+    | `alias`: ``rltoolkit.core.torch.agent.Agent``
 
-    | Agent is one of the three basic classes of PARL.
+    | Agent is one of the three basic classes of rltoolkit.
 
     | It is responsible for interacting with the environment and collecting data for training the policy.
     | To implement a customized ``Agent``, users can:
 
       .. code-block:: python
 
-        import parl
+        import rltoolkit
 
-        class MyAgent(parl.Agent):
+        class MyAgent(rltoolkit.Agent):
             def __init__(self, algorithm, act_dim):
                 super(MyAgent, self).__init__(algorithm)
                 self.act_dim = act_dim
 
     Attributes:
         device (torch.device): select GPU/CPU to be used.
-        alg (parl.Algorithm): algorithm of this agent.
+        alg (rltoolkit.Algorithm): algorithm of this agent.
 
     Public Functions:
         - ``sample``: return a noisy action to perform exploration according to the policy.
@@ -150,7 +136,7 @@ class Agent(AgentBase):
         """.
 
         Args:
-            algorithm (parl.Algorithm): an instance of `parl.Algorithm`. This algorithm is then passed to `self.alg`.
+            algorithm (rltoolkit.Algorithm): an instance of `rltoolkit.Algorithm`. This algorithm is then passed to `self.alg`.
             device (torch.device): specify which GPU/CPU to be used.
         """
 
@@ -187,7 +173,7 @@ class Agent(AgentBase):
 
         Args:
             save_path(str): where to save the parameters.
-            model(parl.Model): model that describes the neural network structure. If None, will use self.alg.model.
+            model(rltoolkit.Model): model that describes the neural network structure. If None, will use self.alg.model.
 
         Raises:
             ValueError: if model is None and self.alg.model does not exist.
@@ -214,7 +200,7 @@ class Agent(AgentBase):
 
         Args:
             save_path(str): path where parameters were previously saved.
-            model(parl.Model): model that describes the neural network structure. If None, will use self.alg.model.
+            model(rltoolkit.Model): model that describes the neural network structure. If None, will use self.alg.model.
             map_location: a function, torch.device, string or a dict specifying how to remap storage locations
 
         Raises:

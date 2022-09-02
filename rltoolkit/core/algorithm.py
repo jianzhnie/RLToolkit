@@ -18,12 +18,12 @@ __all__ = ['Algorithm']
 
 
 class AlgorithmBase(object):
-    """`AlgorithmBase` is the base class of the `parl.Algorithm` in different
-    frameworks.
+    """`AlgorithmBase` is the base class of the `rltoolkit.Algorithm` in
+    different frameworks.
 
     This base class mainly do the following things:
         1. Implements APIs to set or get weights of all `ModelBase` in self.__dict__;
-        2. Defines common APIs that `parl.Algorithm` should implement in different frameworks.
+        2. Defines common APIs that `rltoolkit.Algorithm` should implement in different frameworks.
     """
 
     def __init__(self):
@@ -112,28 +112,28 @@ class AlgorithmBase(object):
 
 
 class Algorithm(AlgorithmBase):
-    """| `alias`: ``parl.Algorithm``
+    """| `alias`: ``rltoolkit.Algorithm``
 
-    | `alias`: ``parl.core.torch.algorithm.Algorithm``
+    | `alias`: ``rltoolkit.core.torch.algorithm.Algorithm``
 
     | ``Algorithm`` defines the way how to update the parameters of the
     ``Model``. This is where we define loss functions and the optimizer of the
     neural network. An ``Algorithm`` has at least a model.
 
-    | PARL has implemented various algorithms(DQN/DDPG/PPO/A3C/IMPALA) that can
-    be reused quickly, which can be accessed with ``parl.algorithms``.
+    | rltoolkit has implemented various algorithms(DQN/DDPG/PPO/A3C/IMPALA) that can
+    be reused quickly, which can be accessed with ``rltoolkit.algorithms``.
 
     Example:
 
     .. code-block:: python
 
-        import parl
+        import rltoolkit
 
         model = Model()
-        dqn = parl.algorithms.DQN(model, lr=1e-3)
+        dqn = rltoolkit.algorithms.DQN(model, lr=1e-3)
 
     Attributes:
-        model(``parl.Model``): a neural network that represents a policy or a
+        model(``rltoolkit.Model``): a neural network that represents a policy or a
         Q-value function.
 
     Pulic Functions:
@@ -145,7 +145,7 @@ class Algorithm(AlgorithmBase):
     def __init__(self, model=None):
         """
         Args:
-            model(``parl.Model``): a neural network that represents a policy or
+            model(``rltoolkit.Model``): a neural network that represents a policy or
             a Q-value function.
         """
         assert isinstance(model, Model)
