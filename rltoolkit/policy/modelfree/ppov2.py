@@ -87,6 +87,7 @@ class PPO(Algorithm):
             entropy_loss (float): entropy loss
         """
         self.model.train()
+
         values = self.model.value(batch_obs)
         if self.continuous_action:
             mean, std = self.model.policy(batch_obs)
@@ -177,6 +178,7 @@ class PPO(Algorithm):
                 noted that in the discrete case we take the argmax along the last axis as action
         """
         self.model.eval()
+
         if self.continuous_action:
             action, _ = self.model.policy(obs)
         else:
