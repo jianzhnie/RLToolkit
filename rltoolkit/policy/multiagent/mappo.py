@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 15:07:00
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 15:14:23
+LastEditTime: 2022-09-02 17:50:57
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -47,12 +47,12 @@ class MAPPO(Algorithm):
         self.model = model
         self.device = device
         self.model.to(self.device)
+
         self.multi_discrete = self.model.actor.multi_discrete
         self.tpdv = dict(dtype=torch.float32, device=self.device)
 
         self.clip_param = clip_param
         self.value_loss_coef = value_loss_coef
-        self.lr = initial_lr
         self.huber_delta = huber_delta
         self.eps = eps
         self.entropy_coef = entropy_coef
@@ -67,12 +67,13 @@ class MAPPO(Algorithm):
             self.value_normalizer = None
 
         self.actor_optimizer = torch.optim.Adam(
-            self.model.actor.parameters(), lr=self.lr, eps=self.eps)
+            self.model.actor.parameters(), lr=initial_lr, eps=self.eps)
         self.critic_optimizer = torch.optim.Adam(
-            self.model.critic.parameters(), lr=self.lr, eps=self.eps)
+            self.model.critic.parameters(), lr=initial_lr, eps=self.eps)
 
     def sample(self, cent_obs, obs, deterministic=False):
         """Sample action from parameterized policy."""
+        values = self.model.value(cent_obs)
         policy = self.model.policy(obs)
 
         if not self.multi_discrete:
@@ -99,7 +100,6 @@ class MAPPO(Algorithm):
             actions = torch.cat(actions, -1)
             action_log_probs = torch.cat(action_log_probs, -1)
 
-        values = self.model.value(cent_obs)
         return values, actions, action_log_probs
 
     def learn(self,
@@ -109,9 +109,10 @@ class MAPPO(Algorithm):
               value_preds_batch,
               return_batch,
               old_action_log_probs_batch,
-              adv_targ,
+              adv_batch,
               active_masks_batch=None):
         """update the value network and policy network parameters."""
+        values = self.model.value(share_obs_batch)
         policy = self.model.policy(obs_batch)
         if not self.multi_discrete:
             action_dis = Categorical(logits=policy)
@@ -144,26 +145,24 @@ class MAPPO(Algorithm):
             action_log_probs = torch.cat(action_log_probs, -1)
             dist_entropy = sum(dist_entropy) / len(dist_entropy)
 
-        values = self.model.value(share_obs_batch)
-
         # actor update
-        imp_weights = torch.exp(action_log_probs - old_action_log_probs_batch)
+        ratio = torch.exp(action_log_probs - old_action_log_probs_batch)
 
-        surr1 = imp_weights * adv_targ
-        surr2 = torch.clamp(imp_weights, 1.0 - self.clip_param,
-                            1.0 + self.clip_param) * adv_targ
+        surr1 = ratio * adv_batch
+        surr2 = torch.clamp(ratio, 1.0 - self.clip_param,
+                            1.0 + self.clip_param) * adv_batch
 
         if active_masks_batch is not None:
-            policy_action_loss = (
+            action_loss = (
                 -torch.sum(torch.min(surr1, surr2), dim=-1, keepdim=True) *
                 active_masks_batch).sum() / active_masks_batch.sum()
         else:
-            policy_action_loss = -torch.sum(
+            action_loss = -torch.sum(
                 torch.min(surr1, surr2), dim=-1, keepdim=True).mean()
 
-        policy_loss = policy_action_loss
+        loss_actor = action_loss - dist_entropy * self.entropy_coef
         self.actor_optimizer.zero_grad()
-        (policy_loss - dist_entropy * self.entropy_coef).backward()
+        loss_actor.backward()
         nn.utils.clip_grad_norm_(self.model.actor.parameters(),
                                  self.max_grad_norm)
         self.actor_optimizer.step()
@@ -172,12 +171,13 @@ class MAPPO(Algorithm):
         value_loss = self.cal_value_loss(values, value_preds_batch,
                                          return_batch, active_masks_batch)
         self.critic_optimizer.zero_grad()
-        (value_loss * self.value_loss_coef).backward()
+        loss_critic = value_loss * self.value_loss_coef
+        loss_critic.backward()
         nn.utils.clip_grad_norm_(self.model.critic.parameters(),
                                  self.max_grad_norm)
         self.critic_optimizer.step()
 
-        return value_loss, policy_loss, dist_entropy
+        return value_loss, action_loss, dist_entropy
 
     def cal_value_loss(self,
                        values,
@@ -185,9 +185,8 @@ class MAPPO(Algorithm):
                        return_batch,
                        active_masks_batch=None):
         """Calculate value function loss."""
-        value_pred_clipped = value_preds_batch + (
-            values - value_preds_batch).clamp(-self.clip_param,
-                                              self.clip_param)
+        value_pred_clipped = value_preds_batch + torch.clamp(
+            values - value_preds_batch, -self.clip_param, self.clip_param)
 
         if self._use_popart:
             self.value_normalizer.update(return_batch)
@@ -211,6 +210,44 @@ class MAPPO(Algorithm):
             value_loss = value_loss.mean()
 
         return value_loss
+
+    def predict(self, cent_obs, obs, deterministic=False):
+        """use the model to predict action.
+
+        Args:
+            obs (torch tensor): observation, shape([batch_size] + obs_shape)
+        Returns:
+            action (torch tensor): action, shape([batch_size] + action_shape),
+                noted that in the discrete case we take the argmax along the last axis as action
+        """
+        self.model.eval()
+        policy = self.model.policy(obs)
+
+        if not self.multi_discrete:
+            action_dis = Categorical(logits=policy)
+            if deterministic:
+                actions = action_dis.probs.argmax(dim=-1, keepdim=True)
+            else:
+                actions = action_dis.sample().unsqueeze(-1)
+            action_log_probs = action_dis.log_prob(actions.squeeze(-1)).view(
+                actions.size(0), -1).sum(-1).unsqueeze(-1)
+        else:
+            actions = []
+            action_log_probs = []
+            for i in range(len(self.model.act_dim)):
+                action_dis = Categorical(logits=policy[i])
+                if deterministic:
+                    action = action_dis.probs.argmax(dim=-1, keepdim=True)
+                else:
+                    action = action_dis.sample().unsqueeze(-1)
+                action_log_prob = action_dis.log_prob(action.squeeze(-1)).view(
+                    action.size(0), -1).sum(-1).unsqueeze(-1)
+                actions.append(action)
+                action_log_probs.append(action_log_prob)
+            actions = torch.cat(actions, -1)
+            action_log_probs = torch.cat(action_log_probs, -1)
+
+        return actions
 
     def value(self, cent_obs):
         """Predict value from parameterized value function."""
