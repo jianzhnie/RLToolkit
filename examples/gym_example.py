@@ -1,3 +1,11 @@
+'''
+Author: jianzhnie
+Date: 2022-08-14 08:35:09
+LastEditors: jianzhnie
+LastEditTime: 2022-09-01 18:19:23
+Description:
+Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
+'''
 import gym  # 导入 Gym 的 Python 接口环境包
 
 if __name__ == '__main__':
