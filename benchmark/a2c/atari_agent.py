@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 14:38:36
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 14:38:39
+LastEditTime: 2022-09-02 19:33:19
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -10,7 +10,7 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 import numpy as np
 import torch
 
-from rltoolkit.core.agent import Agent
+from rltoolkit.agent.base_agent import Agent
 from rltoolkit.utils.scheduler import LinearDecayScheduler, PiecewiseScheduler
 
 torch.set_num_threads(1)

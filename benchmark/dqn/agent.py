@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from rltoolkit.core.agent import Agent
+from rltoolkit.agent.base_agent import Agent
 from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 

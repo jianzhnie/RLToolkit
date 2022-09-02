@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-01 15:16:40
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 10:49:43
+LastEditTime: 2022-09-02 19:33:04
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 
@@ -12,7 +12,7 @@ modified from https://github.com/PaddlePaddle/rltoolkit
 import numpy as np
 import torch
 
-from rltoolkit.core.agent import Agent
+from rltoolkit.agent.base_agent import Agent
 from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 
@@ -28,7 +28,7 @@ class PPOAgent(Agent):
                 self.config['initial_lr'], self.config['num_updates'])
 
     def predict(self, obs):
-        obs = torch.FloatTensor(obs).unsqueeze(0).to(self.device)
+        obs = torch.FloatTensor(obs).to(self.device)
         action = self.alg.predict(obs)
         action_numpy = action.cpu().detach().numpy()
         return action_numpy
