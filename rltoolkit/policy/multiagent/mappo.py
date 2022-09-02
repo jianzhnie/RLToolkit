@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 15:07:00
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 17:50:57
+LastEditTime: 2022-09-02 18:06:45
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -184,7 +184,15 @@ class MAPPO(Algorithm):
                        value_preds_batch,
                        return_batch,
                        active_masks_batch=None):
-        """Calculate value function loss."""
+        """Calculate value function loss.
+
+        :param values: (torch.Tensor) value function predictions.
+        :param value_preds_batch: (torch.Tensor) "old" value  predictions from data batch (used for value clip loss)
+        :param return_batch: (torch.Tensor) reward to go returns.
+        :param active_masks_batch: (torch.Tensor) denotes if agent is active or dead at a given timesep.
+
+        :return value_loss: (torch.Tensor) value function loss.
+        """
         value_pred_clipped = value_preds_batch + torch.clamp(
             values - value_preds_batch, -self.clip_param, self.clip_param)
 
