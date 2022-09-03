@@ -8,12 +8,12 @@ from agent import Mario
 from gym.wrappers import FrameStack, GrayScaleObservation, TransformObservation
 from nes_py.wrappers import JoypadSpace
 
+sys.path.append('../../')
+
+sys.path.append('../../')
+
 from rltoolkit.env.gym_wrappers import ResizeObservation, SkipFrame
 from rltoolkit.utils.metric_logger import MetricLogger
-
-sys.path.append('../../')
-
-sys.path.append('../../')
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
