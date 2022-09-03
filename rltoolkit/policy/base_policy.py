@@ -2,7 +2,7 @@
 Author: jianzhnie@126.com
 Date: 2022-09-01 10:58:47
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 19:48:19
+LastEditTime: 2022-09-03 17:44:13
 Description:
 
 Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
@@ -12,7 +12,7 @@ import warnings
 
 warnings.simplefilter('default')
 
-from ..core.models.base_model import Model, ModelBase
+from ..models.base_model import Model, ModelBase
 
 __all__ = ['Algorithm']
 
