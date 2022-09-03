@@ -10,8 +10,6 @@ from nes_py.wrappers import JoypadSpace
 
 sys.path.append('../../')
 
-sys.path.append('../../')
-
 from rltoolkit.env.gym_wrappers import ResizeObservation, SkipFrame
 from rltoolkit.utils.metric_logger import MetricLogger
 
