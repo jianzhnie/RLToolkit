@@ -2,15 +2,13 @@
 Author: jianzhnie
 Date: 2022-09-02 14:53:47
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 14:54:01
+LastEditTime: 2022-09-03 11:10:16
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
 
 config = {
 
-    # ==========  remote config ==========
-    'master_address': 'localhost:8010',
     # ==========  env config ==========
     'env_name': 'PongNoFrameskip-v4',
     'env_dim': 84,

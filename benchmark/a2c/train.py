@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 14:48:01
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 14:54:33
+LastEditTime: 2022-09-03 13:03:19
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -40,7 +40,7 @@ class Learner(object):
         model = ActorCritic(act_dim)
         model.to(self.device)
         algorithm = A2C(model, config)
-        self.agent = Agent(algorithm, config)
+        self.agent = Agent(algorithm, config, device=self.device)
 
         # ========== Learner ==========
         self.total_loss_stat = WindowStat(100)
