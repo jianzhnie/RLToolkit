@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 15:07:00
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 19:43:37
+LastEditTime: 2022-09-03 16:15:58
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -47,7 +47,6 @@ class MAPPO(Algorithm):
         self.model = model
         self.device = device
         self.model.to(self.device)
-
         self.multi_discrete = self.model.actor.multi_discrete
         self.tpdv = dict(dtype=torch.float32, device=self.device)
 
@@ -176,7 +175,6 @@ class MAPPO(Algorithm):
         nn.utils.clip_grad_norm_(self.model.critic.parameters(),
                                  self.max_grad_norm)
         self.critic_optimizer.step()
-
         return value_loss, action_loss, dist_entropy
 
     def cal_value_loss(self,

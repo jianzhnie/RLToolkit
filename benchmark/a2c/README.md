@@ -2,12 +2,13 @@
  * @Author: jianzhnie
  * @Date: 2022-09-02 14:55:20
  * @LastEditors: jianzhnie
- * @LastEditTime: 2022-09-03 11:11:31
+ * @LastEditTime: 2022-09-03 15:53:15
  * @Description:
  * Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 -->
 ## Reproduce A2C with Pytorch
 Based on Pytorch, the A2C algorithm of deep reinforcement learning has been reproduced, reaching the same level of indicators as the paper in Atari benchmarks.
+
 
 ### Atari game introduction
 Please see [here](https://gym.openai.com/envs/#atari) to know more about Atari games.

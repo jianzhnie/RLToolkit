@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 15:02:03
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 15:35:13
+LastEditTime: 2022-09-03 15:56:10
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -20,6 +20,7 @@ class SeparatedReplayBuffer(object):
 
         Args:
             model (Model): model that contains both value network and policy network
+
             episode_length (int): max length for any episode
             env_num (int): Number of parallel envs to train
             gamma (float): discount factor for rewards

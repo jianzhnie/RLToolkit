@@ -2,14 +2,14 @@
 Author: jianzhnie
 Date: 2022-09-02 15:02:03
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 19:48:09
+LastEditTime: 2022-09-03 15:57:15
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
 import torch.nn as nn
 import torch.nn.functional as F
 
-from rltoolkit.core.models.base_model import Model
+from rltoolkit.models.base_model import Model
 
 
 class SimpleModel(Model):

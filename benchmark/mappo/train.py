@@ -62,6 +62,7 @@ def main():
         algorithm = MAPPO(model, CLIP_PARAM, VALUE_LOSS_COEF, ENTROPY_COEF, LR,
                           HUBER_DELTA, EPS, MAX_GRAD_NORM, args.use_popart,
                           args.use_value_active_masks)
+
         agent = SimpleAgent(algorithm, device=device)
         # buffer
         bu = SeparatedReplayBuffer(EPISODE_LENGTH, env_num, GAMMA, GAE_LAMBDA,

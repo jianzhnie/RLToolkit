@@ -2,7 +2,7 @@
 Author: jianzhnie@126.com
 Date: 2022-09-01 15:12:41
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 19:47:56
+LastEditTime: 2022-09-03 11:25:30
 Description:
 
 Copyright (c) 2022 by jianzhnie, All Rights Reserved.
@@ -12,7 +12,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from rltoolkit.core.models.base_model import Model
+from rltoolkit.models.base_model import Model
 
 
 def _init_layer(layer, std=np.sqrt(2), bias_const=0.0):
