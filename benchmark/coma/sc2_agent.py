@@ -1,3 +1,11 @@
+'''
+Author: jianzhnie
+Date: 2022-09-03 11:00:14
+LastEditors: jianzhnie
+LastEditTime: 2022-09-03 11:05:51
+Description:
+Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
+'''
 import numpy as np
 import torch
 from torch.distributions import Categorical
