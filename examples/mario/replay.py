@@ -1,3 +1,11 @@
+'''
+Author: jianzhnie
+Date: 2022-09-02 12:13:48
+LastEditors: jianzhnie
+LastEditTime: 2022-09-03 10:11:35
+Description:
+Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
+'''
 import datetime
 from pathlib import Path
 
@@ -6,8 +14,8 @@ from agent import Mario
 from gym.wrappers import FrameStack, GrayScaleObservation, TransformObservation
 from nes_py.wrappers import JoypadSpace
 
-from rltoolkit.core.metrics import MetricLogger
 from rltoolkit.env.gym_wrappers import ResizeObservation, SkipFrame
+from rltoolkit.utils.metric_logger import MetricLogger
 
 env = gym_super_mario_bros.make('SuperMarioBros-1-1-v0')
 
