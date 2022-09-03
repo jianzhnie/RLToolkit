@@ -107,9 +107,8 @@ class Agents(Agent):
             # a_inpits shape (ep_num, tr_num, actor_input_dim)
             actor_inputs.append(a_inputs)
 
-        actor_inputs = np.stack(
-            actor_inputs,
-            axis=2)  # shape (ep_num, tr_num, n_agents, actor_input_dim)
+        actor_inputs = np.stack(actor_inputs, axis=2)
+        # shape (ep_num, tr_num, n_agents, actor_input_dim)
         return actor_inputs
 
     def _get_critic_inputs(self, batch):
