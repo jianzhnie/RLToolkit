@@ -1,3 +1,11 @@
+'''
+Author: jianzhnie
+Date: 2022-09-02 19:37:10
+LastEditors: jianzhnie
+LastEditTime: 2022-09-03 11:07:03
+Description:
+Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
+'''
 from copy import deepcopy
 
 import torch
