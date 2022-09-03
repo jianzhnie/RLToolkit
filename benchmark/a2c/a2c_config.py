@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 14:53:47
 LastEditors: jianzhnie
-LastEditTime: 2022-09-03 15:50:07
+LastEditTime: 2022-09-03 17:51:09
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -14,8 +14,8 @@ config = {
     'env_dim': 84,
 
     # ==========  actor config ==========
-    'actor_num': 5,
-    'env_num': 5,
+    'actor_num': 2,
+    'env_num': 2,
     'sample_batch_steps': 20,
 
     # ==========  learner config ==========
