@@ -2,19 +2,19 @@
 Author: jianzhnie
 Date: 2022-09-02 19:35:02
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 19:35:35
+LastEditTime: 2022-09-03 11:06:19
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
 import os
 
 import numpy as np
-from parl.utils import tensorboard
 from sc2_agent import Agents
 from sc2_model import ComaModel
 from smac.env import StarCraft2Env
 
 from rltoolkit.policy.multiagent.coma import COMA
+from rltoolkit.utils import tensorboard
 
 
 def run_episode(env, agents, config, test=False):
