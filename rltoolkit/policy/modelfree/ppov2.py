@@ -35,7 +35,7 @@ class PPO(Algorithm):
         """ PPO algorithm
 
         Args:
-            model (parl.Model): forward network of actor and critic.
+            model (rltoolkit.Model): forward network of actor and critic.
             clip_param (float): epsilon in clipping loss.
             value_loss_coef (float): value function loss coefficient in the optimization objective.
             entropy_coef (float): policy entropy coefficient in the optimization objective.
