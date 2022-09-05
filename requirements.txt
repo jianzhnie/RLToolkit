@@ -1,0 +1,15 @@
+git+https://github.com/oxwhirl/smac.git
+gym
+imageio
+matplotlib
+numpy
+Pillow
+protobuf
+pygame
+PyYAML
+requests
+scipy
+six
+tensorboard-logger
+torch
+torchvision
