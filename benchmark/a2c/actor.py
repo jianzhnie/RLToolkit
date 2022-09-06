@@ -2,7 +2,8 @@
 Author: jianzhnie
 Date: 2022-09-02 14:40:28
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 14:54:22
+LastEditTime: 2022-09-03 17:46:17
+
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -10,7 +11,6 @@ from collections import defaultdict
 
 import gym
 import numpy as np
-import torch
 from atari_agent import Agent
 from atari_model import ActorCritic
 
@@ -23,10 +23,9 @@ from rltoolkit.utils.rl_utils import calc_gae
 
 class Actor(object):
 
-    def __init__(self, config):
+    def __init__(self, config, device):
         # the cluster may not have gpu
-        self.device = torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = device
         self.config = config
         self.envs = []
         for _ in range(config['env_num']):
@@ -48,7 +47,7 @@ class Actor(object):
         model = model.to(self.device)
 
         algorithm = A2C(model, config)
-        self.agent = Agent(algorithm, config)
+        self.agent = Agent(algorithm, config, device=self.device)
 
     def sample(self):
         """Interact with the environments lambda times."""

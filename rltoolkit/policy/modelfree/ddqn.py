@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 14:18:50
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 14:28:30
+LastEditTime: 2022-09-04 22:36:18
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -11,7 +11,7 @@ import copy
 import torch
 import torch.optim as optim
 
-from rltoolkit.core.algorithm import Algorithm
+from rltoolkit.policy.base_policy import Algorithm
 from rltoolkit.utils.utils import check_model_method
 
 __all__ = ['DDQN']
@@ -49,14 +49,20 @@ class DDQN(Algorithm):
         return pred_q
 
     def learn(self, obs, action, reward, next_obs, terminal):
-        """update value model self.model with Double DQN algorithm."""
+        """update value model self.model with Double DQN algorithm.
+
+        selected_action = dqn(next_state).argmax(dim=1, keepdim=True)
+
+        target = reward + gamma * dqn_target(next_state).gather(1, selected_action)
+        """
+
         pred_value = self.model(obs).gather(1, action)
         # model for selection actions.
         greedy_action = self.model(next_obs).max(dim=1, keepdim=True)[1]
         with torch.no_grad():
             # target_model for evaluation.
-            max_v = self.target_model(next_obs).gather(1, greedy_action)
-            target = reward + (1 - terminal) * self.gamma * max_v
+            next_q_value = self.target_model(next_obs).gather(1, greedy_action)
+            target = reward + (1 - terminal) * self.gamma * next_q_value
         self.optimizer.zero_grad()
         loss = self.mse_loss(pred_value, target)
         loss.backward()

@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from rltoolkit.core.agent import Agent
+from rltoolkit.agent.base_agent import Agent
 from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 
@@ -25,12 +25,7 @@ class AtariAgent(Agent):
         self.curr_ep = 1
         self.ep_end = 0.1
         self.lr_end = 0.00001
-
         self.device = device
-
-        self.device = torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu')
-
         self.ep_scheduler = LinearDecayScheduler(1, total_step)
         self.lr_scheduler = LinearDecayScheduler(start_lr, total_step)
 

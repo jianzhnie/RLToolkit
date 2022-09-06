@@ -41,7 +41,7 @@ def main():
     torch.cuda.manual_seed_all(args.seed)
     np.random.seed(args.seed)
     torch.set_num_threads(1)
-
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     envs = VectorEnv(args.env_name, args.env_num, args.seed)
 
     agent_num = len(envs.observation_space)
@@ -62,7 +62,8 @@ def main():
         algorithm = MAPPO(model, CLIP_PARAM, VALUE_LOSS_COEF, ENTROPY_COEF, LR,
                           HUBER_DELTA, EPS, MAX_GRAD_NORM, args.use_popart,
                           args.use_value_active_masks)
-        agent = SimpleAgent(algorithm)
+
+        agent = SimpleAgent(algorithm, device=device)
         # buffer
         bu = SeparatedReplayBuffer(EPISODE_LENGTH, env_num, GAMMA, GAE_LAMBDA,
                                    obs_dim, cent_obs_dim,

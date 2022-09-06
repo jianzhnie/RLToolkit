@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 12:21:35
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 12:22:38
+LastEditTime: 2022-09-03 15:58:04
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -10,7 +10,7 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 import numpy as np
 import torch
 
-from rltoolkit.core.agent import Agent
+from rltoolkit.agent.base_agent import Agent
 
 
 class CartpoleAgent(Agent):

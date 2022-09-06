@@ -2,7 +2,7 @@
 Author: jianzhnie@126.com
 Date: 2022-09-01 12:33:42
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 12:44:13
+LastEditTime: 2022-09-05 12:41:26
 Description:
 
 Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
@@ -13,8 +13,10 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Categorical, Normal
 
-from rltoolkit.core.algorithm import Algorithm
+from rltoolkit.policy.base_policy import Algorithm
 from rltoolkit.utils.utils import check_model_method
+
+__all__ = ['PPO']
 
 
 class PPO(Algorithm):
@@ -35,7 +37,7 @@ class PPO(Algorithm):
         """ PPO algorithm
 
         Args:
-            model (parl.Model): forward network of actor and critic.
+            model (rltoolkit.Model): forward network of actor and critic.
             clip_param (float): epsilon in clipping loss.
             value_loss_coef (float): value function loss coefficient in the optimization objective.
             entropy_coef (float): policy entropy coefficient in the optimization objective.
@@ -184,7 +186,7 @@ class PPO(Algorithm):
         else:
             logits = self.model.policy(obs)
             dist = Categorical(logits=logits)
-            action = dist.probs.argmax(dim=-1)
+            action = dist.probs.argmax(dim=-1, keepdim=True)
         return action
 
     def value(self, obs):

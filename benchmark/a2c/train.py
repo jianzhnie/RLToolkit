@@ -2,16 +2,19 @@
 Author: jianzhnie
 Date: 2022-09-02 14:48:01
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 14:54:33
+LastEditTime: 2022-09-03 18:58:31
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
+import sys
 import time
 from collections import defaultdict
 
 import gym
 import numpy as np
 import torch
+
+sys.path.append('../../')
 from actor import Actor
 from atari_agent import Agent
 from atari_model import ActorCritic
@@ -40,7 +43,7 @@ class Learner(object):
         model = ActorCritic(act_dim)
         model.to(self.device)
         algorithm = A2C(model, config)
-        self.agent = Agent(algorithm, config)
+        self.agent = Agent(algorithm, config, device=self.device)
 
         # ========== Learner ==========
         self.total_loss_stat = WindowStat(100)
@@ -56,11 +59,11 @@ class Learner(object):
         # ========== Remote Actor ===========
         self.sample_total_steps = 0
 
-        self.create_actors()
+        self.create_actors(device=self.device)
 
-    def create_actors(self):
+    def create_actors(self, device):
         self.remote_actors = [
-            Actor(self.config) for _ in range(self.config['actor_num'])
+            Actor(self.config, device) for _ in range(self.config['actor_num'])
         ]
         logger.info('Creating {} remote actors to connect.'.format(
             self.config['actor_num']))
@@ -80,11 +83,8 @@ class Learner(object):
 
         train_batch = defaultdict(list)
         # get the total train data of all the actors.
-        future_object_ids = [
-            remote_actor.sample() for remote_actor in self.remote_actors
-        ]
         sample_datas = [
-            future_object.get() for future_object in future_object_ids
+            remote_actor.sample() for remote_actor in self.remote_actors
         ]
         for sample_data in sample_datas:
             for key, value in sample_data.items():
@@ -113,13 +113,10 @@ class Learner(object):
         if self.start_time is None:
             return
 
-        metrics = []
         # get the total metrics data
-        future_object_ids = [
+        metrics = [
             remote_actor.get_metrics() for remote_actor in self.remote_actors
         ]
-        metrics = [future_object.get() for future_object in future_object_ids]
-
         # if the metric of all the metrics are empty, return nothing.
         total_length = sum(len(metric) for metric in metrics)
         if not total_length:

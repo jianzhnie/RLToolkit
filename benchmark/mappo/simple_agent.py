@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 15:02:03
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 15:20:37
+LastEditTime: 2022-09-03 15:56:45
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -10,16 +10,15 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 import numpy as np
 import torch
 
-from rltoolkit.core.agent import Agent
+from rltoolkit.agent.base_agent import Agent
 
 
 class SimpleAgent(Agent):
 
-    def __init__(self, algorithm):
-        self.value_normalizer = algorithm.value_normalizer
-        self.device = torch.device(
-            'cuda:0' if torch.cuda.is_available() else 'cpu')
+    def __init__(self, algorithm, device):
         super(SimpleAgent, self).__init__(algorithm)
+        self.value_normalizer = algorithm.value_normalizer
+        self.device = device
 
     def sample(self, share_obs, obs):
         obs = torch.from_numpy(obs).to(self.device)

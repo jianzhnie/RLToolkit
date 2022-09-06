@@ -2,7 +2,8 @@
 Author: jianzhnie
 Date: 2022-09-02 14:38:36
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 14:38:39
+LastEditTime: 2022-09-03 16:23:09
+
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -10,7 +11,7 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 import numpy as np
 import torch
 
-from rltoolkit.core.agent import Agent
+from rltoolkit.agent.base_agent import Agent
 from rltoolkit.utils.scheduler import LinearDecayScheduler, PiecewiseScheduler
 
 torch.set_num_threads(1)
@@ -18,17 +19,15 @@ torch.set_num_threads(1)
 
 class Agent(Agent):
 
-    def __init__(self, algorithm, config):
+    def __init__(self, algorithm, config, device):
         super(Agent, self).__init__(algorithm)
+        self.device = device
         self.obs_shape = config['obs_shape']
         self.lr_scheduler = LinearDecayScheduler(config['start_lr'],
                                                  config['max_sample_steps'])
 
         self.entropy_coeff_scheduler = PiecewiseScheduler(
             config['entropy_coeff_scheduler'])
-
-        self.device = torch.device(
-            'cuda' if torch.cuda.is_available() else 'cpu')
 
     def sample(self, obs):
         obs = torch.FloatTensor(obs).to(self.device)

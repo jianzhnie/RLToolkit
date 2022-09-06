@@ -1,8 +1,8 @@
 '''
 Author: jianzhnie@126.com
 Date: 2022-09-01 11:28:52
-LastEditors: jianzhnie@126.com
-LastEditTime: 2022-09-01 11:35:47
+LastEditors: jianzhnie
+LastEditTime: 2022-09-02 19:43:16
 Description:
 
 Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
@@ -11,7 +11,7 @@ import torch
 import torch.optim as optim
 from torch.distributions import Categorical
 
-from rltoolkit.core.algorithm import Algorithm
+from rltoolkit.policy.base_policy import Algorithm
 from rltoolkit.utils.utils import check_model_method
 
 __all__ = ['PolicyGradient']

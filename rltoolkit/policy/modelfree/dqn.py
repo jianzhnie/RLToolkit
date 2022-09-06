@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-02 12:53:53
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 14:25:29
+LastEditTime: 2022-09-04 22:12:51
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -12,7 +12,7 @@ import copy
 import torch
 import torch.optim as optim
 
-from rltoolkit.core.algorithm import Algorithm
+from rltoolkit.policy.base_policy import Algorithm
 from rltoolkit.utils.utils import check_model_method
 
 __all__ = ['DQN']
@@ -53,8 +53,8 @@ class DQN(Algorithm):
         """update value model self.model with DQN algorithm."""
         pred_value = self.model(obs).gather(1, action)
         with torch.no_grad():
-            max_v = self.target_model(next_obs).max(1, keepdim=True)[0]
-            target = reward + (1 - terminal) * self.gamma * max_v
+            next_q_value = self.target_model(next_obs).max(1, keepdim=True)[0]
+            target = reward + (1 - terminal) * self.gamma * next_q_value
         self.optimizer.zero_grad()
         loss = self.mse_loss(pred_value, target)
         loss.backward()

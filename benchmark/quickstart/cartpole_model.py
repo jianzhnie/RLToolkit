@@ -2,7 +2,9 @@
 Author: jianzhnie
 Date: 2022-09-02 12:19:54
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 12:21:11
+
+LastEditTime: 2022-09-03 15:58:23
+
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -10,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from rltoolkit.core.model import Model
+from rltoolkit.models.base_model import Model
 
 
 class CartpoleModel(Model):

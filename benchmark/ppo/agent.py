@@ -2,7 +2,7 @@
 Author: jianzhnie
 Date: 2022-09-01 15:16:40
 LastEditors: jianzhnie
-LastEditTime: 2022-09-02 10:49:43
+LastEditTime: 2022-09-05 12:36:22
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 
@@ -12,7 +12,7 @@ modified from https://github.com/PaddlePaddle/rltoolkit
 import numpy as np
 import torch
 
-from rltoolkit.core.agent import Agent
+from rltoolkit.agent.base_agent import Agent
 from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 

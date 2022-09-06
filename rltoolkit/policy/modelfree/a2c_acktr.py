@@ -1,4 +1,3 @@
-
 '''
 Author: jianzhnie jianzhnie@126.com
 Date: 2022-09-01 09:37:52
@@ -13,8 +12,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-
-from ...core.optim.kfac import KFACOptimizer
+from ...utils.kfac import KFACOptimizer
 
 
 class A2C_ACKTR():
