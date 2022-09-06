@@ -7,6 +7,15 @@
 
 # RLToolkit An Easy  Deep Reinforcement Learning Toolkit
 
+- [RLToolkit An Easy  Deep Reinforcement Learning Toolkit](#rltoolkit-an-easy--deep-reinforcement-learning-toolkit)
+  - [Contents](#contents)
+    - [Policy Gradient Series](#policy-gradient-series)
+    - [DQN Series](#dqn-series)
+  - [Experimental Demos](#experimental-demos)
+  - [Contributions](#contributions)
+  - [Citation:](#citation)
+
+
 RLToolkit ([website][(](https://github.com/jianzhnie/deep-rl-toolkit))) is developed for practitioners with
 the following advantages:
 
@@ -18,34 +27,45 @@ the following advantages:
 
 - **Efficient**: in many testing cases (single GPU/multi-GPU/GPU cloud), we find it more efficient than [Ray RLlib](https://github.com/ray-project/ray).
 
-- **Stable**: much much much more stable than [Stable Baselines 3](https://github.com/DLR-RM/stable-baselines3) by utilizing various ensemble methods.
+- **Stable**: much more stable than [Stable Baselines 3](https://github.com/DLR-RM/stable-baselines3) by utilizing various ensemble methods.
 
+
+## Contents
 RLToolkit implements the following model-free deep reinforcement learning (DRL) algorithms:
 
 - **DDPG, TD3, SAC, PPO, REDQ** for continuous actions in single-agent environment,
 - **DQN, Double DQN, D3QN, SAC** for discrete actions in single-agent environment,
 - **QMIX, VDN, MADDPG, MAPPO, MATD3** in multi-agent environment.
 
-For the details of DRL algorithms, please check out the educational
-webpage [OpenAI Spinning Up](https://spinningup.openai.com/en/latest/).
+For the details of DRL algorithms, please check out the educational webpage [OpenAI Spinning Up](https://spinningup.openai.com/en/latest/).
 
 RL supports the following simulators:
 
 - **Isaac Gym** for massively parallel simulation,
 - **OpenAI Gym, MuJoCo, PyBullet, FinRL** for benchmarking.
 
-## Contents
+### Policy Gradient Series
+1. Advantage Actor-Critic (A2C)
+2. Proximal Policy Optimization Algorithms (PPO)
+3. Deep Deterministic Policy Gradient (DDPG)
+4. Twin Delayed Deep Deterministic Policy Gradient Algorithm (TD3)
+5. Soft Actor-Critic (SAC)
+6. DDPG from Demonstration (DDPGfD)
+7. Behavior Cloning (with DDPG)
 
-- [RLToolkit An Easy  Deep Reinforcement Learning Toolkit](#rltoolkit-an-easy--deep-reinforcement-learning-toolkit)
-  - [Contents](#contents)
-  - [Experimental Demos](#experimental-demos)
-  - [Contributions](#contributions)
-  - [Citation:](#citation)
+### DQN Series
+1.  DQN
+2.  DoubleDQN
+3.  PrioritizedExperienceReplay
+4.  DuelingNet
+5.  NoisyNet
+6.  CategoricalDQN
+7.  N-stepLearning
+8.  Rainbow
 
 
 
 ## Experimental Demos
-
 
 ## Contributions
 
@@ -61,7 +81,7 @@ To cite this repository:
 ```
 @misc{erl,
   author = {jianzhnie},
-  title = {{RLToolkit}: An Easy  Deep Reinforcement Learning Toolkit},
+  title = {{RLToolkit}: An Easy Deep Reinforcement Learning Toolkit},
   year = {2022},
   publisher = {GitHub},
   journal = {GitHub repository},
