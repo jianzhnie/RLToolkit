@@ -1,8 +1,6 @@
 '''
 Author: jianzhnie
-Date: 2022-09-02 14:44:14
 LastEditors: jianzhnie
-LastEditTime: 2022-09-03 15:58:55
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
@@ -58,11 +56,11 @@ class A2C(Algorithm):
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = lr
 
+        self.optimizer.zero_grad()
         total_loss.backward()
         # clip the grad
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=40.0)
         self.optimizer.step()
-        self.optimizer.zero_grad()
 
         return total_loss, pi_loss, vf_loss, entropy
 
