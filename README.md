@@ -124,6 +124,7 @@ We're actively working on refactoring and trying to make the codebase cleaner an
 
 To cite this repository:
 
+```
 @misc{erl,
   author = {jianzhnie},
   title = {{RLToolkit}: An Easy  Deep Reinforcement Learning Toolkit},
@@ -132,3 +133,4 @@ To cite this repository:
   journal = {GitHub repository},
   howpublished = {\url{https://github.com/jianzhnie/deep-rl-toolkit}},
 }
+```
