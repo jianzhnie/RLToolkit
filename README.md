@@ -132,4 +132,3 @@ To cite this repository:
   journal = {GitHub repository},
   howpublished = {\url{https://github.com/jianzhnie/deep-rl-toolkit}},
 }
-```
