@@ -15,7 +15,7 @@
   - [Contents](#contents)
     - [Policy Gradient Series](#policy-gradient-series)
     - [DQN Series](#dqn-series)
-    - [Supported Envs:](#supported-envs)
+    - [Supported Envs](#supported-envs)
   - [Examples](#examples)
   - [Experimental Demos](#experimental-demos)
   - [Contributions](#contributions)
@@ -81,7 +81,7 @@ RLToolkit implements the following model-free deep reinforcement learning (DRL) 
 7.  N-stepLearning
 8.  Rainbow
 
-###  Supported Envs:
+###  Supported Envs
 
 - **OpenAI Gym**
 - **Atari**
