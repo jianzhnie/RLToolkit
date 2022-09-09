@@ -56,6 +56,7 @@ def cleanup_log_dir(log_dir):
         for f in files:
             os.remove(f)
 
+
 def check_model_method(model, method, algo):
     """check method existence for input model to algo.
 
