@@ -6,10 +6,12 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
 import collections
 import random
-from typing import Dict, List
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
+
+from rltoolkit.utils import logger
 
 from ..utils.segment_tree import MinSegmentTree, SumSegmentTree
 
@@ -21,44 +23,107 @@ def combined_shape(length, shape=None):
 
 
 class ReplayBuffer(object):
-    """A simple FIFO experience replay buffer."""
+    """A simple FIFO experience replay buffer for off-policy RL or offline RL.
 
-    def __init__(self, obs_dim: int, act_dim: int, size: int):
-        self.obs_buf = np.zeros(
-            combined_shape(size, obs_dim), dtype=np.float32)
-        self.obs2_buf = np.zeros(
-            combined_shape(size, obs_dim), dtype=np.float32)
-        self.act_buf = np.zeros(
-            combined_shape(size, act_dim), dtype=np.float32)
-        self.rew_buf = np.zeros(size, dtype=np.float32)
-        self.done_buf = np.zeros(size, dtype=np.float32)
-        self.ptr, self.size, self.max_size = 0, 0, size
+    Args:
+        max_size (int): max size of replay memory
+        obs_dim (list or tuple): observation shape
+        act_dim (list or tuple): action shape
+    """
 
-    def store(self, obs: np.ndarray, act: np.ndarray, rew: float,
-              next_obs: np.ndarray, done: bool):
-        self.obs_buf[self.ptr] = obs
-        self.obs2_buf[self.ptr] = next_obs
-        self.act_buf[self.ptr] = act
-        self.rew_buf[self.ptr] = rew
-        self.done_buf[self.ptr] = done
-        self.ptr = (self.ptr + 1) % self.max_size
-        self.size = min(self.size + 1, self.max_size)
+    def __init__(self, obs_dim: Union[int, Tuple], act_dim: Union[int, Tuple],
+                 max_size: int):
+        self.obs = np.zeros(
+            combined_shape(max_size, obs_dim), dtype=np.float32)
+        self.next_obs = np.zeros(
+            combined_shape(max_size, obs_dim), dtype=np.float32)
+        self.action = np.zeros(
+            combined_shape(max_size, act_dim), dtype=np.float32)
+        self.reward = np.zeros(max_size, dtype=np.float32)
+        self.terminal = np.zeros(max_size, dtype=np.float32)
+
+        self._curr_ptr = 0
+        self._curr_size = 0
+        self.max_size = max_size
+
+    def append(self, obs: np.ndarray, act: np.ndarray, rew: float,
+               next_obs: np.ndarray, terminal: bool) -> None:
+        """add an experience sample at the end of replay memory.
+
+        Args:
+            obs (float32): observation, shape of obs_dim
+            act (int32 in Continuous control environment, float32 in Continuous control environment): action, shape of act_dim
+            reward (float32): reward
+            next_obs (float32): next observation, shape of obs_dim
+            terminal (bool): terminal of an episode or not
+        """
+
+        self.obs[self._curr_ptr] = obs
+        self.next_obs[self._curr_ptr] = next_obs
+        self.action[self._curr_ptr] = act
+        self.reward[self._curr_ptr] = rew
+        self.terminal[self._curr_ptr] = terminal
+
+        self._curr_ptr = (self._curr_ptr + 1) % self.max_size
+        self._curr_size = min(self._curr_size + 1, self.max_size)
 
     def sample_batch(self, batch_size: int = 32) -> Dict[str, np.ndarray]:
-        idxs = np.random.randint(0, self.size, size=batch_size, replace=False)
+        """sample a batch from replay memory.
+
+        Args:
+            batch_size (int): batch size
+
+        Returns:
+            a batch of experience samples: obs, action, reward, next_obs, terminal
+        """
+        idxs = np.random.randint(self._curr_size, size=batch_size)
+
         batch = dict(
-            obs=self.obs_buf[idxs],
-            obs2=self.obs2_buf[idxs],
-            act=self.act_buf[idxs],
-            rew=self.rew_buf[idxs],
-            done=self.done_buf[idxs])
+            obs=self.obs[idxs],
+            next_obs=self.next_obs[idxs],
+            action=self.action[idxs],
+            reward=self.reward[idxs],
+            terminal=self.terminal[idxs])
+
         return {
             k: torch.as_tensor(v, dtype=torch.float32)
             for k, v in batch.items()
         }
 
-    def __len__(self) -> int:
-        return self.size
+    def size(self) -> int:
+        """get current size of replay memory."""
+        return self._curr_size
+
+    def __len__(self):
+        return self._curr_size
+
+    def save(self, pathname: str) -> None:
+        """save replay memory to local file (numpy file format: *.npz)."""
+        other = np.array([self._curr_size, self._curr_ptr], dtype=np.int32)
+        np.savez(
+            pathname,
+            obs=self.obs,
+            action=self.action,
+            reward=self.reward,
+            terminal=self.terminal,
+            next_obs=self.next_obs,
+            other=other)
+
+    def load(self, pathname: str) -> None:
+        """load replay memory from local file (numpy file format: *.npz)."""
+        data = np.load(pathname)
+        other = data['other']
+        if int(other[0]) > self.max_size:
+            logger.warn('loading from a bigger size rpm!')
+        self._curr_size = min(int(other[0]), self.max_size)
+        self._curr_ptr = min(int(other[1]), self.max_size - 1)
+
+        self.obs[:self._curr_size] = data['obs'][:self._curr_size]
+        self.action[:self._curr_size] = data['action'][:self._curr_size]
+        self.reward[:self._curr_size] = data['reward'][:self._curr_size]
+        self.terminal[:self._curr_size] = data['terminal'][:self._curr_size]
+        self.next_obs[:self._curr_size] = data['next_obs'][:self._curr_size]
+        logger.info('[load rpm]memory loade from {}'.format(pathname))
 
 
 class PrioritizedReplayBuffer(ReplayBuffer):
@@ -93,9 +158,9 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         self.min_tree = MinSegmentTree(tree_capacity)
 
     def store(self, obs: np.ndarray, act: int, rew: float,
-              next_obs: np.ndarray, done: bool):
+              next_obs: np.ndarray, terminal: bool):
         """Store experience and priority."""
-        super().store(obs, act, rew, next_obs, done)
+        super().store(obs, act, rew, next_obs, terminal)
 
         self.sum_tree[self.tree_ptr] = self.max_priority**self.alpha
         self.min_tree[self.tree_ptr] = self.max_priority**self.alpha
@@ -114,7 +179,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         next_obs = self.next_obs_buf[indices]
         acts = self.acts_buf[indices]
         rews = self.rews_buf[indices]
-        done = self.done_buf[indices]
+        terminal = self.terminal_buf[indices]
         weights = np.array([self._calculate_weight(i, beta) for i in indices])
 
         return dict(
@@ -122,7 +187,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
             next_obs=next_obs,
             acts=acts,
             rews=rews,
-            done=done,
+            terminal=terminal,
             weights=weights,
             indices=indices,
         )
@@ -174,13 +239,13 @@ class ReplayBuffer_:
     def __init__(self, capacity):
         self.buffer = collections.deque(maxlen=capacity)
 
-    def add(self, state, action, reward, next_state, done):
-        self.buffer.append((state, action, reward, next_state, done))
+    def add(self, state, action, reward, next_state, terminal):
+        self.buffer.append((state, action, reward, next_state, terminal))
 
     def sample(self, batch_size):
         transitions = random.sample(self.buffer, batch_size)
-        state, action, reward, next_state, done = zip(*transitions)
-        return np.array(state), action, reward, np.array(next_state), done
+        state, action, reward, next_state, terminal = zip(*transitions)
+        return np.array(state), action, reward, np.array(next_state), terminal
 
     def size(self):
         return len(self.buffer)
