@@ -4,7 +4,7 @@ LastEditors: jianzhnie
 Description: RLToolKit is a flexible and high-efficient reinforcement learning framework.
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
-import collections
+
 import random
 from typing import Dict, List, Tuple, Union
 
@@ -232,20 +232,3 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         weight = weight / max_weight
 
         return weight
-
-
-class ReplayBuffer_:
-
-    def __init__(self, capacity):
-        self.buffer = collections.deque(maxlen=capacity)
-
-    def add(self, state, action, reward, next_state, terminal):
-        self.buffer.append((state, action, reward, next_state, terminal))
-
-    def sample(self, batch_size):
-        transitions = random.sample(self.buffer, batch_size)
-        state, action, reward, next_state, terminal = zip(*transitions)
-        return np.array(state), action, reward, np.array(next_state), terminal
-
-    def size(self):
-        return len(self.buffer)
