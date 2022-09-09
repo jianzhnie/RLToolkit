@@ -7,7 +7,7 @@ import torch
 from tqdm import tqdm
 
 
-class ReplayBuffer_:
+class ReplayBuffer(object):
 
     def __init__(self, capacity):
         self.buffer = collections.deque(maxlen=capacity)
