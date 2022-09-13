@@ -5,7 +5,11 @@ show-source = False
 application-import-names = rltoolkit
 exclude =
     .git
-    docs/
-    venv/
-    build/
-    env/
+    docs
+    venv
+    build
+    env
+    log
+    dist
+	*.egg-info
+	__pycache__
