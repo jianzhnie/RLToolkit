@@ -1,7 +1,27 @@
+import collections
+import random
+
 import numpy as np
 import scipy.signal
 import torch
 from tqdm import tqdm
+
+
+class ReplayBuffer(object):
+
+    def __init__(self, capacity):
+        self.buffer = collections.deque(maxlen=capacity)
+
+    def add(self, state, action, reward, next_state, terminal):
+        self.buffer.append((state, action, reward, next_state, terminal))
+
+    def sample(self, batch_size):
+        transitions = random.sample(self.buffer, batch_size)
+        state, action, reward, next_state, terminal = zip(*transitions)
+        return np.array(state), action, reward, np.array(next_state), terminal
+
+    def size(self):
+        return len(self.buffer)
 
 
 def moving_average(a, window_size):
