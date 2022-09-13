@@ -27,8 +27,8 @@ class ReplayBuffer(object):
 
     Args:
         max_size (int): max size of replay memory
-        obs_dim (list or tuple): observation shape
-        act_dim (list or tuple): action shape
+        obs_dim (int or tuple): observation shape
+        act_dim (int or tuple): action shape
     """
 
     def __init__(self, obs_dim: Union[int, Tuple], act_dim: Union[int, Tuple],
