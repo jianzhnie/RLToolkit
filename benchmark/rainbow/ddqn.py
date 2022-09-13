@@ -15,46 +15,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-
-class ReplayBuffer(object):
-    """A simple numpy replay buffer."""
-
-    def __init__(self, obs_dim: int, size: int, batch_size: int = 32):
-        self.obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
-        self.next_obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
-        self.acts_buf = np.zeros([size], dtype=np.float32)
-        self.rews_buf = np.zeros([size], dtype=np.float32)
-        self.done_buf = np.zeros(size, dtype=np.float32)
-        self.max_size, self.batch_size = size, batch_size
-        self.ptr, self.size, = 0, 0
-
-    def store(
-        self,
-        obs: np.ndarray,
-        act: np.ndarray,
-        rew: float,
-        next_obs: np.ndarray,
-        done: bool,
-    ):
-        self.obs_buf[self.ptr] = obs
-        self.next_obs_buf[self.ptr] = next_obs
-        self.acts_buf[self.ptr] = act
-        self.rews_buf[self.ptr] = rew
-        self.done_buf[self.ptr] = done
-        self.ptr = (self.ptr + 1) % self.max_size
-        self.size = min(self.size + 1, self.max_size)
-
-    def sample_batch(self) -> Dict[str, np.ndarray]:
-        idxs = np.random.choice(self.size, size=self.batch_size, replace=False)
-        return dict(
-            obs=self.obs_buf[idxs],
-            next_obs=self.next_obs_buf[idxs],
-            acts=self.acts_buf[idxs],
-            rews=self.rews_buf[idxs],
-            done=self.done_buf[idxs])
-
-    def __len__(self) -> int:
-        return self.size
+from rltoolkit.data.buffer import ReplayBuffer
 
 
 class Network(nn.Module):
@@ -70,6 +31,22 @@ class Network(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward method implementation."""
         return self.layers(x)
+
+
+# class DQNAgent(Agent):
+
+#     def __init__(self, algorithm, act_dim, start_lr, total_step,
+#                  update_target_step, device):
+#         super().__init__(algorithm)
+#         self.global_update_step = 0
+#         self.update_target_step = update_target_step
+#         self.act_dim = act_dim
+#         self.curr_ep = 1
+#         self.ep_end = 0.1
+#         self.lr_end = 0.00001
+#         self.device = device
+#         self.ep_scheduler = LinearDecayScheduler(1, total_step)
+#         self.lr_scheduler = LinearDecayScheduler(start_lr, total_step)
 
 
 class DQNAgent(object):
