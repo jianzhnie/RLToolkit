@@ -30,14 +30,12 @@ class ReplayBuffer(object):
         act_dim (int or tuple): action shape
     """
 
-    def __init__(self, obs_dim: Union[int, Tuple], act_dim: Union[int, Tuple],
-                 max_size: int):
+    def __init__(self, obs_dim: Union[int, Tuple], max_size: int):
         self.obs = np.zeros(
             combined_shape(max_size, obs_dim), dtype=np.float32)
         self.next_obs = np.zeros(
             combined_shape(max_size, obs_dim), dtype=np.float32)
-        self.action = np.zeros(
-            combined_shape(max_size, act_dim), dtype=np.float32)
+        self.action = np.zeros(max_size, dtype=np.float32)
         self.reward = np.zeros(max_size, dtype=np.float32)
         self.terminal = np.zeros(max_size, dtype=np.float32)
 
