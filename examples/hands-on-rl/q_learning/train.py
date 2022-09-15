@@ -63,14 +63,15 @@ def main():
         act_n=env.action_space.n,
         learning_rate=0.1,
         gamma=0.9,
-        e_greed=0.1)
+        epsilon=0.1)
 
     is_render = False
+    return_list = []
     for episode in range(500):
         ep_reward, ep_steps = run_episode(env, agent, is_render)
         print('Episode %s: steps = %s , reward = %.1f' %
               (episode, ep_steps, ep_reward))
-
+        return_list.append(ep_reward)
         # 每隔20个episode渲染一下看看效果
         if episode % 20 == 0:
             is_render = True
