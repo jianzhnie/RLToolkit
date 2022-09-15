@@ -10,6 +10,7 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 import time
 
 import gym
+import matplotlib.pyplot as plt
 from agent import QLearningAgent
 from gridworld import CliffWalkingWapper
 
@@ -80,6 +81,14 @@ def main():
     # 训练结束，查看算法效果
     test_episode(env, agent)
 
+    return return_list
+
 
 if __name__ == '__main__':
-    main()
+    return_list = main()
+    episodes_list = list(range(len(return_list)))
+    plt.plot(episodes_list, return_list)
+    plt.xlabel('Episodes')
+    plt.ylabel('Returns')
+    plt.title('Q-Learning on {}'.format('Cliff Walking'))
+    plt.show()
