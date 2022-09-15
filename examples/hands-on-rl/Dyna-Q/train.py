@@ -10,7 +10,6 @@ import time
 
 import gym
 import matplotlib.pyplot as plt
-import numpy as np
 from agent import DynaQAgent
 from gridworld import CliffWalkingWapper, FrozenLakeWapper
 
@@ -89,7 +88,6 @@ def main(n_planing):
 
 if __name__ == '__main__':
 
-    np.random.seed(0)
     random.seed(0)
     n_planning_list = [0, 2, 20]
     for n_planning in n_planning_list:
