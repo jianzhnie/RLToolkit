@@ -9,7 +9,7 @@ import time
 
 import gym
 from agent import SarsaAgent
-from gridworld import CliffWalkingWapper
+from gridworld import CliffWalkingWapper, FrozenLakeWapper
 
 
 def run_episode(env, agent, render=False):
@@ -52,10 +52,12 @@ def test_episode(env, agent):
 
 
 def main():
-    # env = gym.make("FrozenLake-v0", is_slippery=False)  # 0 left, 1 down, 2 right, 3 up
-    # env = FrozenLakeWapper(env)
+    env = gym.make('FrozenLake-v1', is_slippery=False)
+    # 0 left, 1 down, 2 right, 3 up
+    env = FrozenLakeWapper(env)
 
-    env = gym.make('CliffWalking-v0')  # 0 up, 1 right, 2 down, 3 left
+    env = gym.make('CliffWalking-v0')
+    # 0 up, 1 right, 2 down, 3 left
     env = CliffWalkingWapper(env)
 
     agent = SarsaAgent(
@@ -63,7 +65,7 @@ def main():
         act_n=env.action_space.n,
         learning_rate=0.1,
         gamma=0.9,
-        e_greed=0.1)
+        epsilon=0.1)
 
     is_render = False
     for episode in range(500):
@@ -72,7 +74,7 @@ def main():
               (episode, ep_steps, ep_reward))
 
         # 每隔20个episode渲染一下看看效果
-        if episode % 20 == 0:
+        if episode % 10 == 0:
             is_render = True
         else:
             is_render = False
