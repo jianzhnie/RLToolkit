@@ -9,7 +9,6 @@ import random
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
-import torch
 
 from rltoolkit.utils import logger
 
@@ -83,12 +82,11 @@ class ReplayBuffer(object):
             next_obs=self.next_obs[idxs],
             action=self.action[idxs],
             reward=self.reward[idxs],
-            terminal=self.terminal[idxs])
+            terminal=self.terminal[idxs],
+            indices=idxs,  # for N -step Learning
+        )
 
-        return {
-            k: torch.as_tensor(v, dtype=torch.float32)
-            for k, v in batch.items()
-        }
+        return batch
 
     def size(self) -> int:
         """get current size of replay memory."""
