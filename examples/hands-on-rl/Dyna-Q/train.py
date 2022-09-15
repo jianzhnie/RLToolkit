@@ -64,14 +64,14 @@ def main(n_planing):
     agent = DynaQAgent(
         obs_n=env.observation_space.n,
         act_n=env.action_space.n,
-        n_planing=10,
+        n_planing=n_planing,
         learning_rate=0.1,
         gamma=0.9,
         epsilon=0.1)
 
     is_render = False
     return_list = []
-    for episode in range(500):
+    for episode in range(300):
         ep_reward, ep_steps = run_episode(env, agent, is_render)
         print('Episode %s: steps = %s , reward = %.1f' %
               (episode, ep_steps, ep_reward))
