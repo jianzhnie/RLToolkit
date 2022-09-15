@@ -74,7 +74,7 @@ def main():
               (episode, ep_steps, ep_reward))
         return_list.append(ep_reward)
         # 每隔20个episode渲染一下看看效果
-        if episode % 20 == 0:
+        if episode % 50 == 0:
             is_render = True
         else:
             is_render = False
