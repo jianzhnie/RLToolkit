@@ -30,7 +30,8 @@ class ReplayBuffer(object):
         act_dim (int or tuple): action shape
     """
 
-    def __init__(self, obs_dim: Union[int, Tuple], max_size: int):
+    def __init__(self, obs_dim: Union[int, Tuple], max_size: int,
+                 batch_size: int):
         self.obs = np.zeros(
             combined_shape(max_size, obs_dim), dtype=np.float32)
         self.next_obs = np.zeros(
@@ -42,6 +43,7 @@ class ReplayBuffer(object):
         self._curr_ptr = 0
         self._curr_size = 0
         self.max_size = max_size
+        self.batch_size = batch_size
 
     def append(self, obs: np.ndarray, act: np.ndarray, rew: float,
                next_obs: np.ndarray, terminal: bool) -> None:
@@ -64,7 +66,7 @@ class ReplayBuffer(object):
         self._curr_ptr = (self._curr_ptr + 1) % self.max_size
         self._curr_size = min(self._curr_size + 1, self.max_size)
 
-    def sample_batch(self, batch_size: int = 32) -> Dict[str, np.ndarray]:
+    def sample_batch(self) -> Dict[str, np.ndarray]:
         """sample a batch from replay memory.
 
         Args:
@@ -73,7 +75,7 @@ class ReplayBuffer(object):
         Returns:
             a batch of experience samples: obs, action, reward, next_obs, terminal
         """
-        idxs = np.random.randint(self._curr_size, size=batch_size)
+        idxs = np.random.randint(self._curr_size, size=self.batch_size)
 
         batch = dict(
             obs=self.obs[idxs],
