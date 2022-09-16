@@ -40,8 +40,8 @@ config = {
     'total_steps': 10000,  # max training steps
     'memory_size': 2000,  # Replay buffer size
     'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
-    'batch_size': 32,  # repaly sample batch size
-    'update_target_step': 200,  # target model update freq
+    'batch_size': 64,  # repaly sample batch size
+    'update_target_step': 100,  # target model update freq
     'start_lr': 0.003,  # start learning rate
     'end_lr': 0.00001,  # end learning rate
     'start_epslion': 1,  # start greedy epslion
