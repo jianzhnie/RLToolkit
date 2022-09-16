@@ -9,6 +9,17 @@ from .base_model import Model
 
 # 定义一个添加噪声的网络层
 class NoisyLinear(nn.Module):
+    """Noisy linear module for NoisyNet.
+
+    Attributes:
+        in_features (int): input size of linear module
+        out_features (int): output size of linear module
+        std_init (float): initial std value
+        weight_mu (nn.Parameter): mean value weight parameter
+        weight_sigma (nn.Parameter): std value weight parameter
+        bias_mu (nn.Parameter): mean value bias parameter
+        bias_sigma (nn.Parameter): std value bias parameter
+    """
 
     def __init__(self,
                  in_features: int,
@@ -38,18 +49,21 @@ class NoisyLinear(nn.Module):
         self.reset_noise()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if self.training:
-            weight = self.weight_mu + self.weight_sigma.mul(
-                self.weight_epsilon)
-            bias = self.bias_mu + self.bias_sigma.mul(self.bias_epsilon)
-        else:
-            weight = self.weight_mu
-            bias = self.bias_mu
+        """Forward method implementation.
+
+        We don't use separate statements on train / eval mode. It doesn't show remarkable difference of performance.
+        """
+        # if self.training:
+        weight = self.weight_mu + self.weight_sigma.mul(self.weight_epsilon)
+        bias = self.bias_mu + self.bias_sigma.mul(self.bias_epsilon)
+        # else:
+        #     weight = self.weight_mu
+        #     bias = self.bias_mu
         return F.linear(x, weight, bias)
 
     def reset_parameters(self):
         """Reset trainable network parameters (factorized gaussian noise)."""
-        mu_range = 1 / math.sqrt(self.in_features)
+        mu_range = 1.0 / math.sqrt(self.in_features)
         self.weight_mu.data.uniform_(-mu_range, mu_range)
         self.weight_sigma.data.fill_(self.std_init /
                                      math.sqrt(self.in_features))
@@ -80,20 +94,16 @@ class NoisyNet(Model):
         super(NoisyNet, self).__init__()
 
         self.feature = nn.Linear(state_dim, hidden_dim)
-        self.noisy_layer1 = NoisyLinear(hidden_dim, hidden_dim)
-        self.noisy_layer2 = NoisyLinear(hidden_dim, action_dim)
-        self.relu1 = nn.ReLU(inplace=True)
-        self.relu2 = nn.ReLU(inplace=True)
+        self.noisy_layer = NoisyLinear(hidden_dim, action_dim)
+        self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward method implementation."""
         out = self.feature(x)
-        out = self.relu1(out)
-        out = self.noisy_layer1(out)
-        out = self.noisy_layer2(out)
+        out = self.relu(out)
+        out = self.noisy_layer(out)
         return out
 
     def reset_noise(self):
         """Reset all noisy layers."""
-        self.noisy_layer1.reset_noise()
-        self.noisy_layer2.reset_noise()
+        self.noisy_layer.reset_noise()
