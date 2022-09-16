@@ -50,7 +50,7 @@ class DQN(Algorithm):
         pred_q = self.model(obs)
         return pred_q
 
-    def learn(self, obs, action, reward, next_obs, terminal):
+    def learn(self, obs, action, reward, next_obs, terminal, n_step=None):
         """update value model self.model with DQN algorithm."""
         # 当前状态 Q 值
         pred_value = self.model(obs).gather(1, action)
@@ -61,7 +61,11 @@ class DQN(Algorithm):
             # greedy_action = self.model(next_obs).max(dim=1, keepdim=True)[1]
             next_q_value = self.target_model(next_obs).max(1, keepdim=True)[0]
             # 计算 TD-Target
-            target = reward + (1 - terminal) * self.gamma * next_q_value
+            if n_step is not None:
+                gamma = self.gamma**n_step
+            else:
+                gamma = self.gamma
+            target = reward + (1 - terminal) * gamma * next_q_value
 
         # TD误差目标
         loss = self.mse_loss(pred_value, target)
