@@ -56,6 +56,9 @@ class DQN(Algorithm):
         pred_value = self.model(obs).gather(1, action)
         with torch.no_grad():
             # 下一个状态 Q 值
+            # q_value = self.model(next_obs).max(dim=1, keepdim=True)
+            # (max, max_indices) = torch.max(input, dim, keepdim=True)
+            # greedy_action = self.model(next_obs).max(dim=1, keepdim=True)[1]
             next_q_value = self.target_model(next_obs).max(1, keepdim=True)[0]
             # 计算 TD-Target
             target = reward + (1 - terminal) * self.gamma * next_q_value
