@@ -156,6 +156,7 @@ def main():
 
     pbar = tqdm(total=args.total_steps, desc='[Training]')
     cum_steps = 0  # this is the current timestep
+    test_flag = 0
     while cum_steps < args.total_steps:
         # start epoch
         total_reward, steps, loss = run_train_episode(
@@ -174,7 +175,9 @@ def main():
         pbar.update(steps)
 
         # perform evaluation
-        if cum_steps // args.test_every_steps:
+        if cum_steps // args.test_every_steps >= test_flag:
+            while cum_steps // args.test_every_steps >= test_flag:
+                test_flag += 1
             eval_rewards_mean = run_evaluate_episodes(agent, test_env)
             pbar.write('testing')
             logger.info(
