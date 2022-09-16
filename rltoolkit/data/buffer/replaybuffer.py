@@ -140,10 +140,6 @@ class MultiStepReplayBuffer(ReplayBuffer):
     ):
         super(MultiStepReplayBuffer, self).__init__(obs_dim, max_size,
                                                     batch_size)
-        self.max_size = max_size
-        self.batch_size = batch_size
-        self._curr_ptr = 0
-        self._curr_size = 0
 
         # for N-step Learning
         self.n_step_buffer = deque(maxlen=n_step)
@@ -208,7 +204,7 @@ class MultiStepReplayBuffer(ReplayBuffer):
         return rew, next_obs, terminal
 
 
-class PrioritizedReplayBuffer(ReplayBuffer):
+class PrioritizedReplayBuffer(MultiStepReplayBuffer):
     """Prioritized Replay buffer.
 
     Attributes:
@@ -219,12 +215,22 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         min_tree (MinSegmentTree): min tree for min prior to get max weight
     """
 
-    def __init__(self, obs_dim: int, size: int, alpha: float = 0.6):
+    def __init__(self,
+                 obs_dim: int,
+                 max_size: int,
+                 batch_size: int = 32,
+                 n_step: int = 1,
+                 gamma: float = 0.99,
+                 alpha: float = 0.6):
         """Initialization."""
         assert alpha >= 0
 
-        super(PrioritizedReplayBuffer, self).__init__(obs_dim, size)
-        self.max_priority, self.tree_ptr = 1.0, 0
+        super(PrioritizedReplayBuffer,
+              self).__init__(obs_dim, max_size, batch_size, n_step, gamma)
+        # for Prioritized Replay buffer
+        self.max_priority, = 1.0
+        self.tree_ptr = 0
+
         self.alpha = alpha
 
         # capacity must be positive and a power of 2.
@@ -235,36 +241,42 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         self.sum_tree = SumSegmentTree(tree_capacity)
         self.min_tree = MinSegmentTree(tree_capacity)
 
-    def store(self, obs: np.ndarray, act: int, rew: float,
-              next_obs: np.ndarray, terminal: bool):
+    def apeend(
+        self,
+        obs: np.ndarray,
+        act: int,
+        rew: float,
+        next_obs: np.ndarray,
+        terminal: bool,
+    ) -> Tuple[np.ndarray, np.ndarray, float, np.ndarray, bool]:
         """Store experience and priority."""
-        super().store(obs, act, rew, next_obs, terminal)
+        transition = super().append(obs, act, rew, next_obs, terminal)
 
-        self.sum_tree[self.tree_ptr] = self.max_priority**self.alpha
-        self.min_tree[self.tree_ptr] = self.max_priority**self.alpha
-        self.tree_ptr = (self.tree_ptr + 1) % self.max_size
+        if transition:
+            self.sum_tree[self.tree_ptr] = self.max_priority**self.alpha
+            self.min_tree[self.tree_ptr] = self.max_priority**self.alpha
+            self.tree_ptr = (self.tree_ptr + 1) % self.max_size
+        return transition
 
-    def sample_batch(self,
-                     beta: float = 0.4,
-                     batch_size: int = 32) -> Dict[str, np.ndarray]:
+    def sample_batch(self, beta: float = 0.4) -> Dict[str, np.ndarray]:
         """Sample a batch of experiences."""
-        assert len(self) >= batch_size
+        assert len(self) >= self.batch_size
         assert beta > 0
 
         indices = self._sample_proportional()
 
         obs = self.obs_buf[indices]
         next_obs = self.next_obs_buf[indices]
-        acts = self.acts_buf[indices]
-        rews = self.rews_buf[indices]
+        action = self.action_buf[indices]
+        reward = self.reward_buf[indices]
         terminal = self.terminal_buf[indices]
         weights = np.array([self._calculate_weight(i, beta) for i in indices])
 
         return dict(
             obs=obs,
             next_obs=next_obs,
-            acts=acts,
-            rews=rews,
+            action=action,
+            reward=reward,
             terminal=terminal,
             weights=weights,
             indices=indices,
