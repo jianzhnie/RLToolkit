@@ -101,11 +101,11 @@ class ReplayBuffer(object):
         other = np.array([self._curr_size, self._curr_ptr], dtype=np.int32)
         np.savez(
             pathname,
-            obs=self.obs,
-            action=self.action,
-            reward=self.reward,
-            terminal=self.terminal,
-            next_obs=self.next_obs,
+            obs=self.obs_buf,
+            action=self.action_buf,
+            reward=self.reward_buf,
+            terminal=self.terminal_buf,
+            next_obs=self.next_obs_buf,
             other=other)
 
     def load(self, pathname: str) -> None:
@@ -117,11 +117,13 @@ class ReplayBuffer(object):
         self._curr_size = min(int(other[0]), self.max_size)
         self._curr_ptr = min(int(other[1]), self.max_size - 1)
 
-        self.obs[:self._curr_size] = data['obs'][:self._curr_size]
-        self.action[:self._curr_size] = data['action'][:self._curr_size]
-        self.reward[:self._curr_size] = data['reward'][:self._curr_size]
-        self.terminal[:self._curr_size] = data['terminal'][:self._curr_size]
-        self.next_obs[:self._curr_size] = data['next_obs'][:self._curr_size]
+        self.obs_buf[:self._curr_size] = data['obs'][:self._curr_size]
+        self.action_buf[:self._curr_size] = data['action'][:self._curr_size]
+        self.reward_buf[:self._curr_size] = data['reward'][:self._curr_size]
+        self.terminal_buf[:self._curr_size] = data['terminal'][:self.
+                                                               _curr_size]
+        self.next_obs_buf[:self._curr_size] = data['next_obs'][:self.
+                                                               _curr_size]
         logger.info('[load rpm]memory loade from {}'.format(pathname))
 
 
@@ -161,9 +163,11 @@ class MultiStepReplayBuffer(ReplayBuffer):
             return
 
         # make a n-step transition
+        # firstly, get curr obs and curr action
+        obs, act = self.n_step_buffer[0][:2]
+        # get the next_obs, reward, terminal in n_step_buffer deque
         rew, next_obs, terminal = self._get_n_step_info(
             self.n_step_buffer, self.gamma)
-        obs, act = self.n_step_buffer[0][:2]
 
         self.obs_buf[self._curr_ptr] = obs
         self.next_obs_buf[self._curr_ptr] = next_obs
@@ -188,12 +192,14 @@ class MultiStepReplayBuffer(ReplayBuffer):
         return batch
 
     def _get_n_step_info(self, n_step_buffer: Deque,
-                         gamma: float) -> Tuple[np.int64, np.ndarray, bool]:
+                         gamma: float) -> Tuple[float, np.array, bool]:
         """Return n step rew, next_obs, and terminal."""
         # info of the last transition
         rew, next_obs, terminal = n_step_buffer[-1][-3:]
 
-        for transition in reversed(list(n_step_buffer)):
+        # info of the n-1 transition
+        sub_n_step_buffer = list(n_step_buffer)[:-1]
+        for transition in reversed(sub_n_step_buffer):
             r, n_o, d = transition[-3:]
 
             rew = r + gamma * rew * (1 - d)
