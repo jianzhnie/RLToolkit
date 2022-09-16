@@ -10,13 +10,13 @@ class QNet(Model):
     只有一层隐藏层的Q网络.
     """
 
-    def __init__(self, state_dim, hidden_dim, action_dim):
+    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int):
         super(QNet, self).__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, action_dim)
         self.relu = nn.ReLU(inplace=True)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward method implementation."""
 
         x = self.fc1(x)
