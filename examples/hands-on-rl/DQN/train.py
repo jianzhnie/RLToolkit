@@ -4,33 +4,15 @@ import sys
 import gym
 import numpy as np
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from tqdm import tqdm
 
 sys.path.append('../../../')
 from agent import Agent
+from network import DulingNet, QNet
 
 from rltoolkit.data.buffer.replaybuffer import ReplayBuffer
-from rltoolkit.models.base_model import Model
-from rltoolkit.policy.modelfree.dqn import DQN
+from rltoolkit.policy.modelfree import DDQN, DQN
 from rltoolkit.utils import logger, tensorboard
-
-
-class Qnet(Model):
-    """只有一层隐藏层的Q网络."""
-
-    def __init__(self, state_dim, hidden_dim, action_dim):
-        super(Qnet, self).__init__()
-        self.fc1 = nn.Linear(state_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, action_dim)
-
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        # 隐藏层使用ReLU激活函数
-        return x
-
 
 config = {
     'train_seed': 42,
@@ -109,7 +91,7 @@ def run_evaluate_episodes(agent: Agent,
 
 
 def main():
-    algo_name = 'dqn'
+    algo_name = 'dulingdqn'
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
     test_env = gym.make(args.env)
@@ -129,10 +111,21 @@ def main():
         max_size=args.memory_size,
         batch_size=args.batch_size)
     # get model
-    model = Qnet(
+    model = QNet(
         state_dim=state_dim, action_dim=action_dim, hidden_dim=args.hidden_dim)
     # get algorithm
-    alg = DQN(model, gamma=args.gamma, lr=args.start_lr, device=device)
+
+    if algo_name == 'dqn':
+        alg = DQN(model, gamma=args.gamma, lr=args.start_lr, device=device)
+    elif algo_name == 'ddqn':
+        alg = DDQN(model, gamma=args.gamma, lr=args.start_lr, device=device)
+    elif algo_name == 'dulingdqn':
+        model = DulingNet(
+            state_dim=state_dim,
+            action_dim=action_dim,
+            hidden_dim=args.hidden_dim)
+        alg = DDQN(model, gamma=args.gamma, lr=args.start_lr, device=device)
+
     # get agent
     agent = Agent(
         alg,
