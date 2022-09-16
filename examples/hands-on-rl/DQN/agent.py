@@ -70,8 +70,7 @@ class Agent(Agent):
             act(int): action
         """
         obs = torch.tensor(obs, dtype=torch.float, device=self.device)
-        selected_action = self.alg.predict(obs).argmax()
-        selected_action = selected_action.detach().cpu().numpy()
+        selected_action = self.alg.predict(obs).argmax().item()
         return selected_action
 
     def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
