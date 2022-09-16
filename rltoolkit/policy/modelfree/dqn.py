@@ -42,6 +42,7 @@ class DQN(Algorithm):
         self.lr = lr
 
         self.mse_loss = torch.nn.MSELoss()
+        self.smoothl1_loss = torch.nn.SmoothL1Loss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
     def predict(self, obs):
@@ -51,15 +52,23 @@ class DQN(Algorithm):
 
     def learn(self, obs, action, reward, next_obs, terminal):
         """update value model self.model with DQN algorithm."""
+        # 当前状态 Q 值
         pred_value = self.model(obs).gather(1, action)
         with torch.no_grad():
+            # 下一个状态 Q 值
             next_q_value = self.target_model(next_obs).max(1, keepdim=True)[0]
+            # 计算 TD-Target
             target = reward + (1 - terminal) * self.gamma * next_q_value
-        self.optimizer.zero_grad()
+
+        # TD误差目标
         loss = self.mse_loss(pred_value, target)
+        # PyTorch中默认梯度会累积,这里需要显式将梯度置为0
+        self.optimizer.zero_grad()
         loss.backward()
+        # 反向传播更新参数
         self.optimizer.step()
         return loss.item()
 
     def sync_target(self):
+        # 更新目标网络
         self.model.sync_weights_to(self.target_model)
