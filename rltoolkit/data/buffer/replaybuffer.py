@@ -125,7 +125,7 @@ class ReplayBuffer(object):
         logger.info('[load rpm]memory loade from {}'.format(pathname))
 
 
-class MulltiStepReplayBuffer(ReplayBuffer):
+class MultiStepReplayBuffer(ReplayBuffer):
     """A simple numpy replay buffer."""
 
     def __init__(
@@ -136,8 +136,8 @@ class MulltiStepReplayBuffer(ReplayBuffer):
         n_step: int = 3,
         gamma: float = 0.99,
     ):
-        super(MulltiStepReplayBuffer, self).__init__(obs_dim, max_size,
-                                                     batch_size)
+        super(MultiStepReplayBuffer, self).__init__(obs_dim, max_size,
+                                                    batch_size)
         self.max_size = max_size
         self.batch_size = batch_size
         self._curr_ptr = 0
@@ -158,7 +158,7 @@ class MulltiStepReplayBuffer(ReplayBuffer):
 
         # single step transition is not ready
         if len(self.n_step_buffer) < self.n_step:
-            return ()
+            return
 
         # make a n-step transition
         rew, next_obs, terminal = self._get_n_step_info(
@@ -179,13 +179,13 @@ class MulltiStepReplayBuffer(ReplayBuffer):
     def sample_batch_from_idxs(self,
                                indices: np.ndarray) -> Dict[str, np.ndarray]:
         # for N-step Learning
-        return dict(
+        batch = dict(
             obs=self.obs_buf[indices],
             next_obs=self.next_obs_buf[indices],
-            acts=self.action_buf[indices],
-            rews=self.reward_buf[indices],
-            terminal=self.terminal_buf[indices],
-        )
+            action=self.action_buf[indices],
+            reward=self.reward_buf[indices],
+            terminal=self.terminal_buf[indices])
+        return batch
 
     def _get_n_step_info(self, n_step_buffer: Deque,
                          gamma: float) -> Tuple[np.int64, np.ndarray, bool]:
