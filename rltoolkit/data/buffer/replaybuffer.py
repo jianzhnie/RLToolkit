@@ -193,7 +193,7 @@ class MulltiStepReplayBuffer(ReplayBuffer):
         # info of the last transition
         rew, next_obs, terminal = n_step_buffer[-1][-3:]
 
-        for transition in reversed(list(n_step_buffer)[:-1]):
+        for transition in reversed(list(n_step_buffer)):
             r, n_o, d = transition[-3:]
 
             rew = r + gamma * rew * (1 - d)
