@@ -25,6 +25,7 @@ class Agent(Agent):
                  end_lr: float = 0.00001,
                  start_epslion: float = 1.0,
                  end_epsilon: float = 0.1,
+                 n_step: int = 3,
                  device='cpu'):
         super().__init__(algorithm)
         self.global_update_step = 0
@@ -33,6 +34,7 @@ class Agent(Agent):
         self.curr_epslion = start_epslion
         self.end_epslion = end_epsilon
         self.end_lr = end_lr
+        self.n_step = n_step
         self.device = device
         self.ep_scheduler = LinearDecayScheduler(start_epslion, total_step)
         self.lr_scheduler = LinearDecayScheduler(start_lr, total_step)
@@ -97,7 +99,8 @@ class Agent(Agent):
         reward = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
         terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
         # calculate dqn loss
-        loss = self.alg.learn(obs, action, reward, next_obs, terminal)
+        loss = self.alg.learn(obs, action, reward, next_obs, terminal,
+                              self.n_step)
         self.global_update_step += 1
         # learning rate decay
         for param_group in self.alg.optimizer.param_groups:
