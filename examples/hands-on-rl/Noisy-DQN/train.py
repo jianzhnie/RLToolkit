@@ -89,7 +89,7 @@ def run_evaluate_episodes(agent: Agent,
 
 
 def main():
-    algo_name = 'dqn'
+    algo_name = 'ddqn'
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
     test_env = gym.make(args.env)
