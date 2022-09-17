@@ -228,7 +228,7 @@ class PrioritizedReplayBuffer(MultiStepReplayBuffer):
         super(PrioritizedReplayBuffer,
               self).__init__(obs_dim, max_size, batch_size, n_step, gamma)
         # for Prioritized Replay buffer
-        self.max_priority, = 1.0
+        self.max_priority = 1.0
         self.tree_ptr = 0
 
         self.alpha = alpha
