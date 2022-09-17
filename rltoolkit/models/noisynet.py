@@ -142,12 +142,9 @@ class NoisyDulingNetwork(Model):
     def dist(self, x: torch.Tensor) -> torch.Tensor:
         """Get distribution for atoms."""
         feature = self.feature_layer(x)
-        adv_hid = F.relu(feature)
-        val_hid = F.relu(feature)
-
-        advantage = self.advantage_layer(adv_hid).view(-1, self.action_dim,
+        advantage = self.advantage_layer(feature).view(-1, self.action_dim,
                                                        self.atom_size)
-        value = self.value_layer(val_hid).view(-1, 1, self.atom_size)
+        value = self.value_layer(feature).view(-1, 1, self.atom_size)
         q_atoms = value + advantage - advantage.mean(dim=1, keepdim=True)
 
         dist = F.softmax(q_atoms, dim=-1)
