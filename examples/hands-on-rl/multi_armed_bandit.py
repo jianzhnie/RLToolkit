@@ -6,19 +6,19 @@ class BernoulliBandit(object):
     """伯努利多臂老虎机,输入K表示拉杆个数."""
 
     def __init__(self, num_bandit):
-        self.probs = np.random.uniform(size=num_bandit)
-        # 随机生成K个0～1的数,作为拉动每根拉杆的获奖概率
+        self.probs = np.random.uniform(
+            size=num_bandit)  # 随机生成K个0～1的数,作为拉动每根拉杆的获奖概率
         self.best_idx = np.argmax(self.probs)  # 获奖概率最大的拉杆
         self.best_prob = self.probs[self.best_idx]  # 最大的获奖概率
         self.num_bandit = num_bandit
 
     def step(self, k):
-        # 当玩家选择了k号拉杆后,根据拉动该老虎机的k号拉杆获得奖励的概率返回1（获奖）或0（未获奖）
+        # 当玩家选择了k号拉杆后,根据拉动该老虎机的k号拉杆获得奖励的概率返回1（获奖）或0（未
+        # 获奖）
         if np.random.rand() < self.probs[k]:
-            reward = 1
+            return 1
         else:
-            reward = 0
-        return reward
+            return 0
 
 
 class Solver(object):
@@ -33,8 +33,7 @@ class Solver(object):
 
     def update_regret(self, k):
         # 计算累积懊悔并保存,k为本次动作选择的拉杆的编号
-        curr_regret = self.bandit.best_prob - self.bandit.probs[k]
-        self.regret += curr_regret
+        self.regret += self.bandit.best_prob - self.bandit.probs[k]
         self.regrets.append(self.regret)
 
     def run_one_step(self):
@@ -73,17 +72,14 @@ class EpsilonGreedy(Solver):
 class DecayingEpsilonGreedy(Solver):
     """epsilon值随时间衰减的epsilon-贪婪算法,继承Solver类."""
 
-    def __init__(self, bandit, epsilon=1.0, init_prob=1.0):
+    def __init__(self, bandit, init_prob=1.0):
         super(DecayingEpsilonGreedy, self).__init__(bandit)
-        self.epsilon = epsilon
-        # 初始化拉动所有拉杆的期望奖励估值
         self.estimates = np.array([init_prob] * self.bandit.num_bandit)
         self.total_count = 0
 
     def run_one_step(self):
         self.total_count += 1
-        self.epsilon = 1.0 / self.total_count
-        if np.random.random() < self.epsilon:  # epsilon值随时间衰减
+        if np.random.random() < 1 / self.total_count:  # epsilon值随时间衰减
             k = np.random.randint(0, self.bandit.num_bandit)
         else:
             k = np.argmax(self.estimates)
@@ -107,8 +103,7 @@ class UCB(Solver):
     def run_one_step(self):
         self.total_count += 1
         ucb = self.estimates + self.coef * np.sqrt(
-            np.log(self.total_count) / (2 * (self.counts + 1)))
-        # 计算上置信界
+            np.log(self.total_count) / (2 * (self.counts + 1)))  # 计算上置信界
         k = np.argmax(ucb)  # 选出上置信界最大的拉杆
         r = self.bandit.step(k)
         self.estimates[k] += 1. / (self.counts[k] + 1) * (
@@ -157,7 +152,7 @@ if __name__ == '__main__':
           (bandit_10_arm.best_idx, bandit_10_arm.best_prob))
 
     np.random.seed(1)
-    epsilon_greedy_solver = EpsilonGreedy(bandit_10_arm, epsilon=0.01)
+    epsilon_greedy_solver = EpsilonGreedy(bandit_10_arm, epsilon=0.001)
     epsilon_greedy_solver.run(50000)
     print('epsilon-贪婪算法的累积懊悔为：', epsilon_greedy_solver.regret)
     plot_results([epsilon_greedy_solver], ['EpsilonGreedy'])

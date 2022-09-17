@@ -6,10 +6,10 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
 
 import random
-from collections import deque
-from typing import Deque, Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
+import torch
 
 from rltoolkit.utils import logger
 
@@ -31,20 +31,20 @@ class ReplayBuffer(object):
         act_dim (int or tuple): action shape
     """
 
-    def __init__(self, obs_dim: Union[int, Tuple], max_size: int,
-                 batch_size: int):
-        self.obs_buf = np.zeros(
+    def __init__(self, obs_dim: Union[int, Tuple], act_dim: Union[int, Tuple],
+                 max_size: int):
+        self.obs = np.zeros(
             combined_shape(max_size, obs_dim), dtype=np.float32)
-        self.next_obs_buf = np.zeros(
+        self.next_obs = np.zeros(
             combined_shape(max_size, obs_dim), dtype=np.float32)
-        self.action_buf = np.zeros(max_size, dtype=np.float32)
-        self.reward_buf = np.zeros(max_size, dtype=np.float32)
-        self.terminal_buf = np.zeros(max_size, dtype=np.float32)
+        self.action = np.zeros(
+            combined_shape(max_size, act_dim), dtype=np.float32)
+        self.reward = np.zeros(max_size, dtype=np.float32)
+        self.terminal = np.zeros(max_size, dtype=np.float32)
 
         self._curr_ptr = 0
         self._curr_size = 0
         self.max_size = max_size
-        self.batch_size = batch_size
 
     def append(self, obs: np.ndarray, act: np.ndarray, rew: float,
                next_obs: np.ndarray, terminal: bool) -> None:
@@ -58,16 +58,16 @@ class ReplayBuffer(object):
             terminal (bool): terminal of an episode or not
         """
 
-        self.obs_buf[self._curr_ptr] = obs
-        self.next_obs_buf[self._curr_ptr] = next_obs
-        self.action_buf[self._curr_ptr] = act
-        self.reward_buf[self._curr_ptr] = rew
-        self.terminal_buf[self._curr_ptr] = terminal
+        self.obs[self._curr_ptr] = obs
+        self.next_obs[self._curr_ptr] = next_obs
+        self.action[self._curr_ptr] = act
+        self.reward[self._curr_ptr] = rew
+        self.terminal[self._curr_ptr] = terminal
 
         self._curr_ptr = (self._curr_ptr + 1) % self.max_size
         self._curr_size = min(self._curr_size + 1, self.max_size)
 
-    def sample_batch(self) -> Dict[str, np.ndarray]:
+    def sample_batch(self, batch_size: int = 32) -> Dict[str, np.ndarray]:
         """sample a batch from replay memory.
 
         Args:
@@ -76,18 +76,19 @@ class ReplayBuffer(object):
         Returns:
             a batch of experience samples: obs, action, reward, next_obs, terminal
         """
-        idxs = np.random.randint(self._curr_size, size=self.batch_size)
+        idxs = np.random.randint(self._curr_size, size=batch_size)
 
         batch = dict(
-            obs=self.obs_buf[idxs],
-            next_obs=self.next_obs_buf[idxs],
-            action=self.action_buf[idxs],
-            reward=self.reward_buf[idxs],
-            terminal=self.terminal_buf[idxs],
-            indices=idxs,  # for N -step Learning
-        )
+            obs=self.obs[idxs],
+            next_obs=self.next_obs[idxs],
+            action=self.action[idxs],
+            reward=self.reward[idxs],
+            terminal=self.terminal[idxs])
 
-        return batch
+        return {
+            k: torch.as_tensor(v, dtype=torch.float32)
+            for k, v in batch.items()
+        }
 
     def size(self) -> int:
         """get current size of replay memory."""
@@ -101,11 +102,11 @@ class ReplayBuffer(object):
         other = np.array([self._curr_size, self._curr_ptr], dtype=np.int32)
         np.savez(
             pathname,
-            obs=self.obs_buf,
-            action=self.action_buf,
-            reward=self.reward_buf,
-            terminal=self.terminal_buf,
-            next_obs=self.next_obs_buf,
+            obs=self.obs,
+            action=self.action,
+            reward=self.reward,
+            terminal=self.terminal,
+            next_obs=self.next_obs,
             other=other)
 
     def load(self, pathname: str) -> None:
@@ -117,94 +118,15 @@ class ReplayBuffer(object):
         self._curr_size = min(int(other[0]), self.max_size)
         self._curr_ptr = min(int(other[1]), self.max_size - 1)
 
-        self.obs_buf[:self._curr_size] = data['obs'][:self._curr_size]
-        self.action_buf[:self._curr_size] = data['action'][:self._curr_size]
-        self.reward_buf[:self._curr_size] = data['reward'][:self._curr_size]
-        self.terminal_buf[:self._curr_size] = data['terminal'][:self.
-                                                               _curr_size]
-        self.next_obs_buf[:self._curr_size] = data['next_obs'][:self.
-                                                               _curr_size]
+        self.obs[:self._curr_size] = data['obs'][:self._curr_size]
+        self.action[:self._curr_size] = data['action'][:self._curr_size]
+        self.reward[:self._curr_size] = data['reward'][:self._curr_size]
+        self.terminal[:self._curr_size] = data['terminal'][:self._curr_size]
+        self.next_obs[:self._curr_size] = data['next_obs'][:self._curr_size]
         logger.info('[load rpm]memory loade from {}'.format(pathname))
 
 
-class MultiStepReplayBuffer(ReplayBuffer):
-    """A simple numpy replay buffer."""
-
-    def __init__(
-        self,
-        obs_dim: int,
-        max_size: int,
-        batch_size: int = 32,
-        n_step: int = 3,
-        gamma: float = 0.99,
-    ):
-        super(MultiStepReplayBuffer, self).__init__(obs_dim, max_size,
-                                                    batch_size)
-
-        # for N-step Learning
-        self.n_step_buffer = deque(maxlen=n_step)
-        self.n_step = n_step
-        self.gamma = gamma
-
-    def append(
-        self, obs: np.ndarray, act: np.ndarray, rew: float,
-        next_obs: np.ndarray, terminal: bool
-    ) -> Tuple[np.ndarray, np.ndarray, float, np.ndarray, bool]:
-
-        transition = (obs, act, rew, next_obs, terminal)
-        self.n_step_buffer.append(transition)
-
-        # single step transition is not ready
-        if len(self.n_step_buffer) < self.n_step:
-            return
-
-        # make a n-step transition
-        # firstly, get curr obs and curr action
-        obs, act = self.n_step_buffer[0][:2]
-        # get the next_obs, reward, terminal in n_step_buffer deque
-        rew, next_obs, terminal = self._get_n_step_info(
-            self.n_step_buffer, self.gamma)
-
-        self.obs_buf[self._curr_ptr] = obs
-        self.next_obs_buf[self._curr_ptr] = next_obs
-        self.action_buf[self._curr_ptr] = act
-        self.reward_buf[self._curr_ptr] = rew
-        self.terminal_buf[self._curr_ptr] = terminal
-
-        self._curr_ptr = (self._curr_ptr + 1) % self.max_size
-        self._curr_size = min(self._curr_size + 1, self.max_size)
-
-        return self.n_step_buffer[0]
-
-    def sample_batch_from_idxs(self,
-                               indices: np.ndarray) -> Dict[str, np.ndarray]:
-        # for N-step Learning
-        batch = dict(
-            obs=self.obs_buf[indices],
-            next_obs=self.next_obs_buf[indices],
-            action=self.action_buf[indices],
-            reward=self.reward_buf[indices],
-            terminal=self.terminal_buf[indices])
-        return batch
-
-    def _get_n_step_info(self, n_step_buffer: Deque,
-                         gamma: float) -> Tuple[float, np.array, bool]:
-        """Return n step rew, next_obs, and terminal."""
-        # info of the last transition
-        rew, next_obs, terminal = n_step_buffer[-1][-3:]
-
-        # info of the n-1 transition
-        sub_n_step_buffer = list(n_step_buffer)[:-1]
-        for transition in reversed(sub_n_step_buffer):
-            r, n_o, d = transition[-3:]
-
-            rew = r + gamma * rew * (1 - d)
-            next_obs, terminal = (n_o, d) if d else (next_obs, terminal)
-
-        return rew, next_obs, terminal
-
-
-class PrioritizedReplayBuffer(MultiStepReplayBuffer):
+class PrioritizedReplayBuffer(ReplayBuffer):
     """Prioritized Replay buffer.
 
     Attributes:
@@ -217,20 +139,14 @@ class PrioritizedReplayBuffer(MultiStepReplayBuffer):
 
     def __init__(self,
                  obs_dim: int,
-                 max_size: int,
-                 batch_size: int = 32,
-                 n_step: int = 1,
-                 gamma: float = 0.99,
+                 act_dim: int,
+                 size: int,
                  alpha: float = 0.6):
         """Initialization."""
         assert alpha >= 0
 
-        super(PrioritizedReplayBuffer,
-              self).__init__(obs_dim, max_size, batch_size, n_step, gamma)
-        # for Prioritized Replay buffer
-        self.max_priority, = 1.0
-        self.tree_ptr = 0
-
+        super(PrioritizedReplayBuffer, self).__init__(obs_dim, act_dim, size)
+        self.max_priority, self.tree_ptr = 1.0, 0
         self.alpha = alpha
 
         # capacity must be positive and a power of 2.
@@ -241,42 +157,36 @@ class PrioritizedReplayBuffer(MultiStepReplayBuffer):
         self.sum_tree = SumSegmentTree(tree_capacity)
         self.min_tree = MinSegmentTree(tree_capacity)
 
-    def apeend(
-        self,
-        obs: np.ndarray,
-        act: int,
-        rew: float,
-        next_obs: np.ndarray,
-        terminal: bool,
-    ) -> Tuple[np.ndarray, np.ndarray, float, np.ndarray, bool]:
+    def store(self, obs: np.ndarray, act: int, rew: float,
+              next_obs: np.ndarray, terminal: bool):
         """Store experience and priority."""
-        transition = super().append(obs, act, rew, next_obs, terminal)
+        super().store(obs, act, rew, next_obs, terminal)
 
-        if transition:
-            self.sum_tree[self.tree_ptr] = self.max_priority**self.alpha
-            self.min_tree[self.tree_ptr] = self.max_priority**self.alpha
-            self.tree_ptr = (self.tree_ptr + 1) % self.max_size
-        return transition
+        self.sum_tree[self.tree_ptr] = self.max_priority**self.alpha
+        self.min_tree[self.tree_ptr] = self.max_priority**self.alpha
+        self.tree_ptr = (self.tree_ptr + 1) % self.max_size
 
-    def sample_batch(self, beta: float = 0.4) -> Dict[str, np.ndarray]:
+    def sample_batch(self,
+                     beta: float = 0.4,
+                     batch_size: int = 32) -> Dict[str, np.ndarray]:
         """Sample a batch of experiences."""
-        assert len(self) >= self.batch_size
+        assert len(self) >= batch_size
         assert beta > 0
 
         indices = self._sample_proportional()
 
         obs = self.obs_buf[indices]
         next_obs = self.next_obs_buf[indices]
-        action = self.action_buf[indices]
-        reward = self.reward_buf[indices]
+        acts = self.acts_buf[indices]
+        rews = self.rews_buf[indices]
         terminal = self.terminal_buf[indices]
         weights = np.array([self._calculate_weight(i, beta) for i in indices])
 
         return dict(
             obs=obs,
             next_obs=next_obs,
-            action=action,
-            reward=reward,
+            acts=acts,
+            rews=rews,
             terminal=terminal,
             weights=weights,
             indices=indices,

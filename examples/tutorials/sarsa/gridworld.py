@@ -9,7 +9,7 @@ import numpy as np
 def GridWorld(gridmap=None, is_slippery=False):
     if gridmap is None:
         gridmap = ['SFFF', 'FHFH', 'FFFH', 'HFFG']
-    env = gym.make('FrozenLake-v1', desc=gridmap, is_slippery=False)
+    env = gym.make('FrozenLake-v0', desc=gridmap, is_slippery=False)
     env = FrozenLakeWapper(env)
     return env
 
@@ -158,16 +158,20 @@ class CliffWalkingWapper(gym.Wrapper):
 if __name__ == '__main__':
     # 环境1：FrozenLake, 可以配置冰面是否是滑的
     # 0 left, 1 down, 2 right, 3 up
-    env = gym.make('FrozenLake-v1', is_slippery=False)
+    env = gym.make('FrozenLake-v0', is_slippery=False)
     env = FrozenLakeWapper(env)
 
     # 环境2：CliffWalking, 悬崖环境
-    env = gym.make('CliffWalking-v0')  # 0 up, 1 right, 2 down, 3 left
-    env = CliffWalkingWapper(env)
+    # env = gym.make("CliffWalking-v0")  # 0 up, 1 right, 2 down, 3 left
+    # env = CliffWalkingWapper(env)
 
     # 环境3：自定义格子世界，可以配置地图, S为出发点Start, F为平地Floor, H为洞Hole, G为出口目标Goal
-    gridmap = ['SFFF', 'FHFF', 'FFFF', 'HFGF']
-    env = GridWorld(gridmap)
+    # gridmap = [
+    #         'SFFF',
+    #         'FHFF',
+    #         'FFFF',
+    #         'HFGF' ]
+    # env = GridWorld(gridmap)
 
     env.reset()
     for step in range(10):
@@ -175,4 +179,4 @@ if __name__ == '__main__':
         obs, reward, done, info = env.step(action)
         print('step {}: action {}, obs {}, reward {}, done {}, info {}'.format(
             step, action, obs, reward, done, info))
-        env.render()  # 渲染一帧图像
+        # env.render() # 渲染一帧图像

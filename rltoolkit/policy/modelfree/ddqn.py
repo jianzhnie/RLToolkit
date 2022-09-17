@@ -48,7 +48,7 @@ class DDQN(Algorithm):
         pred_q = self.model(obs)
         return pred_q
 
-    def learn(self, obs, action, reward, next_obs, terminal, n_step=None):
+    def learn(self, obs, action, reward, next_obs, terminal):
         """update value model self.model with Double DQN algorithm.
 
         selected_action = dqn(next_state).argmax(dim=1, keepdim=True)
@@ -62,11 +62,7 @@ class DDQN(Algorithm):
         with torch.no_grad():
             # target_model for evaluation.
             next_q_value = self.target_model(next_obs).gather(1, greedy_action)
-            if n_step is not None:
-                gamma = self.gamma**n_step
-            else:
-                gamma = self.gamma
-            target = reward + (1 - terminal) * gamma * next_q_value
+            target = reward + (1 - terminal) * self.gamma * next_q_value
         self.optimizer.zero_grad()
         loss = self.mse_loss(pred_value, target)
         loss.backward()
