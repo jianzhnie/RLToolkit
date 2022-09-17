@@ -23,7 +23,7 @@ config = {
     'memory_size': 2000,  # Replay buffer size
     'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
     'batch_size': 64,  # repaly sample batch size
-    'n_step': 3,
+    'n_step': 5,
     'update_target_step': 100,  # target model update freq
     'start_lr': 0.01,  # start learning rate
     'end_lr': 0.00001,  # end learning rate
@@ -87,12 +87,12 @@ def run_evaluate_episodes(agent: Agent,
         if render:
             env.render()
         if done:
-            obs = env.reset()
+            obs = env.close()
     return score
 
 
 def main():
-    algo_name = 'ddqn'
+    algo_name = 'dqn'
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
     test_env = gym.make(args.env)
@@ -139,6 +139,7 @@ def main():
         end_lr=args.end_lr,
         start_epslion=args.start_epslion,
         end_epsilon=args.end_epslion,
+        n_step=args.n_step,
         device=device)
 
     # start training, memory warm up

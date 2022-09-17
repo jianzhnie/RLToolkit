@@ -53,12 +53,13 @@ class NoisyLinear(nn.Module):
 
         We don't use separate statements on train / eval mode. It doesn't show remarkable difference of performance.
         """
-        # if self.training:
-        weight = self.weight_mu + self.weight_sigma.mul(self.weight_epsilon)
-        bias = self.bias_mu + self.bias_sigma.mul(self.bias_epsilon)
-        # else:
-        #     weight = self.weight_mu
-        #     bias = self.bias_mu
+        if self.training:
+            weight = self.weight_mu + self.weight_sigma.mul(
+                self.weight_epsilon)
+            bias = self.bias_mu + self.bias_sigma.mul(self.bias_epsilon)
+        else:
+            weight = self.weight_mu
+            bias = self.bias_mu
         return F.linear(x, weight, bias)
 
     def reset_parameters(self):
@@ -89,12 +90,16 @@ class NoisyLinear(nn.Module):
 
 class NoisyNet(Model):
 
-    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int):
+    def __init__(self,
+                 state_dim: int,
+                 hidden_dim: int,
+                 action_dim: int,
+                 std_init: float = 0.5):
         """Initialization."""
         super(NoisyNet, self).__init__()
 
         self.feature = nn.Linear(state_dim, hidden_dim)
-        self.noisy_layer = NoisyLinear(hidden_dim, action_dim)
+        self.noisy_layer = NoisyLinear(hidden_dim, action_dim, std_init)
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -107,3 +112,89 @@ class NoisyNet(Model):
     def reset_noise(self):
         """Reset all noisy layers."""
         self.noisy_layer.reset_noise()
+
+
+class NoisyDulingNet(Model):
+
+    def __init__(self,
+                 state_dim: int,
+                 hidden_dim: int,
+                 action_dim: int,
+                 atom_size: int,
+                 support: torch.Tensor,
+                 std_init: float = 0.5):
+        """Initialization."""
+        super(NoisyDulingNet, self).__init__()
+
+        self.support = support
+        self.action_dim = action_dim
+        self.atom_size = atom_size
+
+        # set common feature layer
+        self.feature_layer = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+        )
+
+        # set advantage layer
+        self.advantage_layer = NoisyLinear(hidden_dim, action_dim * atom_size,
+                                           std_init)
+
+        # set value layer
+        self.value_layer = NoisyLinear(hidden_dim, atom_size, std_init)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward method implementation."""
+        dist = self.dist(x)
+        q = torch.sum(dist * self.support, dim=2)
+
+        return q
+
+    def dist(self, x: torch.Tensor) -> torch.Tensor:
+        """Get distribution for atoms."""
+        feature = self.feature_layer(x)
+        advantage = self.advantage_layer(feature).view(-1, self.action_dim,
+                                                       self.atom_size)
+        value = self.value_layer(feature).view(-1, 1, self.atom_size)
+        q_atoms = value + advantage - advantage.mean(dim=1, keepdim=True)
+
+        dist = F.softmax(q_atoms, dim=-1)
+        dist = dist.clamp(min=1e-3)  # for avoiding nans
+
+        return dist
+
+    def reset_noise(self):
+        """Reset all noisy layers."""
+        self.advantage_layer.reset_noise()
+        self.value_layer.reset_noise()
+
+
+class CategoryNetwork(Model):
+
+    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int,
+                 atom_size: int, support: torch.Tensor):
+        """Initialization."""
+        super(CategoryNetwork, self).__init__()
+
+        self.support = support
+        self.out_dim = action_dim
+        self.atom_size = atom_size
+
+        self.layers = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim), nn.ReLU(),
+            nn.Linear(hidden_dim, action_dim * atom_size))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward method implementation."""
+        dist = self.dist(x)
+        q = torch.sum(dist * self.support, dim=2)
+
+        return q
+
+    def dist(self, x: torch.Tensor) -> torch.Tensor:
+        """Get distribution for atoms."""
+        q_atoms = self.layers(x).view(-1, self.out_dim, self.atom_size)
+        dist = F.softmax(q_atoms, dim=-1)
+        dist = dist.clamp(min=1e-3)  # for avoiding nans
+
+        return dist
