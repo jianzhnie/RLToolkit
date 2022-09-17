@@ -53,12 +53,13 @@ class NoisyLinear(nn.Module):
 
         We don't use separate statements on train / eval mode. It doesn't show remarkable difference of performance.
         """
-        # if self.training:
-        weight = self.weight_mu + self.weight_sigma.mul(self.weight_epsilon)
-        bias = self.bias_mu + self.bias_sigma.mul(self.bias_epsilon)
-        # else:
-        #     weight = self.weight_mu
-        #     bias = self.bias_mu
+        if self.training:
+            weight = self.weight_mu + self.weight_sigma.mul(
+                self.weight_epsilon)
+            bias = self.bias_mu + self.bias_sigma.mul(self.bias_epsilon)
+        else:
+            weight = self.weight_mu
+            bias = self.bias_mu
         return F.linear(x, weight, bias)
 
     def reset_parameters(self):
@@ -89,12 +90,16 @@ class NoisyLinear(nn.Module):
 
 class NoisyNet(Model):
 
-    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int):
+    def __init__(self,
+                 state_dim: int,
+                 hidden_dim: int,
+                 action_dim: int,
+                 std_init: float = 0.5):
         """Initialization."""
         super(NoisyNet, self).__init__()
 
         self.feature = nn.Linear(state_dim, hidden_dim)
-        self.noisy_layer = NoisyLinear(hidden_dim, action_dim)
+        self.noisy_layer = NoisyLinear(hidden_dim, action_dim, std_init)
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -109,12 +114,17 @@ class NoisyNet(Model):
         self.noisy_layer.reset_noise()
 
 
-class NoisyDulingNetwork(Model):
+class NoisyDulingNet(Model):
 
-    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int,
-                 atom_size: int, support: torch.Tensor):
+    def __init__(self,
+                 state_dim: int,
+                 hidden_dim: int,
+                 action_dim: int,
+                 atom_size: int,
+                 support: torch.Tensor,
+                 std_init: float = 0.5):
         """Initialization."""
-        super(NoisyDulingNetwork, self).__init__()
+        super(NoisyDulingNet, self).__init__()
 
         self.support = support
         self.action_dim = action_dim
@@ -127,10 +137,11 @@ class NoisyDulingNetwork(Model):
         )
 
         # set advantage layer
-        self.advantage_layer = NoisyLinear(hidden_dim, action_dim * atom_size)
+        self.advantage_layer = NoisyLinear(hidden_dim, action_dim * atom_size,
+                                           std_init)
 
         # set value layer
-        self.value_layer = NoisyLinear(hidden_dim, atom_size)
+        self.value_layer = NoisyLinear(hidden_dim, atom_size, std_init)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward method implementation."""
