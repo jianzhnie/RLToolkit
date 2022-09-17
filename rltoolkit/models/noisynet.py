@@ -107,3 +107,86 @@ class NoisyNet(Model):
     def reset_noise(self):
         """Reset all noisy layers."""
         self.noisy_layer.reset_noise()
+
+
+class NoisyDulingNetwork(Model):
+
+    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int,
+                 atom_size: int, support: torch.Tensor):
+        """Initialization."""
+        super(NoisyDulingNetwork, self).__init__()
+
+        self.support = support
+        self.action_dim = action_dim
+        self.atom_size = atom_size
+
+        # set common feature layer
+        self.feature_layer = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim),
+            nn.ReLU(),
+        )
+
+        # set advantage layer
+        self.advantage_layer = NoisyLinear(hidden_dim, action_dim * atom_size)
+
+        # set value layer
+        self.value_layer = NoisyLinear(hidden_dim, atom_size)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward method implementation."""
+        dist = self.dist(x)
+        q = torch.sum(dist * self.support, dim=2)
+
+        return q
+
+    def dist(self, x: torch.Tensor) -> torch.Tensor:
+        """Get distribution for atoms."""
+        feature = self.feature_layer(x)
+        adv_hid = F.relu(feature)
+        val_hid = F.relu(feature)
+
+        advantage = self.advantage_layer(adv_hid).view(-1, self.action_dim,
+                                                       self.atom_size)
+        value = self.value_layer(val_hid).view(-1, 1, self.atom_size)
+        q_atoms = value + advantage - advantage.mean(dim=1, keepdim=True)
+
+        dist = F.softmax(q_atoms, dim=-1)
+        dist = dist.clamp(min=1e-3)  # for avoiding nans
+
+        return dist
+
+    def reset_noise(self):
+        """Reset all noisy layers."""
+        self.advantage_layer.reset_noise()
+        self.value_layer.reset_noise()
+
+
+class CategoryNetwork(Model):
+
+    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int,
+                 atom_size: int, support: torch.Tensor):
+        """Initialization."""
+        super(CategoryNetwork, self).__init__()
+
+        self.support = support
+        self.out_dim = action_dim
+        self.atom_size = atom_size
+
+        self.layers = nn.Sequential(
+            nn.Linear(state_dim, hidden_dim), nn.ReLU(),
+            nn.Linear(hidden_dim, action_dim * atom_size))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward method implementation."""
+        dist = self.dist(x)
+        q = torch.sum(dist * self.support, dim=2)
+
+        return q
+
+    def dist(self, x: torch.Tensor) -> torch.Tensor:
+        """Get distribution for atoms."""
+        q_atoms = self.layers(x).view(-1, self.out_dim, self.atom_size)
+        dist = F.softmax(q_atoms, dim=-1)
+        dist = dist.clamp(min=1e-3)  # for avoiding nans
+
+        return dist
