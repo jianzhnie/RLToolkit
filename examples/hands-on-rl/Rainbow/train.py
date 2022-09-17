@@ -9,30 +9,31 @@ from tqdm import tqdm
 sys.path.append('../../../')
 from agent import Agent
 
-from rltoolkit.data.buffer import ReplayBuffer
-from rltoolkit.models.noisynet import NoisyDulingNetwork
+from rltoolkit.data.buffer import MultiStepReplayBuffer, ReplayBuffer
 from rltoolkit.utils import logger, tensorboard
 
 config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'CartPole-v0',
+    'model_name': 'noisydulingnetwork',
     'hidden_dim': 128,
     'total_steps': 10000,  # max training steps
     'memory_size': 2000,  # Replay buffer size
     'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
     'batch_size': 64,  # repaly sample batch size
-    'n_step': 1,
-    'alpha': 0.2,
-    'beta': 0.6,
-    'prior_eps': 1e-6,
     'update_target_step': 100,  # target model update freq
-    'start_lr': 0.01,  # start learning rate
+    'start_lr': 0.003,  # start learning rate
     'end_lr': 0.00001,  # end learning rate
     'gamma': 0.99,  # discounting factor
     'v_min': 0.0,
     'v_max': 200.0,
     'atom_size': 51,
+    'std_init': 0.5,
+    'n_step': 5,
+    'alpha': 0.2,
+    'beta': 0.6,
+    'prior_eps': 1e-6,
     'eval_render': True,  # do eval render
     'test_every_steps': 1000,  # evaluation freq
     'video_folder': 'results'
@@ -52,9 +53,10 @@ def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
         next_obs, reward, done, _ = env.step(action)
         rpm.append(obs, action, reward, next_obs, done)
         # train model
-        if rpm.size() >= memory_warmup_size:
+        if rpm.size() > memory_warmup_size:
             # s,a,r,s',done
             samples = rpm.sample_batch()
+
             batch_obs = samples['obs']
             batch_action = samples['action']
             batch_reward = samples['reward']
@@ -109,26 +111,24 @@ def main():
 
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
-    rpm = ReplayBuffer(
+
+    rpm = MultiStepReplayBuffer(
         obs_dim=state_dim,
         max_size=args.memory_size,
-        batch_size=args.batch_size)
-    # get model
-    support = torch.linspace(args.v_min, args.v_max, args.atom_size).to(device)
-    model = NoisyDulingNetwork(
+        batch_size=args.batch_size,
+        n_step=args.n_step,
+        gamma=args.gamma)
+    # get agent
+    agent = Agent(
+        model_name=args.model_name,
         state_dim=state_dim,
         action_dim=action_dim,
         hidden_dim=args.hidden_dim,
-        atom_size=args.atom_size,
-        support=support)
-    # get agent
-    agent = Agent(
-        model=model,
-        act_dim=action_dim,
         total_step=args.total_steps,
         update_target_step=args.update_target_step,
         start_lr=args.start_lr,
         end_lr=args.end_lr,
+        std_init=args.std_init,
         gamma=args.gamma,
         batch_size=args.batch_size,
         v_min=args.v_min,
@@ -143,11 +143,7 @@ def main():
             desc='[Replay Memory Warm Up]') as pbar:
         while rpm.size() < args.memory_warmup_size:
             total_reward, steps, _ = run_train_episode(
-                agent,
-                env,
-                rpm,
-                memory_warmup_size=args.memory_warmup_size,
-            )
+                agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
             pbar.update(steps)
 
     pbar = tqdm(total=args.total_steps, desc='[Training]')
@@ -156,11 +152,7 @@ def main():
     while cum_steps < args.total_steps:
         # start epoch
         total_reward, steps, loss = run_train_episode(
-            agent,
-            env,
-            rpm,
-            memory_warmup_size=args.memory_warmup_size,
-        )
+            agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
         cum_steps += steps
         pbar.set_description('[train]learning rate:{}'.format(
             agent.optimizer.param_groups[0]['lr']))

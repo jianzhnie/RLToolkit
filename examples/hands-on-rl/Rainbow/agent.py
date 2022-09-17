@@ -3,8 +3,8 @@ import copy
 import numpy as np
 import torch
 import torch.optim as optim
-from torch.nn.utils import clip_grad_norm_
 
+from rltoolkit.models.noisynet import NoisyDulingNet, NoisyNet
 from rltoolkit.utils.scheduler import LinearDecayScheduler
 from rltoolkit.utils.utils import check_model_method
 
@@ -22,15 +22,18 @@ class Agent(object):
 
     def __init__(
             self,
-            model: torch.nn.Module,
-            act_dim: int,
+            model_name: str,
+            state_dim: int,
+            action_dim: int,
+            hidden_dim: int,
             total_step: int,
             update_target_step: int,
             start_lr: float = 0.001,
             end_lr: float = 0.00001,
             gamma: float = 0.99,
-            # Categorical DQN parameters
             batch_size: int = 64,
+            # Categorical DQN parameters
+            std_init: float = 0.1,
             v_min: float = 0.0,
             v_max: float = 200.0,
             atom_size: int = 51,
@@ -38,13 +41,13 @@ class Agent(object):
             n_step: int = 1,
             device: str = 'cpu'):
         super().__init__()
+        self.model_name = model_name
         self.global_update_step = 0
         self.update_target_step = update_target_step
-        self.act_dim = act_dim
         self.end_lr = end_lr
         self.gamma = gamma
-        # Categorical DQN parameters
         self.batch_size = batch_size
+        # Categorical DQN parameters
         self.v_min = v_min
         self.v_max = v_max
         self.atom_size = atom_size
@@ -53,10 +56,27 @@ class Agent(object):
         self.device = device
         self.support = torch.linspace(self.v_min, self.v_max,
                                       self.atom_size).to(self.device)
-        check_model_method(model, 'forward', self.__class__.__name__)
-        self.model = model
-        self.target_model = copy.deepcopy(model)
+
+        if model_name == 'noisynetwork':
+            print('Using NoisyNet')
+            self.model = NoisyNet(
+                state_dim=state_dim,
+                action_dim=action_dim,
+                hidden_dim=hidden_dim,
+                std_init=std_init)
+        elif model_name == 'noisydulingnetwork':
+            print('Using NoisyDulingNetwork')
+            self.model = NoisyDulingNet(
+                state_dim=state_dim,
+                action_dim=action_dim,
+                hidden_dim=hidden_dim,
+                atom_size=atom_size,
+                std_init=std_init,
+                support=self.support)
+        self.target_model = copy.deepcopy(self.model)
+        check_model_method(self.model, 'forward', self.__class__.__name__)
         self.smoothl1_loss = torch.nn.SmoothL1Loss()
+        self.mse_loss = torch.nn.MSELoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=start_lr)
         self.lr_scheduler = LinearDecayScheduler(start_lr, total_step)
 
@@ -101,24 +121,30 @@ class Agent(object):
         Returns:
             loss (float)
         """
+        device = self.device  # for shortening the following lines
+        obs = torch.FloatTensor(obs).to(device)
+        next_obs = torch.FloatTensor(next_obs).to(device)
+        action = torch.LongTensor(action.reshape(-1, 1)).to(device)
+        reward = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
+        terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
+
         if self.global_update_step % self.update_target_step == 0:
             self.model.sync_weights_to(self.target_model)
 
+        # calculate dqn loss
         # 1-step Learning loss
-        elementwise_loss = self._compute_dqn_loss(
-            obs,
-            action,
-            reward,
-            next_obs,
-            terminal,
-        )
-        loss = torch.mean(elementwise_loss)
+        if self.model_name == 'noisydulingnetwork':
+            loss = self._compute_dis_dqn_loss(obs, action, reward, next_obs,
+                                              terminal)
+
+        elif self.model_name == 'noisynetwork':
+            loss = self._cumpute_noisy_dqn_loss(obs, action, reward, next_obs,
+                                                terminal)
+
         self.optimizer.zero_grad()
         loss.backward()
-        clip_grad_norm_(self.model.parameters(), 10.0)
         self.optimizer.step()
 
-        # calculate dqn loss
         self.global_update_step += 1
         # NoisyNet: reset noise
         self.model.reset_noise()
@@ -128,17 +154,39 @@ class Agent(object):
             param_group['lr'] = max(self.lr_scheduler.step(1), self.end_lr)
         return loss.item()
 
-    def _compute_dqn_loss(self, obs: np.ndarray, action: np.ndarray,
-                          reward: np.ndarray, next_obs: np.ndarray,
-                          terminal: np.ndarray) -> torch.Tensor:
+    def _cumpute_noisy_dqn_loss(self, obs: np.ndarray, action: np.ndarray,
+                                reward: np.ndarray, next_obs: np.ndarray,
+                                terminal: np.ndarray) -> float:
+        """Update model with an episode data.
 
-        device = self.device  # for shortening the following lines
-        obs = torch.FloatTensor(obs).to(device)
-        next_obs = torch.FloatTensor(next_obs).to(device)
-        action = torch.LongTensor(action.reshape(-1, 1)).to(device)
-        reward = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
-        terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
+        Args:
+            obs (np.float32): shape of (batch_size, obs_dim)
+            act (np.int32): shape of (batch_size)
+            reward (np.float32): shape of (batch_size)
+            next_obs (np.float32): shape of (batch_size, obs_dim)
+            terminal (np.float32): shape of (batch_size)
 
+        Returns:
+            loss (float)
+        """
+        # calculate dqn loss
+        pred_value = self.model(obs).gather(1, action)
+        # model for selection actions.
+        greedy_action = self.model(next_obs).max(dim=1, keepdim=True)[1]
+        with torch.no_grad():
+            # target_model for evaluation.
+            next_q_value = self.target_model(next_obs).gather(1, greedy_action)
+            if self.n_step > 1:
+                gamma = self.gamma**self.n_step
+            else:
+                gamma = self.gamma
+            target = reward + (1 - terminal) * gamma * next_q_value
+        loss = self.mse_loss(pred_value, target)
+        return loss
+
+    def _compute_dis_dqn_loss(self, obs: np.ndarray, action: np.ndarray,
+                              reward: np.ndarray, next_obs: np.ndarray,
+                              terminal: np.ndarray) -> torch.Tensor:
         # Categorical DQN algorithm
         delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)
 
@@ -148,7 +196,11 @@ class Agent(object):
             next_dist = self.target_model.dist(next_obs)
             next_dist = next_dist[range(self.batch_size), next_action]
 
-            t_z = reward + (1 - terminal) * self.gamma * self.support
+            if self.n_step > 1:
+                gamma = self.gamma**self.n_step
+            else:
+                gamma = self.gamma
+            t_z = reward + (1 - terminal) * gamma * self.support
             t_z = t_z.clamp(min=self.v_min, max=self.v_max)
             b = (t_z - self.v_min) / delta_z
             l = b.floor().long()
@@ -171,5 +223,5 @@ class Agent(object):
         dist = self.model.dist(obs)
         log_p = torch.log(dist[range(self.batch_size), action])
         elementwise_loss = -(proj_dist * log_p).sum(1)
-
-        return elementwise_loss
+        loss = torch.mean(elementwise_loss)
+        return loss
