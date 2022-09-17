@@ -20,7 +20,7 @@ config = {
     'hidden_dim': 128,
     'total_steps': 10000,  # max training steps
     'memory_size': 2000,  # Replay buffer size
-    'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
+    'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
     'batch_size': 64,  # repaly sample batch size
     'n_step': 1,
     'alpha': 0.2,
@@ -89,7 +89,7 @@ def run_evaluate_episodes(agent: Agent,
         if render:
             env.render()
         if done:
-            obs = env.reset()
+            obs = env.close()
     return score
 
 

@@ -19,7 +19,7 @@ config = {
     'test_seed': 42,
     'env': 'CartPole-v0',
     'hidden_dim': 128,
-    'total_steps': 20000,  # max training steps
+    'total_steps': 10000,  # max training steps
     'memory_size': 2000,  # Replay buffer size
     'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
     'batch_size': 64,  # repaly sample batch size
@@ -84,7 +84,7 @@ def run_evaluate_episodes(agent: Agent,
         if render:
             env.render()
         if done:
-            obs = env.reset()
+            obs = env.close()
     return score
 
 
@@ -112,7 +112,6 @@ def main():
     model = NoisyNet(
         state_dim=state_dim, action_dim=action_dim, hidden_dim=args.hidden_dim)
     # get algorithm
-
     if algo_name == 'dqn':
         alg = DQN(model, gamma=args.gamma, lr=args.start_lr, device=device)
     elif algo_name == 'ddqn':

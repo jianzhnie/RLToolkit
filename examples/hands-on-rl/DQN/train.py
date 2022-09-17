@@ -86,7 +86,7 @@ def run_evaluate_episodes(agent: Agent,
         if render:
             env.render()
         if done:
-            obs = env.reset()
+            obs = env.close()
     return score
 
 
