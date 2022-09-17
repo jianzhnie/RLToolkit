@@ -13,7 +13,7 @@ sys.path.append('../../')
 from rltoolkit.utils import rl_utils
 
 
-class Qnet(torch.nn.Module):
+class Qnet(nn.Module):
     """只有一层隐藏层的Q网络."""
 
     def __init__(self, state_dim, hidden_dim, action_dim):
@@ -28,7 +28,7 @@ class Qnet(torch.nn.Module):
         return x
 
 
-class ConvolutionalQnet(torch.nn.Module):
+class ConvolutionalQnet(nn.Module):
     """加入卷积层的Q网络."""
 
     def __init__(self, action_dim, in_channels=4):

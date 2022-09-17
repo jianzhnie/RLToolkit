@@ -6,29 +6,35 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
 # -*- coding: utf-8 -*-
 
+import random
+
 import numpy as np
 
 
-class QLearningAgent(object):
+class DynaQAgent(object):
+    """DynaQ 算法."""
 
     def __init__(self,
                  obs_n,
                  act_n,
+                 n_planing,
                  learning_rate=0.01,
                  gamma=0.9,
-                 e_greed=0.1):
+                 epsilon=0.1):
         self.act_n = act_n  # 动作维度，有几个动作可选
+        self.n_planing = n_planing  # 执行 Q-planing 的次数， 对应 1 次 Q-planing
         self.lr = learning_rate  # 学习率
         self.gamma = gamma  # reward的衰减率
-        self.epsilon = e_greed  # 按一定概率随机选动作
-        self.Q = np.zeros((obs_n, act_n))
+        self.epsilon = epsilon  # 按一定概率随机选动作
+        self.Q = np.zeros((obs_n, act_n))  # 初始化表格
+        self.model = dict()  # 环境模型
 
     # 根据输入观察值，采样输出的动作值，带探索
     def sample(self, obs):
-        if np.random.uniform(0, 1) < (1.0 - self.epsilon):  # 根据table的Q值选动作
-            action = self.predict(obs)
-        else:
+        if np.random.random() < self.epsilon:
             action = np.random.choice(self.act_n)  # 有一定概率随机探索选取一个动作
+        else:  # 根据table的Q值选动作
+            action = self.predict(obs)
         return action
 
     # 根据输入观察值，预测输出的动作值
@@ -40,8 +46,8 @@ class QLearningAgent(object):
         return action
 
     # 学习方法，也就是更新Q-table的方法
-    def learn(self, obs, action, reward, next_obs, done):
-        """ off-policy
+    def q_learn(self, obs, action, reward, next_obs, done):
+        """ on-policy
             obs: 交互前的obs, s_t
             action: 本次交互选择的action, a_t
             reward: 本次动作获得的奖励r
@@ -52,17 +58,23 @@ class QLearningAgent(object):
         if done:
             target_Q = reward  # 没有下一个状态了
         else:
-            target_Q = reward + self.gamma * np.max(
-                self.Q[next_obs, :])  # Q-learning
+            target_Q = reward + self.gamma * np.max(self.Q[next_obs, :])
+        # Sarsa
         self.Q[obs, action] += self.lr * (target_Q - predict_Q)  # 修正q
 
-    # 把 Q表格 的数据保存到文件中
+    def update(self, obs, action, reward, next_obs, done):
+        self.q_learn(obs, action, reward, next_obs, done)
+        self.model[(obs, action)] = reward, next_obs, done  # 将数据添加到模型中
+        for _ in range(self.n_planing):
+            (obs_, action_), (reward_, next_obs_,
+                              done_) = random.choice(list(self.model.items()))
+            self.q_learn(obs_, action_, reward_, next_obs_, done_)
+
     def save(self):
         npy_file = './q_table.npy'
         np.save(npy_file, self.Q)
         print(npy_file + ' saved.')
 
-    # 从文件中读取数据到 Q表格
     def restore(self, npy_file='./q_table.npy'):
         self.Q = np.load(npy_file)
         print(npy_file + ' loaded.')
