@@ -261,7 +261,7 @@ class MAPPO(Algorithm):
         return values
 
 
-class PopArt(torch.nn.Module):
+class PopArt(nn.Module):
 
     def __init__(self,
                  weight,
