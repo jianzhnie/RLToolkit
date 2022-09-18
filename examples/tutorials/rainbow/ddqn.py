@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from rltoolkit.data.buffer import ReplayBuffer
+from rltoolkit.data.buffer.replaybuffer import ReplayBuffer
 
 
 class Network(nn.Module):
@@ -31,22 +31,6 @@ class Network(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward method implementation."""
         return self.layers(x)
-
-
-# class DQNAgent(Agent):
-
-#     def __init__(self, algorithm, act_dim, start_lr, total_step,
-#                  update_target_step, device):
-#         super().__init__(algorithm)
-#         self.global_update_step = 0
-#         self.update_target_step = update_target_step
-#         self.act_dim = act_dim
-#         self.curr_ep = 1
-#         self.ep_end = 0.1
-#         self.lr_end = 0.00001
-#         self.device = device
-#         self.ep_scheduler = LinearDecayScheduler(1, total_step)
-#         self.lr_scheduler = LinearDecayScheduler(start_lr, total_step)
 
 
 class DQNAgent(object):
