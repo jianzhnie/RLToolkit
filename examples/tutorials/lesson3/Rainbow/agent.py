@@ -14,7 +14,7 @@ class Agent(object):
 
     Args:
         algorithm (`parl.Algorithm`): algorithm to be used in this agent.
-        act_dim (int): action space dimension
+        action_dim (int): action space dimension
         total_step (int): total epsilon decay steps
         start_lr (float): initial learning rate
         update_target_step (int): target network update frequency

@@ -10,7 +10,7 @@ class Agent(Agent):
 
     Args:
         algorithm (`parl.Algorithm`): algorithm to be used in this agent.
-        act_dim (int): action space dimension
+        action_dim (int): action space dimension
         total_step (int): total epsilon decay steps
         start_lr (float): initial learning rate
         update_target_step (int): target network update frequency
@@ -18,7 +18,7 @@ class Agent(Agent):
 
     def __init__(self,
                  algorithm,
-                 act_dim: int,
+                 action_dim: int,
                  total_step: int,
                  update_target_step: int,
                  start_lr: float = 0.001,
@@ -29,7 +29,7 @@ class Agent(Agent):
         super().__init__(algorithm)
         self.global_update_step = 0
         self.update_target_step = update_target_step
-        self.act_dim = act_dim
+        self.action_dim = action_dim
         self.curr_epslion = start_epslion
         self.end_epslion = end_epsilon
         self.end_lr = end_lr
@@ -51,7 +51,7 @@ class Agent(Agent):
         explore = np.random.choice(
             [True, False], p=[self.curr_epslion, 1 - self.curr_epslion])
         if explore:
-            act = np.random.randint(self.act_dim)
+            act = np.random.randint(self.action_dim)
         else:
             act = self.predict(obs)
 

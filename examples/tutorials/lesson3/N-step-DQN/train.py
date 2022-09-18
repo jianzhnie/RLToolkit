@@ -132,7 +132,7 @@ def main():
     # get agent
     agent = Agent(
         alg,
-        act_dim=action_dim,
+        action_dim=action_dim,
         total_step=args.total_steps,
         update_target_step=args.update_target_step,
         start_lr=args.start_lr,
