@@ -7,9 +7,10 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 
 import random
 from collections import deque
-from typing import Deque, Dict, List, Tuple, Union
+from typing import Any, Deque, Dict, List, Tuple, Union
 
 import numpy as np
+import torch
 
 from rltoolkit.utils import logger
 
@@ -125,6 +126,92 @@ class ReplayBuffer(object):
         self.next_obs_buf[:self._curr_size] = data['next_obs'][:self.
                                                                _curr_size]
         logger.info('[load rpm]memory loade from {}'.format(pathname))
+
+
+class TorchReplayBuffer(object):
+    """A simple FIFO experience replay buffer for off-policy RL or offline RL.
+
+    Args:
+        max_size (int): max size of replay memory
+        obs_dim (int or tuple): observation shape
+        act_dim (int or tuple): action shape
+    """
+
+    def __init__(self,
+                 obs_dim: Union[int, Tuple],
+                 max_size: int,
+                 batch_size: int,
+                 device: Any = None):
+        self.obs_buf = torch.empty(
+            combined_shape(max_size, obs_dim), dtype=np.float32)
+        self.next_obs_buf = torch.empty(
+            combined_shape(max_size, obs_dim), dtype=np.float32)
+        self.action_buf = torch.empty(max_size, dtype=np.float32)
+        self.reward_buf = torch.empty(max_size, dtype=np.float32)
+        self.terminal_buf = torch.empty(max_size, dtype=np.float32)
+        self.device = device
+
+        self._curr_ptr = 0
+        self._curr_size = 0
+        self.max_size = max_size
+        self.batch_size = batch_size
+
+    def append(self, obs: np.ndarray, act: np.ndarray, reward: float,
+               next_obs: np.ndarray, terminal: bool) -> None:
+        """Store the experience to self.memory (replay buffer)
+
+        Args:
+            obs (float32): observation, shape of obs_dim
+            act (int32 in Continuous control environment, float32 in Continuous control environment): action, shape of act_dim
+            reward (float32): reward
+            next_obs (float32): next observation, shape of obs_dim
+            terminal (bool): terminal of an episode or not
+        """
+        obs = torch.FloatTensor(obs).to(self.device)
+        next_obs = torch.FloatTensor(next_obs).to(self.device)
+        action = torch.LongTensor([act]).to(self.device)
+        reward = torch.FloatTensor([reward]).to(self.device)
+        terminal = torch.BoolTensor([terminal]).to(self.device)
+
+        self.obs_buf[self._curr_ptr] = obs
+        self.next_obs_buf[self._curr_ptr] = next_obs
+        self.action_buf[self._curr_ptr] = action
+        self.reward_buf[self._curr_ptr] = reward
+        self.terminal_buf[self._curr_ptr] = terminal
+
+        self._curr_ptr = (self._curr_ptr + 1) % self.max_size
+        self._curr_size = min(self._curr_size + 1, self.max_size)
+
+    def sample_batch(self) -> Dict[str, np.ndarray]:
+        """sample a batch from replay memory.
+
+        Args:
+            batch_size (int): batch size
+
+        Returns:
+            a batch of experience samples: obs, action, reward, next_obs, terminal
+        """
+
+        idxs = torch.randint(
+            self._curr_size, size=self.batch_size, device=self.device)
+
+        batch = dict(
+            obs=self.obs_buf[idxs],
+            next_obs=self.next_obs_buf[idxs],
+            action=self.action_buf[idxs],
+            reward=self.reward_buf[idxs],
+            terminal=self.terminal_buf[idxs],
+            indices=idxs,  # for N -step Learning
+        )
+
+        return batch
+
+    def size(self) -> int:
+        """get current size of replay memory."""
+        return self._curr_size
+
+    def __len__(self):
+        return self._curr_size
 
 
 class MultiStepReplayBuffer(ReplayBuffer):
