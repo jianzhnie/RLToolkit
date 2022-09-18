@@ -10,17 +10,15 @@ import gym
 from agent import SarsaAgent
 from gridworld import FrozenLakeWapper
 
-assert gym.__version__ == '0.18.0', '[Version WARNING] please try `pip install gym==0.18.0`'
-
 
 def run_episode(env, agent, render=False):
     total_steps = 0  # 记录每个episode走了多少step
     total_reward = 0
 
     obs = env.reset()  # 重置环境, 重新开一局（即开始新的一个episode）
-    action = agent.sample(obs)  # 根据算法选择一个动作
 
     while True:
+        action = agent.sample(obs)  # 根据算法选择一个动作
         next_obs, reward, done, _ = env.step(action)  # 与环境进行一个交互
         next_action = agent.sample(next_obs)  # 根据算法选择一个动作
         # 训练 Sarsa 算法
@@ -53,8 +51,8 @@ def test_episode(env, agent):
 
 
 def main():
-    env = gym.make(
-        'FrozenLake-v0', is_slippery=False)  # 0 left, 1 down, 2 right, 3 up
+    env = gym.make('FrozenLake-v1', is_slippery=False)
+    # 0 left, 1 down, 2 right, 3 up
     env = FrozenLakeWapper(env)
 
     agent = SarsaAgent(
@@ -62,7 +60,7 @@ def main():
         act_n=env.action_space.n,
         learning_rate=0.1,
         gamma=0.9,
-        e_greed=0.1)
+        epsilon=0.1)
 
     for episode in range(500):
         ep_reward, ep_steps = run_episode(env, agent)

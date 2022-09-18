@@ -16,19 +16,19 @@ class QLearningAgent(object):
                  act_n,
                  learning_rate=0.01,
                  gamma=0.9,
-                 e_greed=0.1):
+                 epsilon=0.1):
         self.act_n = act_n  # 动作维度，有几个动作可选
         self.lr = learning_rate  # 学习率
         self.gamma = gamma  # reward的衰减率
-        self.epsilon = e_greed  # 按一定概率随机选动作
+        self.epsilon = epsilon  # 按一定概率随机选动作
         self.Q = np.zeros((obs_n, act_n))
 
     # 根据输入观察值，采样输出的动作值，带探索
     def sample(self, obs):
-        if np.random.uniform(0, 1) < (1.0 - self.epsilon):  # 根据table的Q值选动作
-            action = self.predict(obs)
-        else:
+        if np.random.random() < self.epsilon:
             action = np.random.choice(self.act_n)  # 有一定概率随机探索选取一个动作
+        else:  # 根据table的Q值选动作
+            action = self.predict(obs)
         return action
 
     # 根据输入观察值，预测输出的动作值
