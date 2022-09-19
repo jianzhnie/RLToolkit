@@ -55,28 +55,12 @@ class Agent(object):
         select_action = self.model(obs).argmax().item()
         return select_action
 
-    def learn(self, obs: torch.tensor, action: torch.tensor,
-              reward: torch.tensor) -> torch.tensor:
+    def learn(self, log_probs: list, returns: list) -> None:
         """Update model with policy gradient algorithm.
-
-        Args:
-            obs (torch.tensor): shape of (batch_size, obs_dim)
-            action (torch.tensor): shape of (batch_size, 1)
-            reward (torch.tensor): shape of (batch_size, 1)
 
         Returns:
             loss (torch.tensor): shape of (1)
         """
-        prob = self.model(obs)
-        log_prob = Categorical(prob).log_prob(action)
-        loss = torch.mean(-1 * log_prob * reward)
-
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        return loss
-
-    def update(self, log_probs: list, returns: list) -> None:
         policy_loss = []
         for log_prob, R in zip(log_probs, returns):
             policy_loss.append(-log_prob * R)
@@ -87,7 +71,7 @@ class Agent(object):
         self.optimizer.step()  # 梯度下降
         return loss
 
-    def updat_with_baseline(self, log_probs: list, returns: list) -> float:
+    def learn_with_baseline(self, log_probs: list, returns: list) -> float:
         baseline = np.mean(returns)
         policy_loss = []
         for log_prob, R in zip(log_probs, returns):

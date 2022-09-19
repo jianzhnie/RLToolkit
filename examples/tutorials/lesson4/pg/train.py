@@ -12,24 +12,25 @@ from rltoolkit.utils import logger, rl_utils
 
 
 # 训练一个episode
-def run_episode(env, agent):
-    obs_list, action_list, log_probs, rewards = [], [], [], []
+def run_episode(env: gym.Env, agent: Agent):
+    rewards, log_probs = [], []
     obs = env.reset()
     while True:
         action, log_prob = agent.sample(obs)
-        obs, reward, done, _ = env.step(action)
-
-        obs_list.append(obs)
-        action_list.append(action)
-        log_probs.append(log_prob)
+        next_obs, reward, done, _ = env.step(action)
         rewards.append(reward)
+        log_probs.append(log_prob)
+        obs = next_obs
         if done:
             break
-    return obs_list, action_list, log_probs, rewards
+    return rewards, log_probs
 
 
 # 评估 agent, 跑 5 个episode，总reward求平均
-def evaluate(env, agent, n_eval_episodes=5, render=False):
+def evaluate(env: gym.Env,
+             agent: Agent,
+             n_eval_episodes: int = 5,
+             render: bool = False):
     eval_rewards = []
     for i in range(n_eval_episodes):
         obs = env.reset()
@@ -64,12 +65,11 @@ config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'CartPole-v0',
-    'hidden_dim': 128,
     'total_episode': 800,  # max training steps
-    'start_lr': 0.001,  # start learning rate
-    'end_lr': 0.00001,  # end learning rate
+    'hidden_dim': 128,
+    'lr': 0.001,  # start learning rate
     'gamma': 0.98,  # discounting factor
-    'with_baseline': True,
+    'with_baseline': False,
     'eval_render': False,  # do eval render
     'test_every_episode': 50,  # evaluation freq
     'video_folder': 'results'
@@ -98,20 +98,20 @@ def main():
         state_dim=obs_dim,
         action_dim=action_dim,
         hidden_dim=args.hidden_dim,
-        learning_rate=args.start_lr,
+        learning_rate=args.lr,
         gamma=args.gamma,
         device=device)
 
     return_list = []
     for i_episode in range(args.total_episode):
-        obs_list, action_list, log_probs, rewards = run_episode(env, agent)
+        rewards, log_probs = run_episode(env, agent)
         episode_return = sum(rewards)
         returns = calc_discount_rewards(rewards, gamma=args.gamma)
         if args.with_baseline:
-            loss = agent.updat_with_baseline(
+            loss = agent.learn_with_baseline(
                 log_probs=log_probs, returns=returns)
         else:
-            loss = agent.update(log_probs=log_probs, returns=returns)
+            loss = agent.learn(log_probs=log_probs, returns=returns)
         if (i_episode + 1) % args.test_every_episode == 0:
             logger.info('Episode {}, Loss {:.2f}, Reward Sum {}.'.format(
                 i_episode, loss, episode_return))
