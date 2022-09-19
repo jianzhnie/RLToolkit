@@ -9,10 +9,9 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 import time
 
 import gym
+import matplotlib.pyplot as plt
 from agent import QLearningAgent
 from gridworld import FrozenLakeWapper
-
-assert gym.__version__ == '0.18.0', '[Version WARNING] please try `pip install gym==0.18.0`'
 
 
 def run_episode(env, agent, render=False):
@@ -54,7 +53,7 @@ def test_episode(env, agent):
 
 def main():
     env = gym.make(
-        'FrozenLake-v0', is_slippery=False)  # 0 left, 1 down, 2 right, 3 up
+        'FrozenLake-v1', is_slippery=False)  # 0 left, 1 down, 2 right, 3 up
     env = FrozenLakeWapper(env)
 
     agent = QLearningAgent(
@@ -62,16 +61,31 @@ def main():
         act_n=env.action_space.n,
         learning_rate=0.1,
         gamma=0.9,
-        e_greed=0.1)
+        epsilon=0.1)
 
+    is_render = False
+    return_list = []
     for episode in range(500):
-        ep_reward, ep_steps = run_episode(env, agent)
+        ep_reward, ep_steps = run_episode(env, agent, is_render)
         print('Episode %s: steps = %s , reward = %.1f' %
               (episode, ep_steps, ep_reward))
-
+        return_list.append(ep_reward)
+        # 每隔20个episode渲染一下看看效果
+        if episode % 50 == 0:
+            is_render = True
+        else:
+            is_render = False
     # 训练结束，查看算法效果
     test_episode(env, agent)
 
+    return return_list
+
 
 if __name__ == '__main__':
-    main()
+    return_list = main()
+    episodes_list = list(range(len(return_list)))
+    plt.plot(episodes_list, return_list)
+    plt.xlabel('Episodes')
+    plt.ylabel('Returns')
+    plt.title('Q-Learning on {}'.format('Cliff Walking'))
+    plt.show()

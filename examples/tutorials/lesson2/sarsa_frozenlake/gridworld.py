@@ -9,7 +9,7 @@ import numpy as np
 def GridWorld(gridmap=None, is_slippery=False):
     if gridmap is None:
         gridmap = ['SFFF', 'FHFH', 'FFFH', 'HFFG']
-    env = gym.make('FrozenLake-v0', desc=gridmap, is_slippery=False)
+    env = gym.make('FrozenLake-v1', desc=gridmap, is_slippery=False)
     env = FrozenLakeWapper(env)
     return env
 
@@ -158,7 +158,7 @@ class CliffWalkingWapper(gym.Wrapper):
 if __name__ == '__main__':
     # 环境1：FrozenLake, 可以配置冰面是否是滑的
     # 0 left, 1 down, 2 right, 3 up
-    env = gym.make('FrozenLake-v0', is_slippery=False)
+    env = gym.make('FrozenLake-v1', is_slippery=False)
     env = FrozenLakeWapper(env)
 
     # 环境2：CliffWalking, 悬崖环境

@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-sys.path.append('../../../')
+sys.path.append('../../../../')
 from agent import Agent
 
 from rltoolkit.data.buffer import MultiStepReplayBuffer, ReplayBuffer
