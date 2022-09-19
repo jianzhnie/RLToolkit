@@ -62,8 +62,8 @@ class Agent(object):
             loss (torch.tensor): shape of (1)
         """
         policy_loss = []
-        for log_prob, R in zip(log_probs, returns):
-            policy_loss.append(-log_prob * R)
+        for log_prob, G in zip(log_probs, returns):
+            policy_loss.append(-log_prob * G)
 
         loss = torch.cat(policy_loss).sum()
         self.optimizer.zero_grad()
@@ -74,8 +74,8 @@ class Agent(object):
     def learn_with_baseline(self, log_probs: list, returns: list) -> float:
         baseline = np.mean(returns)
         policy_loss = []
-        for log_prob, R in zip(log_probs, returns):
-            policy_loss.append(-log_prob * (R - baseline))
+        for log_prob, G in zip(log_probs, returns):
+            policy_loss.append(-log_prob * (G - baseline))
 
         self.optimizer.zero_grad()
         loss = torch.cat(policy_loss).sum()
