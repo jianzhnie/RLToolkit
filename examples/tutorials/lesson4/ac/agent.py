@@ -65,14 +65,11 @@ class Agent(object):
     Atribute:
         gamma (float): discount factor
         entropy_weight (float): rate of weighting entropy into the loss function
-        device (torch.device): cpu / gpu
         actor (nn.Module): target actor model to select actions
         critic (nn.Module): critic model to predict state values
         actor_optimizer (optim.Optimizer) : optimizer of actor
         critic_optimizer (optim.Optimizer) : optimizer of critic
-        transition (list): temporory storage for the recent transition
-        total_step (int): total step numbers
-        is_test (bool): flag to show the current mode (train / test)
+        device (torch.device): cpu / gpu
     """
 
     def __init__(self,
@@ -97,7 +94,6 @@ class Agent(object):
         # 价值网络优化器
         self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
         # 折扣因子
-        self.gamma = gamma
         self.device = device
 
     def sample(self, obs: np.ndarray) -> Tuple[int, float]:
