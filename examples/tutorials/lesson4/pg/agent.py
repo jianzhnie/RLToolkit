@@ -42,7 +42,7 @@ class Agent(object):
         self.device = device
 
     def sample(self, obs: np.ndarray) -> Tuple[int, float]:
-        obs = torch.FloatTensor([obs]).to(self.device)
+        obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         prob = self.model(obs)
         action_dist = Categorical(prob)
         action = action_dist.sample()
@@ -50,55 +50,35 @@ class Agent(object):
         return action.item(), log_prob
 
     def predict(self, obs) -> int:
-        obs = torch.FloatTensor([obs]).to(self.device)
+        obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         # 根据动作概率选择概率最高的动作
         select_action = self.model(obs).argmax().item()
         return select_action
 
-    def learn(self, obs: torch.tensor, action: torch.tensor,
-              reward: torch.tensor) -> torch.tensor:
+    def learn(self, log_probs: list, returns: list) -> None:
         """Update model with policy gradient algorithm.
-
-        Args:
-            obs (torch.tensor): shape of (batch_size, obs_dim)
-            action (torch.tensor): shape of (batch_size, 1)
-            reward (torch.tensor): shape of (batch_size, 1)
 
         Returns:
             loss (torch.tensor): shape of (1)
         """
-        prob = self.model(obs)
-        log_prob = Categorical(prob).log_prob(action)
-        loss = torch.mean(-1 * log_prob * reward)
+        policy_loss = []
+        for log_prob, G in zip(log_probs, returns):
+            policy_loss.append(-log_prob * G)
 
+        loss = torch.cat(policy_loss).sum()
         self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+        loss.backward()  # 反向传播计算梯度
+        self.optimizer.step()  # 梯度下降
         return loss
 
-    def update(self, obs_list: list, action_list: list,
-               reward_list: list) -> None:
-        G = 0
-        self.optimizer.zero_grad()
-        for i in reversed(range(len(reward_list))):  # 从最后一步算起
-            reward = reward_list[i]
-            state = torch.tensor([obs_list[i]],
-                                 dtype=torch.float).to(self.device)
-            action = torch.tensor([action_list[i]]).view(-1, 1).to(self.device)
-            log_prob = torch.log(self.model(state).gather(1, action))
-            G = self.gamma * G + reward
-            loss = -log_prob * G  # 每一步的损失函数
-            loss.backward()  # 反向传播计算梯度
-        self.optimizer.step()  # 梯度下降
-
-    def updat_with_baseline(self, log_probs: list, returns: list) -> float:
+    def learn_with_baseline(self, log_probs: list, returns: list) -> float:
         baseline = np.mean(returns)
         policy_loss = []
-        for log_prob, R in zip(log_probs, returns):
-            policy_loss.append(-log_prob * (R - baseline))
+        for log_prob, G in zip(log_probs, returns):
+            policy_loss.append(-log_prob * (G - baseline))
 
         self.optimizer.zero_grad()
-        loss = torch.cat(policy_loss).mean()
+        loss = torch.cat(policy_loss).sum()
         loss.backward()  # 反向传播计算梯度
         self.optimizer.step()  # 梯度下降
         return loss.item()
