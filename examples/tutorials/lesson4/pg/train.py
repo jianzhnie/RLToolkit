@@ -2,17 +2,18 @@ import argparse
 import sys
 
 import gym
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from agent import Agent
 
 sys.path.append('../../../../')
-from rltoolkit.utils import logger
+from rltoolkit.utils import logger, rl_utils
 
 
 # 训练一个episode
 def run_episode(env, agent):
-    obs_list, action_list, log_prob_list, reward_list = [], [], [], []
+    obs_list, action_list, log_probs, rewards = [], [], [], []
     obs = env.reset()
     while True:
         action, log_prob = agent.sample(obs)
@@ -20,17 +21,17 @@ def run_episode(env, agent):
 
         obs_list.append(obs)
         action_list.append(action)
-        log_prob_list.append(log_prob)
-        reward_list.append(reward)
+        log_probs.append(log_prob)
+        rewards.append(reward)
         if done:
             break
-    return obs_list, action_list, log_prob_list, reward_list
+    return obs_list, action_list, log_probs, rewards
 
 
 # 评估 agent, 跑 5 个episode，总reward求平均
-def evaluate(env, agent, n_episode=5, render=False):
-    eval_reward = []
-    for i in range(n_episode):
+def evaluate(env, agent, n_eval_episodes=5, render=False):
+    eval_rewards = []
+    for i in range(n_eval_episodes):
         obs = env.reset()
         done = False
         episode_reward = 0
@@ -42,8 +43,10 @@ def evaluate(env, agent, n_episode=5, render=False):
                 env.render()
             if done:
                 env.close()
-        eval_reward.append(episode_reward)
-    return np.mean(eval_reward)
+        eval_rewards.append(episode_reward)
+    mean_reward = np.mean(eval_rewards)
+    std_reward = np.std(eval_rewards)
+    return mean_reward, std_reward
 
 
 def calc_discount_rewards(rewards, gamma):
@@ -62,8 +65,7 @@ config = {
     'test_seed': 42,
     'env': 'CartPole-v0',
     'hidden_dim': 128,
-    'total_episode': 800,  # max training steps
-    'batch_size': 64,  # repaly sample batch size
+    'total_episode': 500,  # max training steps
     'start_lr': 0.001,  # start learning rate
     'end_lr': 0.00001,  # end learning rate
     'gamma': 0.98,  # discounting factor
@@ -99,19 +101,37 @@ def main():
         gamma=args.gamma,
         device=device)
 
-    for i in range(args.total_episode):
-        obs_list, action_list, log_prob_list, reward_list = run_episode(
-            env, agent)
-        logger.info('Episode {}, Reward Sum {}.'.format(i, sum(reward_list)))
-        return_list = calc_discount_rewards(reward_list, gamma=args.gamma)
-        # agent.update(
-        #     obs_list=obs_list,
-        #     action_list=action_list,
-        #     reward_list=reward_list)
-        agent.updat_with_baseline(log_probs=log_prob_list, returns=return_list)
-        if (i + 1) % args.test_every_episode == 0:
-            total_reward = evaluate(env, agent, render=args.eval_render)
-            logger.info('Test reward: {}'.format(total_reward))
+    return_list = []
+    for i_episode in range(args.total_episode):
+        obs_list, action_list, log_probs, rewards = run_episode(env, agent)
+        episode_return = sum(rewards)
+        returns = calc_discount_rewards(rewards, gamma=args.gamma)
+        loss = agent.updat_with_baseline(log_probs=log_probs, returns=returns)
+        if (i_episode + 1) % args.test_every_episode == 0:
+            logger.info('Episode {}, Loss {:.2f}, Reward Sum {}.'.format(
+                i_episode, loss, episode_return))
+            mean_reward, std_reward = evaluate(
+                env, agent, render=args.eval_render)
+            logger.info('Test reward: mean: {}, std: {:.2f}'.format(
+                mean_reward, std_reward))
+        return_list.append(episode_return)
+
+    mean_reward, std_reward = evaluate(
+        env, agent, n_eval_episodes=1, render=True)
+
+    episodes_list = list(range(len(return_list)))
+    plt.plot(episodes_list, return_list)
+    plt.xlabel('Episodes')
+    plt.ylabel('Returns')
+    plt.title('REINFORCE on {}'.format(args.env))
+    plt.show()
+
+    mv_return = rl_utils.moving_average(return_list, 9)
+    plt.plot(episodes_list, mv_return)
+    plt.xlabel('Episodes')
+    plt.ylabel('Returns')
+    plt.title('REINFORCE on {}'.format(args.env))
+    plt.show()
 
 
 if __name__ == '__main__':

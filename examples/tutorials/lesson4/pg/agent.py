@@ -42,7 +42,7 @@ class Agent(object):
         self.device = device
 
     def sample(self, obs: np.ndarray) -> Tuple[int, float]:
-        obs = torch.FloatTensor([obs]).to(self.device)
+        obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         prob = self.model(obs)
         action_dist = Categorical(prob)
         action = action_dist.sample()
@@ -50,7 +50,7 @@ class Agent(object):
         return action.item(), log_prob
 
     def predict(self, obs) -> int:
-        obs = torch.FloatTensor([obs]).to(self.device)
+        obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         # 根据动作概率选择概率最高的动作
         select_action = self.model(obs).argmax().item()
         return select_action
@@ -98,7 +98,7 @@ class Agent(object):
             policy_loss.append(-log_prob * (R - baseline))
 
         self.optimizer.zero_grad()
-        loss = torch.cat(policy_loss).mean()
+        loss = torch.cat(policy_loss).sum()
         loss.backward()  # 反向传播计算梯度
         self.optimizer.step()  # 梯度下降
         return loss.item()
