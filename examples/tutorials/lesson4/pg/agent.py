@@ -76,20 +76,16 @@ class Agent(object):
         self.optimizer.step()
         return loss
 
-    def update(self, obs_list: list, action_list: list,
-               reward_list: list) -> None:
-        G = 0
+    def update(self, log_probs: list, returns: list) -> None:
+        policy_loss = []
+        for log_prob, R in zip(log_probs, returns):
+            policy_loss.append(-log_prob * R)
+
+        loss = torch.cat(policy_loss).sum()
         self.optimizer.zero_grad()
-        for i in reversed(range(len(reward_list))):  # 从最后一步算起
-            reward = reward_list[i]
-            state = torch.tensor([obs_list[i]],
-                                 dtype=torch.float).to(self.device)
-            action = torch.tensor([action_list[i]]).view(-1, 1).to(self.device)
-            log_prob = torch.log(self.model(state).gather(1, action))
-            G = self.gamma * G + reward
-            loss = -log_prob * G  # 每一步的损失函数
-            loss.backward()  # 反向传播计算梯度
+        loss.backward()  # 反向传播计算梯度
         self.optimizer.step()  # 梯度下降
+        return loss
 
     def updat_with_baseline(self, log_probs: list, returns: list) -> float:
         baseline = np.mean(returns)

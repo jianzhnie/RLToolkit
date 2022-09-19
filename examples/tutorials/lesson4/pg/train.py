@@ -65,10 +65,11 @@ config = {
     'test_seed': 42,
     'env': 'CartPole-v0',
     'hidden_dim': 128,
-    'total_episode': 500,  # max training steps
+    'total_episode': 800,  # max training steps
     'start_lr': 0.001,  # start learning rate
     'end_lr': 0.00001,  # end learning rate
     'gamma': 0.98,  # discounting factor
+    'with_baseline': True,
     'eval_render': False,  # do eval render
     'test_every_episode': 50,  # evaluation freq
     'video_folder': 'results'
@@ -106,12 +107,16 @@ def main():
         obs_list, action_list, log_probs, rewards = run_episode(env, agent)
         episode_return = sum(rewards)
         returns = calc_discount_rewards(rewards, gamma=args.gamma)
-        loss = agent.updat_with_baseline(log_probs=log_probs, returns=returns)
+        if args.with_baseline:
+            loss = agent.updat_with_baseline(
+                log_probs=log_probs, returns=returns)
+        else:
+            loss = agent.update(log_probs=log_probs, returns=returns)
         if (i_episode + 1) % args.test_every_episode == 0:
             logger.info('Episode {}, Loss {:.2f}, Reward Sum {}.'.format(
                 i_episode, loss, episode_return))
             mean_reward, std_reward = evaluate(
-                env, agent, render=args.eval_render)
+                env, agent, n_eval_episodes=5, render=args.eval_render)
             logger.info('Test reward: mean: {}, std: {:.2f}'.format(
                 mean_reward, std_reward))
         return_list.append(episode_return)
