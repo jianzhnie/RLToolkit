@@ -3,7 +3,6 @@ from typing import Any, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.distributions import Categorical
 
 
@@ -13,12 +12,14 @@ class PolicyNet(nn.Module):
         super(PolicyNet, self).__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, action_dim)
+        self.relu = nn.ReLU(inplace=True)
+        self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
         x = self.fc1(x)
-        x = F.relu(x)
+        x = self.relu(x)
         x = self.fc2(x)
-        x = F.softmax(x, dim=1)
+        x = self.softmax(x)
         return x
 
 
@@ -90,14 +91,11 @@ class Agent(object):
             loss.backward()  # 反向传播计算梯度
         self.optimizer.step()  # 梯度下降
 
-    def updat_with_baseline(self, log_prob_list: list,
-                            retrun_list: list) -> float:
-        returns = torch.tensor(retrun_list)
-        baseline = torch.mean(returns)
-
+    def updat_with_baseline(self, log_probs: list, returns: list) -> float:
+        baseline = np.mean(returns)
         policy_loss = []
-        for log_prob, G in zip(log_prob_list, returns):
-            policy_loss.append(-log_prob * (G - baseline))
+        for log_prob, R in zip(log_probs, returns):
+            policy_loss.append(-log_prob * (R - baseline))
 
         self.optimizer.zero_grad()
         loss = torch.cat(policy_loss).mean()

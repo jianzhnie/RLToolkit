@@ -46,15 +46,15 @@ def evaluate(env, agent, n_episode=5, render=False):
     return np.mean(eval_reward)
 
 
-def calc_reward_to_return(reward_list, gamma):
+def calc_discount_rewards(rewards, gamma):
     G = 0
-    return_list = []
-    for i in reversed(range(len(reward_list))):
-        reward = reward_list[i]
+    returns = []
+    for i in reversed(range(len(rewards))):
+        reward = rewards[i]
         # G_i = r_i + γ·G_i+1
         G = gamma * G + reward
-        return_list.insert(0, G)
-    return return_list
+        returns.insert(0, G)
+    return returns
 
 
 config = {
@@ -103,13 +103,12 @@ def main():
         obs_list, action_list, log_prob_list, reward_list = run_episode(
             env, agent)
         logger.info('Episode {}, Reward Sum {}.'.format(i, sum(reward_list)))
-        return_list = calc_reward_to_return(reward_list, gamma=args.gamma)
-        agent.update(
-            obs_list=obs_list,
-            action_list=action_list,
-            reward_list=reward_list)
-        agent.updat_with_baseline(
-            log_prob_list=log_prob_list, retrun_list=return_list)
+        return_list = calc_discount_rewards(reward_list, gamma=args.gamma)
+        # agent.update(
+        #     obs_list=obs_list,
+        #     action_list=action_list,
+        #     reward_list=reward_list)
+        agent.updat_with_baseline(log_probs=log_prob_list, returns=return_list)
         if (i + 1) % args.test_every_episode == 0:
             total_reward = evaluate(env, agent, render=args.eval_render)
             logger.info('Test reward: {}'.format(total_reward))
