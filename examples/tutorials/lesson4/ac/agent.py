@@ -101,7 +101,7 @@ class Agent(object):
         self.device = device
 
     def sample(self, obs: np.ndarray) -> Tuple[int, float]:
-        obs = torch.tensor([obs], dtype=torch.float32).to(self.device)
+        obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         prob = self.actor(obs)
         action_dist = Categorical(prob)
         action = action_dist.sample()
@@ -110,7 +110,7 @@ class Agent(object):
     def predict(self, obs) -> int:
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         # 根据动作概率选择概率最高的动作
-        select_action = self.critic(obs).argmax().item()
+        select_action = self.actor(obs).argmax().item()
         return select_action
 
     def learn(self, transition_dict) -> Tuple[float, float]:
@@ -173,7 +173,7 @@ class Agent(object):
         # 时序差分目标
         td_target = rewards + self.gamma * self.critic(next_obs) * (1 - dones)
         # 均方误差损失函数
-        value_loss = F.smooth_l1_loss(pred_value, td_target.detach())
+        value_loss = F.mse_loss(pred_value, td_target.detach())
 
         # advantage = Q_t - V(s_t)
         advantage = (td_target - pred_value).detach()  # not backpropagated

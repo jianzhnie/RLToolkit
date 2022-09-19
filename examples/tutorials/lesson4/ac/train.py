@@ -126,7 +126,7 @@ def main():
         return_list.append(episode_return)
 
     mean_reward, std_reward = evaluate(
-        test_env, agent, n_eval_episodes=1, render=True)
+        test_env, agent, n_eval_episodes=1, render=False)
 
     episodes_list = list(range(len(return_list)))
     plt.plot(episodes_list, return_list)
