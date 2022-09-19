@@ -18,20 +18,16 @@ def run_episode(env: gym.Env, agent: Agent):
         'actions': [],
         'next_obs': [],
         'rewards': [],
-        'log_probs': [],
-        'values': [],
         'dones': []
     }
     obs = env.reset()
     while True:
-        action, log_prob, value = agent.sample(obs)
+        action = agent.sample(obs)
         next_obs, reward, done, _ = env.step(action)
         transition_dict['obs'].append(obs)
         transition_dict['actions'].append(action)
         transition_dict['next_obs'].append(next_obs)
         transition_dict['rewards'].append(reward)
-        transition_dict['log_probs'].append(log_prob)
-        transition_dict['values'].append(value)
         transition_dict['dones'].append(done)
         obs = next_obs
         if done:
@@ -70,7 +66,7 @@ config = {
     'critic_lr': 0.01,  # end learning rate
     'gamma': 0.98,  # discounting factor
     'entropy_weight': 0.01,
-    'with_a2c': False,
+    'with_a2c': True,
     'eval_render': False,  # do eval render
     'test_every_episode': 50,  # evaluation freq
     'video_folder': 'results'
@@ -113,6 +109,7 @@ def main():
             key: np.array(val)
             for key, val in transition_dict.items()
         }
+
         episode_return = sum(transition_dict['rewards'])
         if args.with_a2c:
             policy_loss, value_loss = agent.learn_a2c(transition_dict)

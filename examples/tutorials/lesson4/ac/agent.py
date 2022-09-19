@@ -105,9 +105,7 @@ class Agent(object):
         prob = self.actor(obs)
         action_dist = Categorical(prob)
         action = action_dist.sample()
-        log_prob = action_dist.log_prob(action)
-        values = self.critic(obs)
-        return action.item(), log_prob.item(), values.item()
+        return action.item()
 
     def predict(self, obs) -> int:
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
@@ -129,8 +127,45 @@ class Agent(object):
         dones = torch.tensor(
             transition_dict['dones'],
             dtype=torch.float).view(-1, 1).to(self.device)
-        # log_probs = torch.tensor(
-        #     transition_dict['log_probs'], dtype=torch.float).view(-1, 1).to(self.device)
+
+        log_probs = torch.log(self.actor(obs).gather(1, actions))
+
+        pred_value = self.critic(obs)
+        # 时序差分目标
+        td_target = rewards + self.gamma * self.critic(next_obs) * (1 - dones)
+        # 均方误差损失函数
+        value_loss = F.mse_loss(pred_value, td_target.detach())
+
+        # 时序差分误差
+        td_delta = td_target - pred_value
+        policy_loss = torch.mean(-log_probs * td_delta.detach())
+
+        # update value
+        self.critic_optimizer.zero_grad()
+        value_loss.backward()
+        self.critic_optimizer.step()
+
+        # update policy
+        self.actor_optimizer.zero_grad()
+        policy_loss.backward()  # 计算策略网络的梯度
+        self.actor_optimizer.step()  # 更新策略网络的参数
+
+        return policy_loss.item(), value_loss.item()
+
+    def learn_a2c(self, transition_dict) -> None:
+        """Update the model by gradient descent."""
+        obs = torch.tensor(
+            transition_dict['obs'], dtype=torch.float).to(self.device)
+        actions = torch.tensor(transition_dict['actions']).view(-1, 1).to(
+            self.device)
+        rewards = torch.tensor(
+            transition_dict['rewards'],
+            dtype=torch.float).view(-1, 1).to(self.device)
+        next_obs = torch.tensor(
+            transition_dict['next_obs'], dtype=torch.float).to(self.device)
+        dones = torch.tensor(
+            transition_dict['dones'],
+            dtype=torch.float).view(-1, 1).to(self.device)
 
         log_probs = torch.log(self.actor(obs).gather(1, actions))
 
@@ -140,54 +175,18 @@ class Agent(object):
         # 均方误差损失函数
         value_loss = F.smooth_l1_loss(pred_value, td_target.detach())
 
-        # update value
-        self.critic_optimizer.zero_grad()
-        value_loss.backward(retain_graph=True)
-        self.critic_optimizer.step()
-
-        # 时序差分误差
-        td_delta = td_target - pred_value
-        policy_loss = torch.mean(-log_probs * td_delta.detach())
-
-        # update policy
-        self.actor_optimizer.zero_grad()
-        policy_loss.backward(retain_graph=True)  # 计算策略网络的梯度
-        self.actor_optimizer.step()  # 更新策略网络的参数
-
-        return policy_loss.item(), value_loss.item()
-
-    def learn_a2c(self, obs, next_obs, log_prob, rewards, dones) -> None:
-        """Update the model by gradient descent."""
-        obs = torch.tensor(obs, dtype=torch.float).to(self.device)
-        next_obs = torch.tensor(next_obs, dtype=torch.float).to(self.device)
-        log_prob = torch.tensor(
-            log_prob, dtype=torch.float).view(-1, 1).to(self.device)
-        rewards = torch.tensor(
-            rewards, dtype=torch.float).view(-1, 1).to(self.device)
-        dones = torch.tensor(
-            dones, dtype=torch.float).view(-1, 1).to(self.device)
-
-        pred_value = self.critic(obs)
-        # 时序差分目标
-        td_target = rewards + self.gamma * self.critic(next_obs) * (1 - dones)
-        # 均方误差损失函数
-        value_loss = F.smooth_l1_loss(pred_value, td_target.detach())
-
-        # update value
-        self.critic_optimizer.zero_grad()
-        value_loss.backward(retain_graph=True)
-        self.critic_optimizer.step()
-
-        # 时序差分误差
-        advantage = (td_target - pred_value)  # not backpropagated
-        policy_loss = -advantage * log_prob
-        policy_loss += self.entropy_weight * -log_prob  # entropy maximization
+        # advantage = Q_t - V(s_t)
+        advantage = (td_target - pred_value).detach()  # not backpropagated
+        policy_loss = -advantage * log_probs
+        policy_loss += -self.entropy_weight * log_probs  # entropy maximization
         policy_loss = torch.mean(policy_loss)
 
-        print(value_loss, policy_loss)
-
+        # update value
+        self.critic_optimizer.zero_grad()
+        value_loss.backward()
+        self.critic_optimizer.step()
         # update policy
         self.actor_optimizer.zero_grad()
-        policy_loss.backward(retain_graph=True)  # 计算策略网络的梯度
-        self.actor_optimizer.step()  # 更新策略网络的参数
+        policy_loss.backward()
+        self.actor_optimizer.step()
         return policy_loss.item(), value_loss.item()
