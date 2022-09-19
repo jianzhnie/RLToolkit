@@ -60,7 +60,11 @@ class ActorCritic(nn.Module):
 
 
 class Agent(object):
-    """A2CAgent interacting with environment.
+    """A2CAgent interacting with environment. The “Critic” estimates the value
+    function. This could be the action-value (the Q value) or state-value (the
+    V value).
+
+    The “Actor” updates the policy distribution in the direction suggested by the Critic (such as with policy gradients).
 
     Atribute:
         gamma (float): discount factor
@@ -110,7 +114,7 @@ class Agent(object):
         return select_action
 
     def learn(self, transition_dict) -> Tuple[float, float]:
-        """Update the model by gradient descent."""
+        """Update the model by TD actor-critic."""
         obs = torch.tensor(
             transition_dict['obs'], dtype=torch.float).to(self.device)
         actions = torch.tensor(transition_dict['actions']).view(-1, 1).to(
@@ -171,11 +175,17 @@ class Agent(object):
         # 均方误差损失函数
         value_loss = F.mse_loss(pred_value, td_target.detach())
 
-        # advantage = Q_t - V(s_t)
+        # entropy loss
+        prob = self.actor(obs)
+        action_dist = Categorical(prob)
+        entropy_loss = action_dist.entropy().mean()
+
+        # Q(s_t, a_t) = r_{t+1} + gamma * V(s_{t+1})
+        # A(s_t, a_t) = Q(s_t, a_t) - V(s_t)
+        # advantage = r_{t+1} + gamma * V(s_{t+1}) - V(s_t)
         advantage = (td_target - pred_value).detach()  # not backpropagated
-        policy_loss = -advantage * log_probs
-        policy_loss += -self.entropy_weight * log_probs  # entropy maximization
-        policy_loss = torch.mean(policy_loss)
+        policy_loss = -torch.mean(advantage * log_probs)
+        policy_loss += self.entropy_weight * entropy_loss  # entropy maximization
 
         # update value
         self.critic_optimizer.zero_grad()
