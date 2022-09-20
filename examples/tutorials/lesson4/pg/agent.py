@@ -77,8 +77,8 @@ class Agent(object):
         for log_prob, G in zip(log_probs, returns):
             policy_loss.append(-log_prob * (G - baseline))
 
-        self.optimizer.zero_grad()
         loss = torch.cat(policy_loss).sum()
+        self.optimizer.zero_grad()
         loss.backward()  # 反向传播计算梯度
         self.optimizer.step()  # 梯度下降
         return loss.item()
