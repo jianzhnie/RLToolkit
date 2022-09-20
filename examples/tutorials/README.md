@@ -17,8 +17,8 @@
 + 一、强化学习(RL)初印象
     + RL概述、入门路线
     + 实践：
-      + 环境搭建1（[lesson1](lesson1/gridworld.py) 的代码提供了格子环境世界的渲染封装）
-      + 环境搭建2（[lesson1](lesson1/gym_example.py) 的代码提供了CartPole 的环境例子）
+      + [gridworld](lesson1/gridworld.py)
+      + [CartPole](lesson1/gym_example.py)
 + 二、基于表格型方法求解RL
     + MDP、状态价值、Q表格
     + 实践：
@@ -38,7 +38,10 @@
       + [Policy Gradient](lesson4/policy_gradient)
       + [TRPO](lesson4/policy_gradient)
       + [PPO](lesson4/policy_gradient)
-+ 五、连续动作空间上求解RL
++ 五、基于 Actor-Critic 框架
+  + AC
+  + A2C
++ 六、连续动作空间上求解RL
     + 实战：[DDPG](lesson5/ddpg)
 
 ## The Syllabus 🏗️
@@ -100,7 +103,7 @@ To cite this repository in publications:
 
 ```bibtex
 @misc{deep reinformentlearing course,
-  author = {JianZheng},
+  author = {jianzhnie},
   title = {Deep reinformentlearing course },
   year = {2022},
   publisher = {GitHub},
