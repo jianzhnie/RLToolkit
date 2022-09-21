@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import torch
@@ -98,19 +98,19 @@ class Agent(object):
                  actor_lr: float,
                  critic_lr: float,
                  lmbda: float,
-                 kl_constraint: float,
-                 alpha: float,
                  gamma: float,
-                 entropy_weight: float,
+                 kl_constraint: float = 0.01,
+                 backtrack_coeff: float = 0.5,
                  backtrack_iter: int = 10,
+                 backtrack_iters: List[int] = [],
                  device: Any = None):
 
         self.lmbda = lmbda  # GAE参数
-        self.kl_constraint = kl_constraint  # KL距离最大限制
-        self.alpha = alpha  # 线性搜索参数
         self.gamma = gamma  # 衰减率
-        self.entropy_weight = entropy_weight
-        self.backtrack_iter = backtrack_iter
+        self.kl_constraint = kl_constraint  # KL距离最大限制
+        self.backtrack_coeff = backtrack_coeff  # 线性搜索参数
+        self.backtrack_iter = backtrack_iter  # 线性搜索次数
+        self.backtrack_iters = backtrack_iters  # 线性搜索次数
 
         # 策略网络
         self.actor = PolicyNet(state_dim, hidden_dim, action_dim).to(device)
@@ -152,10 +152,11 @@ class Agent(object):
         kl_grad_vector = torch.cat([grad.view(-1) for grad in kl_grad])
         # KL距离的梯度先和向量进行点积运算
         kl_grad_vector_product = torch.dot(kl_grad_vector, vector)
-        kl_hessian = torch.autograd.grad(kl_grad_vector_product,
-                                         self.actor.parameters())
+        kl_hessian_gard = torch.autograd.grad(kl_grad_vector_product,
+                                              self.actor.parameters())
         # kl_hessian_vector = self.flat_grad(kl_hessian, hessian=True)
-        kl_hessian_vector = torch.cat([grad.view(-1) for grad in kl_hessian])
+        kl_hessian_vector = torch.cat(
+            [grad.view(-1) for grad in kl_hessian_gard])
         grad2_vector = kl_hessian_vector + vector * damping_coeff
         return grad2_vector
 
@@ -167,12 +168,11 @@ class Agent(object):
                            cg_iters: int = 10,
                            EPS: int = 1e-8,
                            residual_tol: float = 1e-10):
-        """Conjugate gradient algorithm (see
+        """Conjugate gradient algorithm  共轭梯度法求解方程 (see
         https://en.wikipedia.org/wiki/Conjugate_gradient_method)"""
         # from openai baseline code
         # https://github.com/openai/baselines/blob/master/baselines/common/cg.py
 
-        # 共轭梯度法求解方程
         x = torch.zeros_like(grad)
         r = grad.clone()
         p = grad.clone()
@@ -208,9 +208,10 @@ class Agent(object):
         actions: torch.Tensor,
         advantage: torch.Tensor,
         old_log_probs: torch.Tensor,
+        actor: nn.Module,
     ):
         # 计算策略目标
-        log_probs = torch.log(self.actor(obs).gather(1, actions))
+        log_probs = torch.log(actor(obs).gather(1, actions))
         ratio = torch.exp(log_probs - old_log_probs)
         return torch.mean(ratio * advantage)
 
@@ -221,26 +222,33 @@ class Agent(object):
         advantage: torch.Tensor,
         old_log_probs: torch.Tensor,
         old_action_dists: torch.Tensor,
-        max_vec: torch.Tensor,
+        descent_direction: torch.Tensor,
+        step_size: torch.Tensor,
     ):  # 线性搜索
-        old_para = parameters_to_vector(self.actor.parameters())
+        old_params = parameters_to_vector(self.actor.parameters())
         old_policy_obj = self.compute_policy_obj(obs, actions, advantage,
                                                  old_log_probs, self.actor)
-        for i in range(self.backtrack_iter):  # 线性搜索主循环
+        for i in range(1, self.backtrack_iter + 1):  # 线性搜索主循环
             # Backtracking line search
             # (https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf) 464p.
-            coef = self.alpha**i
-            new_para = old_para + coef * max_vec
+            coef = self.backtrack_coeff**i
+            new_params = old_params + coef * step_size * descent_direction
             new_actor = copy.deepcopy(self.actor)
-            vector_to_parameters(new_para, new_actor.parameters())
+            vector_to_parameters(new_params, new_actor.parameters())
             new_action_dists = Categorical(new_actor(obs))
             kl_div = torch.mean(
                 kl_divergence(old_action_dists, new_action_dists))
             new_policy_obj = self.compute_policy_obj(obs, actions, advantage,
                                                      old_log_probs, new_actor)
             if old_policy_obj > new_policy_obj and kl_div < self.kl_constraint:
-                return new_para
-        return old_para
+                print('Accepting new params at step %d of line search.' % i)
+                self.backtrack_iters.append(i)
+                return new_params
+
+        if i == self.backtrack_iter:
+            print('Line search failed! Keeping old params.')
+            self.backtrack_iters.append(i)
+        return old_params
 
     def policy_learn(
         self,
@@ -264,13 +272,14 @@ class Agent(object):
 
         gHg = self.hessian_vector_product(obs, old_action_dists,
                                           descent_direction)
-        gHg = torch.dot(descent_direction, gHg).sum(0)
-        max_coef = torch.sqrt(2 * self.kl_constraint / (gHg + 1e-8))
-        new_para = self.line_search(obs, actions, advantage, old_log_probs,
-                                    old_action_dists,
-                                    descent_direction * max_coef)
+        gHg = torch.dot(gHg, descent_direction).sum(0)
+        # 对梯度下降的半径进行限制
+        step_size = torch.sqrt(2 * self.kl_constraint / (gHg + 1e-8))
+        new_params = self.line_search(obs, actions, advantage, old_log_probs,
+                                      old_action_dists, descent_direction,
+                                      step_size)
         # 线性搜索
-        vector_to_parameters(new_para, self.actor.parameters())
+        vector_to_parameters(new_params, self.actor.parameters())
         # 用线性搜索后的参数更新策略
 
     def learn(self, transition_dict: Dict[str, list]) -> None:
@@ -294,6 +303,7 @@ class Agent(object):
                                       td_delta.cpu()).to(self.device)
         old_log_probs = torch.log(self.actor(obs).gather(1, actions)).detach()
         old_action_dists = Categorical(self.actor(obs).detach())
+
         critic_loss = F.mse_loss(self.critic(obs), td_target.detach())
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
@@ -301,3 +311,5 @@ class Agent(object):
         # 更新策略函数
         self.policy_learn(obs, actions, old_action_dists, old_log_probs,
                           advantage)
+
+        return critic_loss, critic_loss
