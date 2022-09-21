@@ -5,22 +5,11 @@
  * Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 -->
 
-# RLToolkit
+<p align="center">
+<img src="docs/images/logo.png" alt="logo" width="1000"/>
+</p>
 
-- [RLToolkit](#rltoolkit)
-  - [Abstractions](#abstractions)
-    - [Model](#model)
-    - [Algorithm](#algorithm)
-    - [Agent](#agent)
-  - [Contents](#contents)
-    - [Policy Gradient Series](#policy-gradient-series)
-    - [DQN Series](#dqn-series)
-    - [Supported Envs](#supported-envs)
-  - [Examples](#examples)
-  - [Experimental Demos](#experimental-demos)
-  - [Contributions](#contributions)
-  - [Reference](#reference)
-  - [Citation:](#citation)
+## Overview
 
 RLToolkit is a flexible and high-efficient reinforcement learning framework. RLToolkit ([website](https://github.com/jianzhnie/deep-rl-toolkit))) is developed for practitioners with the following advantages:
 
@@ -37,10 +26,28 @@ RLToolkit is a flexible and high-efficient reinforcement learning framework. RLT
 - **Stable**: much more stable than [Stable Baselines 3](https://github.com/DLR-RM/stable-baselines3) by utilizing various ensemble methods.
 
 
+## Table of Content
+- [Overview](#overview)
+- [Table of Content](#table-of-content)
+- [Abstractions](#abstractions)
+  - [Model](#model)
+  - [Algorithm](#algorithm)
+  - [Agent](#agent)
+- [Contents](#contents)
+  - [Policy Gradient Series](#policy-gradient-series)
+  - [DQN Series](#dqn-series)
+  - [Supported Envs](#supported-envs)
+- [Examples](#examples)
+- [Experimental Demos](#experimental-demos)
+- [Contributions](#contributions)
+- [Reference](#reference)
+- [Citation:](#citation)
+
+
 ## Abstractions
 
 <p align="center">
-<img src=".docs/../docs/images/abstractions.png/" alt="abstractions" width="400"/>
+<img src="./docs/images/abstractions.png" alt="abstractions" width="400"/>
 </p>
 
 RLToolkit aims to build an agent for training algorithms to perform complex tasks.
