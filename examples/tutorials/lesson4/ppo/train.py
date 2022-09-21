@@ -57,16 +57,19 @@ def evaluate(env, agent, n_eval_episodes=5, render=False):
 
 
 config = {
-    'train_seed': 42,
-    'test_seed': 42,
+    'train_seed': 0,
+    'test_seed': 0,
     'env': 'CartPole-v0',
-    'total_episode': 800,  # max training steps
+    'total_episode': 500,  # max training steps
     'hidden_dim': 128,
     'actor_lr': 0.001,  # start learning rate
     'critic_lr': 0.01,  # end learning rate
     'gamma': 0.98,  # discounting factor
-    'entropy_weight': 0.01,
-    'with_a2c': True,
+    'lmbda': 0.95,
+    'train_policy_iters': 5,
+    'train_value_iters': 10,
+    'clip_param': 0.2,
+    'target_kl': 0.01,
     'eval_render': False,  # do eval render
     'test_every_episode': 50,  # evaluation freq
     'video_folder': 'results'
@@ -99,7 +102,11 @@ def main():
         actor_lr=args.actor_lr,
         critic_lr=args.critic_lr,
         gamma=args.gamma,
-        entropy_weight=args.entropy_weight,
+        lmbda=args.lmbda,
+        target_kl=args.target_kl,
+        clip_param=args.clip_param,
+        train_value_iters=args.train_value_iters,
+        train_policy_iters=args.train_policy_iters,
         device=device)
 
     return_list = []
@@ -111,13 +118,10 @@ def main():
         }
 
         episode_return = sum(transition_dict['rewards'])
-        if args.with_a2c:
-            policy_loss, value_loss = agent.learn_a2c(transition_dict)
-        else:
-            policy_loss, value_loss = agent.learn(transition_dict)
+        policy_loss, value_loss = agent.learn(transition_dict)
         if (i_episode + 1) % args.test_every_episode == 0:
             logger.info(
-                'Episode {}, Plicy Loss {:.2f}, Actor Loss {:.2f}, Reward Sum {}.'
+                'Episode {}, Plicy Loss {:.2f}, Value Loss {:.2f}, Reward Sum {}.'
                 .format(i_episode, policy_loss, value_loss, episode_return))
             mean_reward, std_reward = evaluate(
                 env, agent, n_eval_episodes=5, render=args.eval_render)
@@ -132,14 +136,14 @@ def main():
     plt.plot(episodes_list, return_list)
     plt.xlabel('Episodes')
     plt.ylabel('Returns')
-    plt.title('Actor-critic on {}'.format(args.env))
+    plt.title('PPO on {}'.format(args.env))
     plt.show()
 
     mv_return = rl_utils.moving_average(return_list, 9)
     plt.plot(episodes_list, mv_return)
     plt.xlabel('Episodes')
     plt.ylabel('Returns')
-    plt.title('Actor-critic on {}'.format(args.env))
+    plt.title('PPO on {}'.format(args.env))
     plt.show()
 
 
