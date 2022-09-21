@@ -86,7 +86,7 @@ class Agent(object):
         lmbda: (float): GAE参数
         gamma: (float), 折扣回报系数
         kl_constraint: (float) = 0.01,  KL距离最大限制
-        backtrack_coeff: (float) = 0.5, 线性搜索参数
+        backtrack_coeff: (float) = 1.0, 线性搜索参数
         backtrack_iter: (int) = 15,     线性搜索次数
         actor (nn.Module): target actor model to select actions
         critic (nn.Module): critic model to predict state values
@@ -239,8 +239,8 @@ class Agent(object):
         for i in range(1, self.backtrack_iter + 1):  # 线性搜索主循环
             # Backtracking line search
             # (https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf) 464p.
-            coef = self.backtrack_coeff**i
-            new_params = old_params + coef * step_size * descent_direction
+            self.backtrack_coeff = self.backtrack_coeff**i
+            new_params = old_params + self.backtrack_coeff * step_size * descent_direction
             new_actor = copy.deepcopy(self.actor)
             # 更新策略网络的参数
             vector_to_parameters(new_params, new_actor.parameters())

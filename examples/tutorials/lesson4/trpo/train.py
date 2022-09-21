@@ -60,13 +60,14 @@ config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'CartPole-v0',
-    'total_episode': 800,  # max training steps
+    'total_episode': 500,  # max training steps
     'hidden_dim': 128,
     'critic_lr': 0.01,  # end learning rate
     'gamma': 0.98,  # discounting factor
     'lmbda': 0.95,
-    'kl_constraint': 0.006,
-    'backtrack_coeff': 0.5,
+    'train_critic_iters': 10,
+    'kl_constraint': 0.005,
+    'backtrack_coeff': 1.0,
     'backtrack_iter': 15,
     'eval_render': False,  # do eval render
     'test_every_episode': 50,  # evaluation freq
