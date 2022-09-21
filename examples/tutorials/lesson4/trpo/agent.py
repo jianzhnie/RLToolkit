@@ -83,7 +83,11 @@ class Agent(object):
 
     Atribute:
         gamma (float): discount factor
-        entropy_weight (float): rate of weighting entropy into the loss function
+        lmbda: (float): GAE参数
+        gamma: (float), 折扣回报系数
+        kl_constraint: (float) = 0.01,  KL距离最大限制
+        backtrack_coeff: (float) = 0.5, 线性搜索参数
+        backtrack_iter: (int) = 15,     线性搜索次数
         actor (nn.Module): target actor model to select actions
         critic (nn.Module): critic model to predict state values
         actor_optimizer (optim.Optimizer) : optimizer of actor
@@ -95,20 +99,25 @@ class Agent(object):
                  state_dim: int,
                  hidden_dim: int,
                  action_dim: int,
-                 actor_lr: float,
                  critic_lr: float,
                  lmbda: float,
                  gamma: float,
+                 algo: str = 'trpo',
+                 train_critic_iters: int = 10,
                  kl_constraint: float = 0.01,
                  backtrack_coeff: float = 0.5,
-                 backtrack_iter: int = 10,
+                 backtrack_alpha: float = 0.5,
+                 backtrack_iter: int = 15,
                  backtrack_iters: List[int] = [],
                  device: Any = None):
 
         self.lmbda = lmbda  # GAE参数
-        self.gamma = gamma  # 衰减率
+        self.gamma = gamma  # 折扣因子
+        self.algo = algo  # 算法名
+        self.train_critic_iters = train_critic_iters
         self.kl_constraint = kl_constraint  # KL距离最大限制
         self.backtrack_coeff = backtrack_coeff  # 线性搜索参数
+        self.backtrack_alpha = backtrack_alpha
         self.backtrack_iter = backtrack_iter  # 线性搜索次数
         self.backtrack_iters = backtrack_iters  # 线性搜索次数
 
@@ -116,11 +125,8 @@ class Agent(object):
         self.actor = PolicyNet(state_dim, hidden_dim, action_dim).to(device)
         # 价值网络
         self.critic = ValueNet(state_dim, hidden_dim).to(device)
-        # 策略网络优化器
-        self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
         # 价值网络优化器
         self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
-        # 折扣因子
         self.device = device
 
     def sample(self, obs: np.ndarray) -> Tuple[int, float]:
@@ -149,7 +155,6 @@ class Agent(object):
         kl_grad = torch.autograd.grad(
             kl, self.actor.parameters(), create_graph=True)
         kl_grad_vector = self.flat_grad(kl_grad)
-        # kl_grad_vector = torch.cat([grad.view(-1) for grad in kl_grad])
         # KL距离的梯度先和向量进行点积运算
         kl_grad_vector_product = torch.dot(kl_grad_vector, vector)
         kl_hessian_gard = torch.autograd.grad(kl_grad_vector_product,
@@ -157,7 +162,7 @@ class Agent(object):
         kl_hessian_vector = self.flat_grad(kl_hessian_gard, hessian=True)
         # kl_hessian_vector = torch.cat(
         #     [grad.view(-1) for grad in kl_hessian_gard])
-        # grad2_vector = kl_hessian_vector + vector * damping_coeff
+        kl_hessian_vector = kl_hessian_vector + vector * damping_coeff
         return kl_hessian_vector
 
     # have checked
@@ -166,28 +171,28 @@ class Agent(object):
                            obs: torch.Tensor,
                            old_action_dists: torch.Tensor,
                            cg_iters: int = 10,
-                           EPS: int = 1e-8,
+                           eps: float = 1e-8,
                            residual_tol: float = 1e-10):
         """Conjugate gradient algorithm  共轭梯度法求解方程 (see
         https://en.wikipedia.org/wiki/Conjugate_gradient_method)"""
         # from openai baseline code
         # https://github.com/openai/baselines/blob/master/baselines/common/cg.py
 
-        x = torch.zeros_like(grad)
+        x = torch.zeros_like(grad).to(self.device)
         r = grad.clone()
         p = grad.clone()
-        rdotr = torch.dot(r, r)
+        rdotr = torch.dot(r, r).to(self.device)
         for _ in range(cg_iters):  # 共轭梯度主循环
             Hp = self.hessian_vector_product(obs, old_action_dists, p)
-            alpha = rdotr / (torch.dot(p, Hp) + EPS)
+            alpha = rdotr / (torch.dot(p, Hp) + eps)
             x += alpha * p
             r -= alpha * Hp
             new_rdotr = torch.dot(r, r)
+            if new_rdotr < residual_tol:
+                break
             beta = new_rdotr / rdotr
             p = r + beta * p
             rdotr = new_rdotr
-            if new_rdotr < residual_tol:
-                break
         return x
 
     def flat_grad(self, grads, hessian=False):
@@ -195,7 +200,7 @@ class Agent(object):
         if hessian:
             for grad in grads:
                 grad_flatten.append(grad.contiguous().view(-1))
-            grad_flatten = torch.cat(grad_flatten).data
+            grad_flatten = torch.cat(grad_flatten)
         else:
             for grad in grads:
                 grad_flatten.append(grad.view(-1))
@@ -222,25 +227,35 @@ class Agent(object):
         advantage: torch.Tensor,
         old_log_probs: torch.Tensor,
         old_action_dists: torch.Tensor,
+        grads_vector: torch.Tensor,
         descent_direction: torch.Tensor,
         step_size: torch.Tensor,
     ):  # 线性搜索
         old_params = parameters_to_vector(self.actor.parameters())
         old_policy_obj = self.compute_policy_obj(obs, actions, advantage,
                                                  old_log_probs, self.actor)
+        expected_improve = (grads_vector * step_size * descent_direction).sum(
+            0, keepdim=True)
         for i in range(1, self.backtrack_iter + 1):  # 线性搜索主循环
             # Backtracking line search
             # (https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf) 464p.
             coef = self.backtrack_coeff**i
             new_params = old_params + coef * step_size * descent_direction
             new_actor = copy.deepcopy(self.actor)
+            # 更新策略网络的参数
             vector_to_parameters(new_params, new_actor.parameters())
             new_action_dists = Categorical(new_actor(obs))
             kl_div = torch.mean(
                 kl_divergence(old_action_dists, new_action_dists))
+            # 重新计算策略目标
             new_policy_obj = self.compute_policy_obj(obs, actions, advantage,
                                                      old_log_probs, new_actor)
-            if old_policy_obj > new_policy_obj and kl_div < self.kl_constraint:
+
+            loss_improve = new_policy_obj - old_policy_obj
+            expected_improve *= self.backtrack_coeff
+            improve_condition = loss_improve / expected_improve
+
+            if improve_condition > self.backtrack_alpha and kl_div < self.kl_constraint:
                 self.backtrack_iters.append(i)
                 return new_params
         return old_params
@@ -252,6 +267,7 @@ class Agent(object):
         old_action_dists: torch.Tensor,
         old_log_probs: torch.Tensor,
         advantage: torch.Tensor,
+        eps: float = 1e-8,
     ) -> None:
         old_policy_obj = self.compute_policy_obj(obs, actions, advantage,
                                                  old_log_probs, self.actor)
@@ -267,15 +283,21 @@ class Agent(object):
 
         gHg = self.hessian_vector_product(obs, old_action_dists,
                                           descent_direction)
-        gHg = torch.dot(gHg, descent_direction)
+        gHg = torch.dot(gHg, descent_direction).sum(0)
         # 对梯度下降的半径进行限制
-        step_size = torch.sqrt(2 * self.kl_constraint / (gHg + 1e-8))
-        # 线性搜索
-        new_params = self.line_search(obs, actions, advantage, old_log_probs,
-                                      old_action_dists, descent_direction,
-                                      step_size)
-        # 用线性搜索后的参数更新策略
-        vector_to_parameters(new_params, self.actor.parameters())
+        step_size = torch.sqrt(2 * self.kl_constraint / (gHg + eps))
+        if self.algo == 'npg':
+            pass
+
+        elif self.algo == 'trpo':
+            # 线性搜索得到新的参数
+            # Backtracking line search
+            new_params = self.line_search(obs, actions, advantage,
+                                          old_log_probs, old_action_dists,
+                                          grads_vector, descent_direction,
+                                          step_size)
+            # 用线性搜索后的参数更新策略网络
+            vector_to_parameters(new_params, self.actor.parameters())
 
     def learn(self, transition_dict: Dict[str, list]) -> None:
         """Update the model by gradient descent."""
@@ -291,18 +313,26 @@ class Agent(object):
         dones = torch.tensor(
             transition_dict['dones'],
             dtype=torch.float).view(-1, 1).to(self.device)
-        td_target = rewards + self.gamma * self.critic(next_obs) * (1 - dones)
 
-        td_delta = td_target - self.critic(obs)
+        # Update value network parameter
+        # 更新价值网络参数
+        for _ in range(self.train_critic_iters):
+            td_target = rewards + self.gamma * self.critic(next_obs) * (1 -
+                                                                        dones)
+            td_delta = td_target - self.critic(obs)
+
+            critic_loss = F.mse_loss(self.critic(obs), td_target.detach())
+            self.critic_optimizer.zero_grad()
+            critic_loss.backward()
+            self.critic_optimizer.step()  # 更新价值函数
+
+        # compute anvantage
         advantage = compute_advantage(self.gamma, self.lmbda,
                                       td_delta.cpu()).to(self.device)
+        # Prediction logπ_old(s), logπ(s)
         old_log_probs = torch.log(self.actor(obs).gather(1, actions)).detach()
         old_action_dists = Categorical(self.actor(obs).detach())
 
-        critic_loss = F.mse_loss(self.critic(obs), td_target.detach())
-        self.critic_optimizer.zero_grad()
-        critic_loss.backward()
-        self.critic_optimizer.step()  # 更新价值函数
         # 更新策略函数
         self.policy_learn(obs, actions, old_action_dists, old_log_probs,
                           advantage)
