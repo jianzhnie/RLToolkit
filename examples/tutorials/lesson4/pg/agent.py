@@ -56,9 +56,13 @@ class Agent(object):
         return select_action
 
     def learn(self, log_probs: list, returns: list) -> None:
-        """Update model with policy gradient algorithm.
+        """REINFORCE algorithm, also known as Monte Carlo Policy Gradients.
 
-        Returns:
+        Args:
+            - log_probs:
+            - returns:
+
+        Return:
             loss (torch.tensor): shape of (1)
         """
         policy_loss = []
@@ -77,8 +81,8 @@ class Agent(object):
         for log_prob, G in zip(log_probs, returns):
             policy_loss.append(-log_prob * (G - baseline))
 
-        self.optimizer.zero_grad()
         loss = torch.cat(policy_loss).sum()
+        self.optimizer.zero_grad()
         loss.backward()  # 反向传播计算梯度
         self.optimizer.step()  # 梯度下降
         return loss.item()
