@@ -142,7 +142,6 @@ class Agent(object):
         select_action = self.actor(obs).argmax().item()
         return select_action
 
-    # have checked
     def hessian_vector_product(self,
                                obs: torch.Tensor,
                                old_action_dists: torch.Tensor,
@@ -165,7 +164,6 @@ class Agent(object):
         kl_hessian_vector = kl_hessian_vector + vector * damping_coeff
         return kl_hessian_vector
 
-    # have checked
     def conjugate_gradient(self,
                            grad: torch.Tensor,
                            obs: torch.Tensor,
