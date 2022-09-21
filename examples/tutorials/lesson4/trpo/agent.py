@@ -152,30 +152,10 @@ class Agent(object):
         kl_grad_vector_product = torch.dot(kl_grad_vector, vector)
         kl_hessian = torch.autograd.grad(kl_grad_vector_product,
                                          self.actor.parameters())
-        # kl_hessian = self.flat_grad(kl_hessian, hessian=True)
+        # kl_hessian_vector = self.flat_grad(kl_hessian, hessian=True)
         kl_hessian_vector = torch.cat([grad.view(-1) for grad in kl_hessian])
         grad2_vector = kl_hessian_vector + vector * damping_coeff
         return grad2_vector
-
-    def flat_grad(self, grads, hessian=False):
-        grad_flatten = []
-        if not hessian:
-            for grad in grads:
-                grad_flatten.append(grad.view(-1))
-            grad_flatten = torch.cat(grad_flatten)
-            return grad_flatten
-        elif hessian:
-            for grad in grads:
-                grad_flatten.append(grad.contiguous().view(-1))
-            grad_flatten = torch.cat(grad_flatten).data
-        return grad_flatten
-
-    def flat_params(self, model):
-        params = []
-        for param in model.parameters():
-            params.append(param.data.view(-1))
-        params_flatten = torch.cat(params)
-        return params_flatten
 
     # have checked
     def conjugate_gradient(self,
@@ -208,7 +188,19 @@ class Agent(object):
                 break
         return x
 
-    def compute_surrogate_obj(
+    def flat_grad(self, grads, hessian=False):
+        grad_flatten = []
+        if hessian:
+            for grad in grads:
+                grad_flatten.append(grad.contiguous().view(-1))
+            grad_flatten = torch.cat(grad_flatten).data
+        else:
+            for grad in grads:
+                grad_flatten.append(grad.view(-1))
+            grad_flatten = torch.cat(grad_flatten)
+        return grad_flatten
+
+    def compute_policy_obj(
         self,
         obs: torch.Tensor,
         actions: torch.Tensor,
@@ -230,8 +222,8 @@ class Agent(object):
         max_vec: torch.Tensor,
     ):  # 线性搜索
         old_para = parameters_to_vector(self.actor.parameters())
-        old_obj = self.compute_surrogate_obj(obs, actions, advantage,
-                                             old_log_probs, self.actor)
+        old_policy_obj = self.compute_policy_obj(obs, actions, advantage,
+                                                 old_log_probs, self.actor)
         for i in range(15):  # 线性搜索主循环
             coef = self.alpha**i
             new_para = old_para + coef * max_vec
@@ -240,9 +232,9 @@ class Agent(object):
             new_action_dists = Categorical(new_actor(obs))
             kl_div = torch.mean(
                 kl_divergence(old_action_dists, new_action_dists))
-            new_obj = self.compute_surrogate_obj(obs, actions, advantage,
-                                                 old_log_probs, new_actor)
-            if new_obj > old_obj and kl_div < self.kl_constraint:
+            new_policy_obj = self.compute_policy_obj(obs, actions, advantage,
+                                                     old_log_probs, new_actor)
+            if old_policy_obj > new_policy_obj and kl_div < self.kl_constraint:
                 return new_para
         return old_para
 
@@ -254,18 +246,22 @@ class Agent(object):
         old_log_probs: torch.Tensor,
         advantage: torch.Tensor,
     ) -> None:
-        surrogate_obj = self.compute_surrogate_obj(obs, actions, advantage,
+        policy_loss_old = self.compute_policy_loss(obs, actions, advantage,
                                                    old_log_probs, self.actor)
-        grads = torch.autograd.grad(surrogate_obj, self.actor.parameters())
-        obj_grad = torch.cat([grad.view(-1) for grad in grads]).detach()
+        # Symbols needed for Conjugate gradient solver
+        grads = torch.autograd.grad(policy_loss_old, self.actor.parameters())
+        # grad_vector = torch.cat([grad.view(-1) for grad in grads]).detach()
+        grads_vector = self.flat_grad(grads)
+
         # 用共轭梯度法计算x = H^(-1)g
-        descent_direction = self.conjugate_gradient(obj_grad, obs,
+        # Core calculations for NPG or TRPO
+        descent_direction = self.conjugate_gradient(grads_vector, obs,
                                                     old_action_dists)
 
-        Hd = self.hessian_matrix_vector_product(obs, old_action_dists,
-                                                descent_direction)
-        max_coef = torch.sqrt(2 * self.kl_constraint /
-                              (torch.dot(descent_direction, Hd) + 1e-8))
+        gHg = self.hessian_vector_product(obs, old_action_dists,
+                                          descent_direction)
+        gHg = torch.dot(descent_direction, gHg).sum(0)
+        max_coef = torch.sqrt(2 * self.kl_constraint / (gHg + 1e-8))
         new_para = self.line_search(obs, actions, advantage, old_log_probs,
                                     old_action_dists,
                                     descent_direction * max_coef)
