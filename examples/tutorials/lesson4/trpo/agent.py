@@ -75,7 +75,7 @@ def compute_advantage(gamma, lmbda, td_delta):
 
 
 class Agent(object):
-    """A2CAgent interacting with environment. The “Critic” estimates the value
+    """Agent interacting with environment. The “Critic” estimates the value
     function. This could be the action-value (the Q value) or state-value (the
     V value).
 
