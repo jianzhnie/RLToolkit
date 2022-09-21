@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
+from torch.distributions.kl import kl_divergence
 from torch.optim import Adam
 
 
@@ -154,6 +155,7 @@ class Agent(object):
         advantage = self.compute_advantage(self.gamma, self.lmbda,
                                            td_delta.cpu()).to(self.device)
         old_log_probs = torch.log(self.actor(obs).gather(1, actions)).detach()
+        old_action_dists = Categorical(self.actor(obs).detach())
 
         for _ in range(self.train_policy_iters):
             log_probs = torch.log(self.actor(obs).gather(1, actions))
@@ -165,10 +167,17 @@ class Agent(object):
             # PPO损失函数
             policy_loss = torch.mean(-torch.min(surr1, surr2))
 
+            # K-L dist
+            new_action_dists = Categorical(self.actor(obs))
             # A sample estimate for KL-divergence, easy to compute
-            approx_kl = (old_log_probs - log_probs).mean()
+            # approx_kl = (old_log_probs - log_probs).mean()
+            kl_div = torch.mean(
+                kl_divergence(old_action_dists, new_action_dists))
             # Early stopping at step i due to reaching max kl
-            if approx_kl > 1.5 * self.target_kl:
+            if kl_div > 1.5 * self.target_kl:
+                print(
+                    'Early stopping, due to current kl_div: %3f reaching max kl %3f'
+                    % (kl_div, self.target_kl))
                 break
             # update policy
             self.actor_optimizer.zero_grad()
