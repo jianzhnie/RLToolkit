@@ -132,14 +132,14 @@ def main():
     plt.plot(episodes_list, return_list)
     plt.xlabel('Episodes')
     plt.ylabel('Returns')
-    plt.title('REINFORCE on {}'.format(args.env))
+    plt.title('Actor-critic on {}'.format(args.env))
     plt.show()
 
     mv_return = rl_utils.moving_average(return_list, 9)
     plt.plot(episodes_list, mv_return)
     plt.xlabel('Episodes')
     plt.ylabel('Returns')
-    plt.title('REINFORCE on {}'.format(args.env))
+    plt.title('Actor-critic on {}'.format(args.env))
     plt.show()
 
 
