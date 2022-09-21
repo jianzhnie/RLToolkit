@@ -83,14 +83,18 @@ class Agent(object):
                  critic_lr: float,
                  gamma: float,
                  lmbda: float,
-                 eps: float,
-                 epochs: float,
+                 clip_param: float = 0.2,
+                 target_kl: float = 0.01,
+                 train_policy_iters: int = 10,
+                 train_value_iters: int = 10,
                  device: Any = None):
 
         self.gamma = gamma
         self.lmbda = lmbda
-        self.eps = eps  # PPO中截断范围的参数
-        self.epochs = epochs  # 一条序列的数据用来训练轮数
+        self.clip_param = clip_param  # PPO中截断范围的参数
+        self.target_kl = target_kl
+        self.train_policy_iters = train_policy_iters  # 一条序列的数据用来训练轮数
+        self.train_value_iters = train_value_iters  # 一条序列的数据用来训练轮数
 
         # 策略网络
         self.actor = PolicyNet(state_dim, hidden_dim, action_dim).to(device)
@@ -151,27 +155,32 @@ class Agent(object):
                                            td_delta.cpu()).to(self.device)
         old_log_probs = torch.log(self.actor(obs).gather(1, actions)).detach()
 
-        for _ in range(self.epochs):
+        for _ in range(self.train_policy_iters):
             log_probs = torch.log(self.actor(obs).gather(1, actions))
             ratio = torch.exp(log_probs - old_log_probs)
-
             surr1 = ratio * advantage
             # 截断
-            surr2 = torch.clamp(ratio, 1 - self.eps, 1 + self.eps) * advantage
+            surr2 = torch.clamp(ratio, 1 - self.clip_param,
+                                1 + self.clip_param) * advantage
             # PPO损失函数
             policy_loss = torch.mean(-torch.min(surr1, surr2))
 
-            # value loss
-            value_loss = F.mse_loss(self.critic(obs), td_target.detach())
-
-            # update value
-            self.critic_optimizer.zero_grad()
-            value_loss.backward()
-            self.critic_optimizer.step()
-
+            # A sample estimate for KL-divergence, easy to compute
+            approx_kl = (old_log_probs - log_probs).mean()
+            # Early stopping at step i due to reaching max kl
+            if approx_kl > 1.5 * self.target_kl:
+                break
             # update policy
             self.actor_optimizer.zero_grad()
             policy_loss.backward()  # 计算策略网络的梯度
             self.actor_optimizer.step()  # 更新策略网络的参数
+
+        for _ in range(self.train_value_iters):
+            # value loss
+            value_loss = F.mse_loss(self.critic(obs), td_target.detach())
+            # update value
+            self.critic_optimizer.zero_grad()
+            value_loss.backward()
+            self.critic_optimizer.step()
 
         return policy_loss.item(), value_loss.item()

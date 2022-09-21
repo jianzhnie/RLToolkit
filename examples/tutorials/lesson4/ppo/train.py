@@ -66,8 +66,9 @@ config = {
     'critic_lr': 0.01,  # end learning rate
     'gamma': 0.98,  # discounting factor
     'lmbda': 0.95,
-    'epochs': 10,
-    'eps': 0.2,
+    'train_policy_iters': 5,
+    'train_value_iters': 10,
+    'clip_param': 0.2,
     'eval_render': False,  # do eval render
     'test_every_episode': 50,  # evaluation freq
     'video_folder': 'results'
@@ -101,8 +102,9 @@ def main():
         critic_lr=args.critic_lr,
         gamma=args.gamma,
         lmbda=args.lmbda,
-        eps=args.eps,
-        epochs=args.epochs,
+        clip_param=args.clip_param,
+        train_value_iters=args.train_value_iters,
+        train_policy_iters=args.train_policy_iters,
         device=device)
 
     return_list = []
@@ -117,7 +119,7 @@ def main():
         policy_loss, value_loss = agent.learn(transition_dict)
         if (i_episode + 1) % args.test_every_episode == 0:
             logger.info(
-                'Episode {}, Plicy Loss {:.2f}, Actor Loss {:.2f}, Reward Sum {}.'
+                'Episode {}, Plicy Loss {:.2f}, Value Loss {:.2f}, Reward Sum {}.'
                 .format(i_episode, policy_loss, value_loss, episode_return))
             mean_reward, std_reward = evaluate(
                 env, agent, n_eval_episodes=5, render=args.eval_render)
