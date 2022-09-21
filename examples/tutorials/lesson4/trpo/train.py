@@ -60,15 +60,15 @@ config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'CartPole-v0',
-    'total_episode': 800,  # max training steps
+    'total_episode': 500,  # max training steps
     'hidden_dim': 128,
-    'actor_lr': 0.001,  # start learning rate
     'critic_lr': 0.01,  # end learning rate
     'gamma': 0.98,  # discounting factor
     'lmbda': 0.95,
-    'kl_constraint': 0.0005,
-    'backtrack_coeff': 0.5,
-    'backtrack_iter': 10,
+    'train_critic_iters': 5,
+    'kl_constraint': 0.005,
+    'backtrack_coeff': 1.0,
+    'backtrack_iter': 15,
     'eval_render': False,  # do eval render
     'test_every_episode': 50,  # evaluation freq
     'video_folder': 'results'
@@ -98,10 +98,10 @@ def main():
         state_dim=obs_dim,
         action_dim=action_dim,
         hidden_dim=args.hidden_dim,
-        actor_lr=args.actor_lr,
         critic_lr=args.critic_lr,
         lmbda=args.lmbda,
         gamma=args.gamma,
+        train_critic_iters=args.train_critic_iters,
         kl_constraint=args.kl_constraint,
         backtrack_coeff=args.backtrack_coeff,
         backtrack_iter=args.backtrack_iter,
