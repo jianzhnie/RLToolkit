@@ -207,30 +207,19 @@ class Agent(object):
             grad_flatten = torch.cat(grad_flatten)
         return grad_flatten
 
-    def compute_policy_obj(
-        self,
-        obs: torch.Tensor,
-        actions: torch.Tensor,
-        advantage: torch.Tensor,
-        old_log_probs: torch.Tensor,
-        actor: nn.Module,
-    ):
+    def compute_policy_obj(self, obs: torch.Tensor, actions: torch.Tensor,
+                           advantage: torch.Tensor,
+                           old_log_probs: torch.Tensor, actor: nn.Module):
         # 计算策略目标
         log_probs = torch.log(actor(obs).gather(1, actions))
         ratio = torch.exp(log_probs - old_log_probs)
         return torch.mean(ratio * advantage)
 
-    def line_search(
-        self,
-        obs: torch.Tensor,
-        actions: torch.Tensor,
-        advantage: torch.Tensor,
-        old_log_probs: torch.Tensor,
-        old_action_dists: torch.Tensor,
-        grads_vector: torch.Tensor,
-        descent_direction: torch.Tensor,
-        step_size: torch.Tensor,
-    ):  # 线性搜索
+    def line_search(self, obs: torch.Tensor, actions: torch.Tensor,
+                    advantage: torch.Tensor, old_log_probs: torch.Tensor,
+                    old_action_dists: torch.Tensor, grads_vector: torch.Tensor,
+                    descent_direction: torch.Tensor, step_size: torch.Tensor):
+        # 线性搜索
         old_params = parameters_to_vector(self.actor.parameters())
         old_policy_obj = self.compute_policy_obj(obs, actions, advantage,
                                                  old_log_probs, self.actor)
@@ -260,15 +249,13 @@ class Agent(object):
                 return new_params
         return old_params
 
-    def policy_learn(
-        self,
-        obs: torch.Tensor,
-        actions: torch.Tensor,
-        old_action_dists: torch.Tensor,
-        old_log_probs: torch.Tensor,
-        advantage: torch.Tensor,
-        eps: float = 1e-8,
-    ) -> None:
+    def policy_learn(self,
+                     obs: torch.Tensor,
+                     actions: torch.Tensor,
+                     old_action_dists: torch.Tensor,
+                     old_log_probs: torch.Tensor,
+                     advantage: torch.Tensor,
+                     eps: float = 1e-8) -> None:
         old_policy_obj = self.compute_policy_obj(obs, actions, advantage,
                                                  old_log_probs, self.actor)
         # Symbols needed for Conjugate gradient solver
@@ -299,7 +286,7 @@ class Agent(object):
             # 用线性搜索后的参数更新策略网络
             vector_to_parameters(new_params, self.actor.parameters())
 
-    def learn(self, transition_dict: Dict[str, list]) -> None:
+    def learn(self, transition_dict: Dict[str, list]):
         """Update the model by gradient descent."""
         obs = torch.tensor(
             transition_dict['obs'], dtype=torch.float).to(self.device)

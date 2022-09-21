@@ -65,7 +65,7 @@ config = {
     'critic_lr': 0.01,  # end learning rate
     'gamma': 0.98,  # discounting factor
     'lmbda': 0.95,
-    'train_critic_iters': 10,
+    'train_critic_iters': 5,
     'kl_constraint': 0.005,
     'backtrack_coeff': 1.0,
     'backtrack_iter': 15,
@@ -101,6 +101,7 @@ def main():
         critic_lr=args.critic_lr,
         lmbda=args.lmbda,
         gamma=args.gamma,
+        train_critic_iters=args.train_critic_iters,
         kl_constraint=args.kl_constraint,
         backtrack_coeff=args.backtrack_coeff,
         backtrack_iter=args.backtrack_iter,
