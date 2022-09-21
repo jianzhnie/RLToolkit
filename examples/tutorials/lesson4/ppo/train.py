@@ -69,6 +69,7 @@ config = {
     'train_policy_iters': 5,
     'train_value_iters': 10,
     'clip_param': 0.2,
+    'target_kl': 0.01,
     'eval_render': False,  # do eval render
     'test_every_episode': 50,  # evaluation freq
     'video_folder': 'results'
@@ -102,6 +103,7 @@ def main():
         critic_lr=args.critic_lr,
         gamma=args.gamma,
         lmbda=args.lmbda,
+        target_kl=args.target_kl,
         clip_param=args.clip_param,
         train_value_iters=args.train_value_iters,
         train_policy_iters=args.train_policy_iters,
