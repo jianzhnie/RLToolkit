@@ -102,6 +102,7 @@ class Agent(object):
                  alpha: float,
                  gamma: float,
                  entropy_weight: float,
+                 backtrack_iter: int = 10,
                  device: Any = None):
 
         self.lmbda = lmbda  # GAE参数
@@ -109,6 +110,7 @@ class Agent(object):
         self.alpha = alpha  # 线性搜索参数
         self.gamma = gamma  # 衰减率
         self.entropy_weight = entropy_weight
+        self.backtrack_iter = backtrack_iter
 
         # 策略网络
         self.actor = PolicyNet(state_dim, hidden_dim, action_dim).to(device)
@@ -224,7 +226,9 @@ class Agent(object):
         old_para = parameters_to_vector(self.actor.parameters())
         old_policy_obj = self.compute_policy_obj(obs, actions, advantage,
                                                  old_log_probs, self.actor)
-        for i in range(15):  # 线性搜索主循环
+        for i in range(self.backtrack_iter):  # 线性搜索主循环
+            # Backtracking line search
+            # (https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf) 464p.
             coef = self.alpha**i
             new_para = old_para + coef * max_vec
             new_actor = copy.deepcopy(self.actor)
@@ -246,10 +250,10 @@ class Agent(object):
         old_log_probs: torch.Tensor,
         advantage: torch.Tensor,
     ) -> None:
-        policy_loss_old = self.compute_policy_loss(obs, actions, advantage,
-                                                   old_log_probs, self.actor)
+        old_policy_obj = self.compute_policy_obj(obs, actions, advantage,
+                                                 old_log_probs, self.actor)
         # Symbols needed for Conjugate gradient solver
-        grads = torch.autograd.grad(policy_loss_old, self.actor.parameters())
+        grads = torch.autograd.grad(old_policy_obj, self.actor.parameters())
         # grad_vector = torch.cat([grad.view(-1) for grad in grads]).detach()
         grads_vector = self.flat_grad(grads)
 
