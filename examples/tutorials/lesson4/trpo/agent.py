@@ -148,17 +148,17 @@ class Agent(object):
         kl = torch.mean(kl_divergence(old_action_dists, new_action_dists))
         kl_grad = torch.autograd.grad(
             kl, self.actor.parameters(), create_graph=True)
-        # kl_grad = self.flat_grad(kl_grad)
-        kl_grad_vector = torch.cat([grad.view(-1) for grad in kl_grad])
+        kl_grad_vector = self.flat_grad(kl_grad)
+        # kl_grad_vector = torch.cat([grad.view(-1) for grad in kl_grad])
         # KL距离的梯度先和向量进行点积运算
         kl_grad_vector_product = torch.dot(kl_grad_vector, vector)
         kl_hessian_gard = torch.autograd.grad(kl_grad_vector_product,
                                               self.actor.parameters())
-        # kl_hessian_vector = self.flat_grad(kl_hessian, hessian=True)
-        kl_hessian_vector = torch.cat(
-            [grad.view(-1) for grad in kl_hessian_gard])
-        grad2_vector = kl_hessian_vector + vector * damping_coeff
-        return grad2_vector
+        kl_hessian_vector = self.flat_grad(kl_hessian_gard, hessian=True)
+        # kl_hessian_vector = torch.cat(
+        #     [grad.view(-1) for grad in kl_hessian_gard])
+        # grad2_vector = kl_hessian_vector + vector * damping_coeff
+        return kl_hessian_vector
 
     # have checked
     def conjugate_gradient(self,
@@ -241,13 +241,8 @@ class Agent(object):
             new_policy_obj = self.compute_policy_obj(obs, actions, advantage,
                                                      old_log_probs, new_actor)
             if old_policy_obj > new_policy_obj and kl_div < self.kl_constraint:
-                print('Accepting new params at step %d of line search.' % i)
                 self.backtrack_iters.append(i)
                 return new_params
-
-        if i == self.backtrack_iter:
-            print('Line search failed! Keeping old params.')
-            self.backtrack_iters.append(i)
         return old_params
 
     def policy_learn(
@@ -272,15 +267,15 @@ class Agent(object):
 
         gHg = self.hessian_vector_product(obs, old_action_dists,
                                           descent_direction)
-        gHg = torch.dot(gHg, descent_direction).sum(0)
+        gHg = torch.dot(gHg, descent_direction)
         # 对梯度下降的半径进行限制
         step_size = torch.sqrt(2 * self.kl_constraint / (gHg + 1e-8))
+        # 线性搜索
         new_params = self.line_search(obs, actions, advantage, old_log_probs,
                                       old_action_dists, descent_direction,
                                       step_size)
-        # 线性搜索
-        vector_to_parameters(new_params, self.actor.parameters())
         # 用线性搜索后的参数更新策略
+        vector_to_parameters(new_params, self.actor.parameters())
 
     def learn(self, transition_dict: Dict[str, list]) -> None:
         """Update the model by gradient descent."""
