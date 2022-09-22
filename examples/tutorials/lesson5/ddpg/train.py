@@ -17,7 +17,7 @@ config = {
     'env': 'Pendulum-v1',
     'total_episode': 800,  # max training steps
     'hidden_dim': 128,
-    'total_steps': 100000,  # max training steps
+    'total_steps': 20000,  # max training steps
     'memory_size': 20000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'actor_lr': 3e-4,  # start learning rate

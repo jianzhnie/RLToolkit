@@ -103,7 +103,8 @@ class Agent(object):
     def sample(self, obs: np.ndarray):
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         action = self.actor(obs).item()
-        action += self.sigma * np.random.randn(self.action_dim)
+        # 给动作添加噪声，增加探索
+        action = action + self.sigma * np.random.randn(self.action_dim)
         return action
 
     def predict(self, obs):
@@ -125,7 +126,7 @@ class Agent(object):
         device = self.device  # for shortening the following lines
         obs = torch.FloatTensor(obs).to(device)
         next_obs = torch.FloatTensor(next_obs).to(device)
-        actions = torch.LongTensor(action.reshape(-1, 1)).to(device)
+        actions = torch.FloatTensor(action.reshape(-1, 1)).to(device)
         rewards = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
         terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
 
@@ -141,6 +142,7 @@ class Agent(object):
         value_loss.backward()
         self.critic_optimizer.step()
 
+        # cal policy loss
         policy_loss = -torch.mean(self.critic(obs, self.actor(obs)))
         # update policy
         self.actor_optimizer.zero_grad()
