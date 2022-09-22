@@ -7,7 +7,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.optim import Adam
 
 sys.path.append('../../')
 from rltoolkit.utils import rl_utils
@@ -43,70 +42,30 @@ class QValueNet(nn.Module):
         return self.fc2(x)
 
 
-class TwoLayerFC(nn.Module):
-    # 这是一个简单的两层神经网络
-    def __init__(self,
-                 num_in,
-                 num_out,
-                 hidden_dim,
-                 activation=F.relu,
-                 out_fn=lambda x: x):
-        super().__init__()
-        self.fc1 = nn.Linear(num_in, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, num_out)
-
-        self.activation = activation
-        self.out_fn = out_fn
-
-    def forward(self, x):
-        x = self.activation(self.fc1(x))
-        x = self.activation(self.fc2(x))
-        x = self.out_fn(self.fc3(x))
-        return x
-
-
 class DDPG:
     """DDPG算法."""
 
-    def __init__(self, num_in_actor, num_out_actor, num_in_critic, hidden_dim,
-                 discrete, action_bound, sigma, actor_lr, critic_lr, tau,
-                 gamma, device):
-        # self.actor = PolicyNet(state_dim, hidden_dim, action_dim, action_bound).to(device)
-        # self.critic = QValueNet(state_dim, hidden_dim, action_dim).to(device)
-        # self.target_actor = PolicyNet(state_dim, hidden_dim, action_dim, action_bound).to(device)
-        # self.target_critic = QValueNet(state_dim, hidden_dim, action_dim).to(device)
-        out_fn = (lambda x: x) if discrete else (
-            lambda x: torch.tanh(x) * action_bound)
-        self.actor = TwoLayerFC(
-            num_in_actor,
-            num_out_actor,
-            hidden_dim,
-            activation=F.relu,
-            out_fn=out_fn).to(device)
-        self.target_actor = TwoLayerFC(
-            num_in_actor,
-            num_out_actor,
-            hidden_dim,
-            activation=F.relu,
-            out_fn=out_fn).to(device)
-        self.critic = TwoLayerFC(num_in_critic, 1, hidden_dim).to(device)
-        self.target_critic = TwoLayerFC(num_in_critic, 1,
-                                        hidden_dim).to(device)
+    def __init__(self, state_dim, hidden_dim, action_dim, action_bound, sigma,
+                 actor_lr, critic_lr, tau, gamma, device):
+        self.actor = PolicyNet(state_dim, hidden_dim, action_dim,
+                               action_bound).to(device)
+        self.critic = QValueNet(state_dim, hidden_dim, action_dim).to(device)
+        self.target_actor = PolicyNet(state_dim, hidden_dim, action_dim,
+                                      action_bound).to(device)
+        self.target_critic = QValueNet(state_dim, hidden_dim,
+                                       action_dim).to(device)
         # 初始化目标价值网络并设置和价值网络相同的参数
         self.target_critic.load_state_dict(self.critic.state_dict())
         # 初始化目标策略网络并设置和策略相同的参数
         self.target_actor.load_state_dict(self.actor.state_dict())
-        self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
-        self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
+        self.actor_optimizer = torch.optim.Adam(
+            self.actor.parameters(), lr=actor_lr)
+        self.critic_optimizer = torch.optim.Adam(
+            self.critic.parameters(), lr=critic_lr)
         self.gamma = gamma
-        # 高斯噪声的标准差,均值直接设为0
-        self.sigma = sigma
-        # action_bound是环境可以接受的动作最大值
-        self.action_bound = action_bound
-        # 目标网络软更新参数
-        self.tau = tau
-        self.action_dim = num_out_actor
+        self.sigma = sigma  # 高斯噪声的标准差,均值直接设为0
+        self.tau = tau  # 目标网络软更新参数
+        self.action_dim = action_dim
         self.device = device
 
     def take_action(self, state):
@@ -137,30 +96,22 @@ class DDPG:
             transition_dict['dones'],
             dtype=torch.float).view(-1, 1).to(self.device)
 
-        next_q_values = self.target_critic(
-            torch.cat(
-                [next_states, self.target_actor(next_states)], dim=1))
+        next_q_values = self.target_critic(next_states,
+                                           self.target_actor(next_states))
         q_targets = rewards + self.gamma * next_q_values * (1 - dones)
-
-        # MSE损失函数
         critic_loss = torch.mean(
-            F.mse_loss(
-                self.critic(torch.cat([states, actions], dim=1)), q_targets))
+            F.mse_loss(self.critic(states, actions), q_targets))
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         self.critic_optimizer.step()
 
-        # 策略网络就是为了使得Q值最大化
-        actor_loss = -torch.mean(
-            self.critic(torch.cat([states, self.actor(states)], dim=1)))
+        actor_loss = -torch.mean(self.critic(states, self.actor(states)))
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
-        # 软更新策略网络
-        self.soft_update(self.actor, self.target_actor)
-        # 软更新价值网络
-        self.soft_update(self.critic, self.target_critic)
+        self.soft_update(self.actor, self.target_actor)  # 软更新策略网络
+        self.soft_update(self.critic, self.target_critic)  # 软更新价值网络
 
 
 if __name__ == '__main__':
@@ -188,9 +139,8 @@ if __name__ == '__main__':
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
     action_bound = env.action_space.high[0]  # 动作最大值
-    agent = DDPG(state_dim, action_dim, state_dim + action_dim, hidden_dim,
-                 False, action_bound, sigma, actor_lr, critic_lr, tau, gamma,
-                 device)
+    agent = DDPG(state_dim, hidden_dim, action_dim, action_bound, sigma,
+                 actor_lr, critic_lr, tau, gamma, device)
 
     return_list = rl_utils.train_off_policy_agent(env, agent, num_episodes,
                                                   replay_buffer, minimal_size,
