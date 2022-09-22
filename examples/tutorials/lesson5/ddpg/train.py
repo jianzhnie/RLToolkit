@@ -4,7 +4,7 @@ import sys
 import gym
 import numpy as np
 import torch
-from agent import Agent
+from agent import ActionNormalizer, Agent
 from tqdm import tqdm
 
 sys.path.append('../../../../')
@@ -22,6 +22,9 @@ config = {
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'actor_lr': 3e-4,  # start learning rate
     'critic_lr': 3e-3,  # end learning rate
+    'initial_random_steps': 0,
+    'ou_noise_theta': 1.0,
+    'ou_noise_sigma': 0.1,
     'gamma': 0.98,  # discounting factor
     'tau': 0.005,  # 软更新参数,
     'sigma': 0.01,
@@ -102,6 +105,7 @@ def main():
     algo_name = 'ddpg'
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
+    env = ActionNormalizer(env)
     test_env = gym.make(args.env)
 
     # set seed
@@ -119,13 +123,16 @@ def main():
     rpm = ReplayBuffer(
         obs_dim=obs_dim, max_size=args.memory_size, batch_size=args.batch_size)
     agent = Agent(
+        env=env,
         obs_dim=obs_dim,
         action_dim=action_dim,
         hidden_dim=args.hidden_dim,
         actor_lr=args.actor_lr,
         critic_lr=args.critic_lr,
+        initial_random_steps=args.initial_random_steps,
+        ou_noise_theta=1.0,
+        ou_noise_sigma=0.1,
         action_bound=action_bound,
-        sigma=args.sigma,
         tau=args.tau,
         gamma=args.gamma,
         device=device)

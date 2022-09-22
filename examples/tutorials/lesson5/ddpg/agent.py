@@ -1,6 +1,8 @@
 import copy
+import random
 from typing import Any, Tuple
 
+import gym
 import numpy as np
 import torch
 import torch.nn as nn
@@ -8,16 +10,87 @@ import torch.nn.functional as F
 from torch.optim import Adam
 
 
+class OUNoise(object):
+    """Ornstein-Uhlenbeck process.
+
+    Taken from Udacity deep-reinforcement-learning github repository:
+    https://github.com/udacity/deep-reinforcement-learning/blob/master/
+    ddpg-pendulum/ddpg_agent.py
+    """
+
+    def __init__(
+        self,
+        size: int,
+        mu: float = 0.0,
+        theta: float = 0.15,
+        sigma: float = 0.2,
+    ):
+        """Initialize parameters and noise process."""
+        self.state = np.float64(0.0)
+        self.mu = mu * np.ones(size)
+        self.theta = theta
+        self.sigma = sigma
+        self.reset()
+
+    def reset(self):
+        """Reset the internal state (= noise) to mean (mu)."""
+        self.state = copy.copy(self.mu)
+
+    def sample(self) -> np.ndarray:
+        """Update internal state and return it as a noise sample."""
+        x = self.state
+        dx = self.theta * (self.mu - x) + self.sigma * np.array(
+            [random.random() for _ in range(len(x))])
+        self.state = x + dx
+        return self.state
+
+
+class ActionNormalizer(gym.ActionWrapper):
+    """Rescale and relocate the actions."""
+
+    def action(self, action: np.ndarray) -> np.ndarray:
+        """Change the range (-1, 1) to (low, high)."""
+        low = self.action_space.low
+        high = self.action_space.high
+
+        scale_factor = (high - low) / 2
+        reloc_factor = high - scale_factor
+
+        action = action * scale_factor + reloc_factor
+        action = np.clip(action, low, high)
+
+        return action
+
+    def reverse_action(self, action: np.ndarray) -> np.ndarray:
+        """Change the range (low, high) to (-1, 1)."""
+        low = self.action_space.low
+        high = self.action_space.high
+
+        scale_factor = (high - low) / 2
+        reloc_factor = high - scale_factor
+
+        action = (action - reloc_factor) / scale_factor
+        action = np.clip(action, -1.0, 1.0)
+
+        return action
+
+
 class PolicyNet(nn.Module):
 
-    def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int,
-                 action_bound: float):
+    def __init__(self,
+                 obs_dim: int,
+                 hidden_dim: int,
+                 action_dim: int,
+                 action_bound: float,
+                 init_w: float = 3e-3):
         super(PolicyNet, self).__init__()
         self.fc1 = nn.Linear(obs_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, action_dim)
         self.relu = nn.ReLU(inplace=True)
         # action_bound是环境可以接受的动作最大值
         self.action_bound = action_bound
+        self.fc2.weight.data.uniform_(-init_w, init_w)
+        self.fc2.bias.data.uniform_(-init_w, init_w)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.fc1(x)
@@ -25,25 +98,33 @@ class PolicyNet(nn.Module):
         x = self.fc2(x)
         # 连续动作空间，利用 tanh() 函数将特征映射到 [-1, 1],
         # 然后通过变换，得到 [low, high] 的输出
-        out = torch.tanh(x) * self.action_bound
+        out = torch.tanh(x)
         return out
 
 
 class ValueNet(nn.Module):
 
-    def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int):
+    def __init__(
+        self,
+        obs_dim: int,
+        hidden_dim: int,
+        action_dim: int,
+        init_w: float = 3e-3,
+    ):
         super(ValueNet, self).__init__()
         self.fc1 = nn.Linear(obs_dim + action_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, 1)
         self.relu = nn.ReLU(inplace=True)
+        self.fc2.weight.data.uniform_(-init_w, init_w)
+        self.fc2.bias.data.uniform_(-init_w, init_w)
 
     def forward(self, x: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         # 拼接状态和动作
         cat = torch.cat([x, a], dim=1)
-        x = self.fc1(cat)
-        x = self.relu(x)
-        x = self.fc2(x)
-        return x
+        out = self.fc1(cat)
+        out = self.relu(out)
+        out = self.fc2(out)
+        return out
 
 
 class Agent(object):
@@ -64,25 +145,35 @@ class Agent(object):
     """
 
     def __init__(self,
+                 env,
                  obs_dim: int,
                  hidden_dim: int,
                  action_dim: int,
                  actor_lr: float,
                  critic_lr: float,
                  action_bound: float,
-                 sigma: float,
+                 initial_random_steps: int,
+                 ou_noise_theta: float,
+                 ou_noise_sigma: float,
                  tau: float,
                  gamma: float,
                  device: Any = None):
 
+        self.env = env
         self.action_dim = action_dim
+        self.initial_random_steps = initial_random_steps
         self.gamma = gamma
-        # 高斯噪声的标准差,均值直接设为0
-        self.sigma = sigma
         # action_bound是环境可以接受的动作最大值
         self.action_bound = action_bound
         # 目标网络软更新参数
         self.tau = tau
+
+        # noise
+        self.noise = OUNoise(
+            action_dim,
+            theta=ou_noise_theta,
+            sigma=ou_noise_sigma,
+        )
 
         # 策略网络
         self.actor = PolicyNet(obs_dim, hidden_dim, action_dim,
@@ -99,17 +190,23 @@ class Agent(object):
         self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
         # 折扣因子
         self.device = device
+        # total steps count
+        self.total_step = 0
 
     def sample(self, obs: np.ndarray):
-        obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-        action = self.actor(obs).item()
-        # 给动作添加噪声，增加探索
-        action = action + self.sigma * np.random.randn(self.action_dim)
-        return action
+        if self.total_step < self.initial_random_steps:
+            selected_action = self.env.action_space.sample()
+        else:
+            obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+            selected_action = self.actor(obs).detach().cpu().numpy()
+            # add noise for exploration during training
+            noise = self.noise.sample()
+            selected_action = np.clip(selected_action + noise, -1.0, 1.0)
+        return selected_action
 
     def predict(self, obs):
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-        select_action = self.actor(obs).cpu().detach().numpy().flatten()
+        select_action = self.actor(obs).detach().cpu().numpy().flatten()
         return select_action
 
     def soft_update(self, net, target_net):
