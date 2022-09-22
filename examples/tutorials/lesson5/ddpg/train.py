@@ -17,18 +17,17 @@ config = {
     'env': 'Pendulum-v1',
     'total_episode': 800,  # max training steps
     'hidden_dim': 128,
-    'total_steps': 10000,  # max training steps
-    'memory_size': 2000,  # Replay buffer size
-    'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
-    'actor_lr': 5e-4,  # start learning rate
-    'critic_lr': 5e-3,  # end learning rate
+    'total_steps': 100000,  # max training steps
+    'memory_size': 20000,  # Replay buffer size
+    'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
+    'actor_lr': 3e-4,  # start learning rate
+    'critic_lr': 3e-3,  # end learning rate
     'gamma': 0.98,  # discounting factor
     'tau': 0.005,  # 软更新参数,
     'sigma': 0.01,
-    'entropy_weight': 0.01,
     'batch_size': 64,
     'eval_render': False,  # do eval render
-    'test_every_steps': 50,  # evaluation freq
+    'test_every_steps': 1000,  # evaluation freq
     'video_folder': 'results'
 }
 
@@ -81,7 +80,7 @@ def evaluate(agent: Agent,
     if video_folder is not None:
         env = gym.wrappers.RecordVideo(env, video_folder=video_folder)
     eval_rewards = []
-    for i in range(n_eval_episodes):
+    for _ in range(n_eval_episodes):
         obs = env.reset()
         done = False
         episode_reward = 0
@@ -119,9 +118,6 @@ def main():
     action_bound = env.action_space.high[0]  # 动作最大值
     rpm = ReplayBuffer(
         obs_dim=obs_dim, max_size=args.memory_size, batch_size=args.batch_size)
-
-    logger.info('obs_dim {}, action_dim {}'.format(obs_dim, action_dim))
-
     agent = Agent(
         state_dim=obs_dim,
         action_dim=action_dim,
@@ -169,7 +165,6 @@ def main():
             while cum_steps // args.test_every_steps >= test_flag:
                 test_flag += 1
             mean_reward, std_reward = evaluate(agent, test_env)
-            pbar.write('testing')
             logger.info(
                 'Eval_agent done, steps: {}, mean: {}, std: {:.2f}'.format(
                     cum_steps, mean_reward, std_reward))
