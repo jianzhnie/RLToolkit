@@ -10,9 +10,9 @@ class QNet(Model):
     只有一层隐藏层的Q网络.
     """
 
-    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int):
+    def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int):
         super(QNet, self).__init__()
-        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc1 = nn.Linear(obs_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, action_dim)
         self.relu = nn.ReLU(inplace=True)
 
@@ -28,12 +28,12 @@ class QNet(Model):
 class DulingNet(Model):
     """只有一层隐藏层的A网络和V网络."""
 
-    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int):
+    def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int):
         """Initialization."""
         super(DulingNet, self).__init__()
         # set common feature layer
         self.feature_layer = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim), nn.ReLU())
+            nn.Linear(obs_dim, hidden_dim), nn.ReLU())
         # set advantage layer
         self.advantage_layer = nn.Linear(hidden_dim, action_dim)
         # set value layer

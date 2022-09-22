@@ -104,15 +104,13 @@ def main():
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    state_dim = env.observation_space.shape[0]
+    obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
     rpm = ReplayBuffer(
-        obs_dim=state_dim,
-        max_size=args.memory_size,
-        batch_size=args.batch_size)
+        obs_dim=obs_dim, max_size=args.memory_size, batch_size=args.batch_size)
     # get model
     model = QNet(
-        state_dim=state_dim, action_dim=action_dim, hidden_dim=args.hidden_dim)
+        obs_dim=obs_dim, action_dim=action_dim, hidden_dim=args.hidden_dim)
     # get algorithm
 
     if algo_name == 'dqn':
@@ -121,9 +119,7 @@ def main():
         alg = DDQN(model, gamma=args.gamma, lr=args.start_lr, device=device)
     elif algo_name == 'dulingdqn':
         model = DulingNet(
-            state_dim=state_dim,
-            action_dim=action_dim,
-            hidden_dim=args.hidden_dim)
+            obs_dim=obs_dim, action_dim=action_dim, hidden_dim=args.hidden_dim)
         alg = DDQN(model, gamma=args.gamma, lr=args.start_lr, device=device)
 
     # get agent

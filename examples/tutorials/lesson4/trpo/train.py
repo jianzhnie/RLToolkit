@@ -95,7 +95,7 @@ def main():
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     agent = Agent(
-        state_dim=obs_dim,
+        obs_dim=obs_dim,
         action_dim=action_dim,
         hidden_dim=args.hidden_dim,
         critic_lr=args.critic_lr,
@@ -118,7 +118,7 @@ def main():
         policy_loss, value_loss = agent.learn(transition_dict)
         if (i_episode + 1) % args.test_every_episode == 0:
             logger.info(
-                'Episode {}, Plicy Loss {:.2f}, Actor Loss {:.2f}, Reward Sum {}.'
+                'Episode {}, Plicy Loss {:.2f}, Value Loss {:.2f}, Reward Sum {}.'
                 .format(i_episode, policy_loss, value_loss, episode_return))
             mean_reward, std_reward = evaluate(
                 env, agent, n_eval_episodes=5, render=args.eval_render)

@@ -21,7 +21,7 @@ RLToolkit is a flexible and high-efficient reinforcement learning framework. RLT
 
 - **Elastic**: allows to elastically and automatically allocate computing resources on the cloud.
 
-- **Lightweight**: the core codes <1,000 lines (check [Demo]()).
+- **Lightweight**: the core codes <1,000 lines (check [Demo](./examples/tutorials/lesson3/DQN/train.py)).
 
 - **Stable**: much more stable than [Stable Baselines 3](https://github.com/DLR-RM/stable-baselines3) by utilizing various ensemble methods.
 
@@ -99,26 +99,54 @@ RLToolkit implements the following model-free deep reinforcement learning (DRL) 
 For the details of DRL algorithms, please check out the educational webpage [OpenAI Spinning Up](https://spinningup.openai.com/en/latest/).
 
 ## Examples
+
+[//]: # (Image References)
+<p align="center">
+<img src="docs/images/trained.gif" alt="logo" width="700"/>
+</p>
+<p align="center">
+<img src="docs/images/performance.gif" width = "230" height ="200" alt="NeurlIPS2018"/> <img src="docs/images/Half-Cheetah.gif" width = "230" height ="200" alt="Half-Cheetah"/> <img src="docs/images/Breakout.gif" width = "230" height ="200" alt="Breakout"/>
+<br>
+
 - [QuickStart](./benchmark/quickstart/train.py)
 - [DQN](./benchmark/dqn/train.py)
 - [DDPG](./benchmark/ddpg/train.py)
 - [A2C](./benchmark/a2c/train.py)
-- [TD3](./benchmark/td3/train.py)
+- [TD3](./benchmark/a2c/train.py)
 - [SAC](./benchmark/sac/train.py)
-- [QMIX](./benchmark/qmix/train.py)
-- [MADDPG](./benchmark/maddpg/train.py)
 - [PPO](./benchmark/ppo/train.py)
+- [QMIX](./benchmark/qmix/train.py)
+- [MADDPG](./benchmark/mappo/train.py)
+- [MADDPG](./benchmark/mappo/train.py)
 
 
 ## Experimental Demos
 
+- **Quick start**
 ```python
 # into demo dirs
 cd  benchmark/quickstart/
-
 # train
 python train.py
 ```
+
+**DNQ for CartPole-v0**
+```python
+# into demo dirs
+cd  examples/tutorials/lesson3/DQN/
+# train
+python train.py
+```
+**DDPG for Pendulum-v1**
+
+```python
+# into demo dirs
+cd  examples/tutorials/lesson5/ddpg/
+# train
+python train.py
+```
+...
+
 
 ## Contributions
 

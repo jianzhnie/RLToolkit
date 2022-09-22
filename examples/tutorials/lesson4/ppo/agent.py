@@ -11,9 +11,9 @@ from torch.optim import Adam
 
 class PolicyNet(nn.Module):
 
-    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int):
+    def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int):
         super(PolicyNet, self).__init__()
-        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc1 = nn.Linear(obs_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, action_dim)
         self.relu = nn.ReLU(inplace=True)
         self.softmax = nn.Softmax(dim=1)
@@ -28,9 +28,9 @@ class PolicyNet(nn.Module):
 
 class ValueNet(nn.Module):
 
-    def __init__(self, state_dim: int, hidden_dim: int):
+    def __init__(self, obs_dim: int, hidden_dim: int):
         super(ValueNet, self).__init__()
-        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc1 = nn.Linear(obs_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, 1)
         self.relu = nn.ReLU(inplace=True)
 
@@ -43,13 +43,12 @@ class ValueNet(nn.Module):
 
 class ActorCritic(nn.Module):
 
-    def __init__(self, state_dim: int, hidden_dim: int,
-                 action_dim: int) -> None:
+    def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int) -> None:
         super(ActorCritic).__init__()
         """Initialize."""
 
-        self.policy_net = PolicyNet(state_dim, hidden_dim, action_dim)
-        self.value_net = ValueNet(state_dim, hidden_dim)
+        self.policy_net = PolicyNet(obs_dim, hidden_dim, action_dim)
+        self.value_net = ValueNet(obs_dim, hidden_dim)
 
     def policy(self, x: torch.Tensor) -> torch.Tensor:
         out = self.policy_net(x)
@@ -77,7 +76,7 @@ class Agent(object):
     """
 
     def __init__(self,
-                 state_dim: int,
+                 obs_dim: int,
                  hidden_dim: int,
                  action_dim: int,
                  actor_lr: float,
@@ -98,9 +97,9 @@ class Agent(object):
         self.train_value_iters = train_value_iters  # 一条序列的数据用来训练轮数
 
         # 策略网络
-        self.actor = PolicyNet(state_dim, hidden_dim, action_dim).to(device)
+        self.actor = PolicyNet(obs_dim, hidden_dim, action_dim).to(device)
         # 价值网络
-        self.critic = ValueNet(state_dim, hidden_dim).to(device)
+        self.critic = ValueNet(obs_dim, hidden_dim).to(device)
         # 策略网络优化器
         self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
         # 价值网络优化器
