@@ -102,10 +102,10 @@ For the details of DRL algorithms, please check out the educational webpage [Ope
 
 [//]: # (Image References)
 <p align="center">
-<img src="docs/images/trained.gif" alt="logo" width="910"/>
+<img src="docs/images/trained.gif" alt="logo" width="700"/>
 </p>
 <p align="center">
-<img src="docs/images/performance.gif" width = "300" height ="200" alt="NeurlIPS2018"/> <img src="docs/images/Half-Cheetah.gif" width = "300" height ="200" alt="Half-Cheetah"/> <img src="docs/images/Breakout.gif" width = "300" height ="200" alt="Breakout"/>
+<img src="docs/images/performance.gif" width = "230" height ="200" alt="NeurlIPS2018"/> <img src="docs/images/Half-Cheetah.gif" width = "230" height ="200" alt="Half-Cheetah"/> <img src="docs/images/Breakout.gif" width = "230" height ="200" alt="Breakout"/>
 <br>
 
 - [QuickStart](./benchmark/quickstart/train.py)
