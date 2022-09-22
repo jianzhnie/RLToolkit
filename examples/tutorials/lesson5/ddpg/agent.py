@@ -45,50 +45,17 @@ class OUNoise(object):
         return self.state
 
 
-class ActionNormalizer(gym.ActionWrapper):
-    """Rescale and relocate the actions."""
-
-    def action(self, action: np.ndarray) -> np.ndarray:
-        """Change the range (-1, 1) to (low, high)."""
-        low = self.action_space.low
-        high = self.action_space.high
-
-        scale_factor = (high - low) / 2
-        reloc_factor = high - scale_factor
-
-        action = action * scale_factor + reloc_factor
-        action = np.clip(action, low, high)
-
-        return action
-
-    def reverse_action(self, action: np.ndarray) -> np.ndarray:
-        """Change the range (low, high) to (-1, 1)."""
-        low = self.action_space.low
-        high = self.action_space.high
-
-        scale_factor = (high - low) / 2
-        reloc_factor = high - scale_factor
-
-        action = (action - reloc_factor) / scale_factor
-        action = np.clip(action, -1.0, 1.0)
-
-        return action
-
-
 class PolicyNet(nn.Module):
 
     def __init__(self,
                  obs_dim: int,
                  hidden_dim: int,
                  action_dim: int,
-                 action_bound: float,
                  init_w: float = 3e-3):
         super(PolicyNet, self).__init__()
         self.fc1 = nn.Linear(obs_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, action_dim)
         self.relu = nn.ReLU(inplace=True)
-        # action_bound是环境可以接受的动作最大值
-        self.action_bound = action_bound
         self.fc2.weight.data.uniform_(-init_w, init_w)
         self.fc2.bias.data.uniform_(-init_w, init_w)
 
@@ -145,7 +112,7 @@ class Agent(object):
     """
 
     def __init__(self,
-                 env,
+                 env: gym.Env,
                  obs_dim: int,
                  hidden_dim: int,
                  action_dim: int,
@@ -161,6 +128,7 @@ class Agent(object):
 
         self.env = env
         self.action_dim = action_dim
+        self.global_update_step = 0
         self.initial_random_steps = initial_random_steps
         self.gamma = gamma
         # action_bound是环境可以接受的动作最大值
@@ -170,10 +138,7 @@ class Agent(object):
 
         # noise
         self.noise = OUNoise(
-            action_dim,
-            theta=ou_noise_theta,
-            sigma=ou_noise_sigma,
-        )
+            action_dim, theta=ou_noise_theta, sigma=ou_noise_sigma)
 
         # 策略网络
         self.actor = PolicyNet(obs_dim, hidden_dim, action_dim,
@@ -190,11 +155,9 @@ class Agent(object):
         self.critic_optimizer = Adam(self.critic.parameters(), lr=critic_lr)
         # 折扣因子
         self.device = device
-        # total steps count
-        self.total_step = 0
 
     def sample(self, obs: np.ndarray):
-        if self.total_step < self.initial_random_steps:
+        if self.global_update_step < self.initial_random_steps:
             selected_action = self.env.action_space.sample()
         else:
             obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
@@ -202,12 +165,15 @@ class Agent(object):
             # add noise for exploration during training
             noise = self.noise.sample()
             selected_action = np.clip(selected_action + noise, -1.0, 1.0)
+            selected_action *= self.action_bound
+        selected_action = selected_action.flatten()
         return selected_action
 
     def predict(self, obs):
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-        select_action = self.actor(obs).detach().cpu().numpy().flatten()
-        return select_action
+        selected_action = self.actor(obs).detach().cpu().numpy().flatten()
+        selected_action *= self.action_bound
+        return selected_action
 
     def soft_update(self, net, target_net):
         for param_target, param in zip(target_net.parameters(),
@@ -251,4 +217,5 @@ class Agent(object):
         # 软更新价值网络
         self.soft_update(self.critic, self.target_critic)
 
+        self.global_update_step += 1
         return policy_loss.item(), value_loss.item()
