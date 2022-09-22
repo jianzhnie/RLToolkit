@@ -41,7 +41,7 @@ RLToolkit is a flexible and high-efficient reinforcement learning framework. RLT
 - [Experimental Demos](#experimental-demos)
 - [Contributions](#contributions)
 - [Reference](#reference)
-- [Citation:](#citation)
+- [Citation](#citation)
 
 
 ## Abstractions
@@ -171,10 +171,9 @@ We're actively working on refactoring and trying to make the codebase cleaner an
 10. Soft Actor-Critic (SAC) <sub><sup> ([T. Haarnoja et al. 2018](https://arxiv.org/abs/1801.01290)) </sup></sub>
 11. SAC with automatic entropy adjustment (SAC-AEA) <sub><sup> ([T. Haarnoja et al. 2018](https://arxiv.org/abs/1812.05905)) </sup></sub>
 
-## Citation:
+## Citation
 
 To cite this repository:
-
 
 ```
 @misc{erl,
