@@ -10,10 +10,10 @@ from torch.optim import Adam
 
 class PolicyNet(nn.Module):
 
-    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int,
+    def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int,
                  action_bound: float):
         super(PolicyNet, self).__init__()
-        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc1 = nn.Linear(obs_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, action_dim)
         self.relu = nn.ReLU(inplace=True)
         # action_bound是环境可以接受的动作最大值
@@ -31,9 +31,9 @@ class PolicyNet(nn.Module):
 
 class ValueNet(nn.Module):
 
-    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int):
+    def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int):
         super(ValueNet, self).__init__()
-        self.fc1 = nn.Linear(state_dim + action_dim, hidden_dim)
+        self.fc1 = nn.Linear(obs_dim + action_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, 1)
         self.relu = nn.ReLU(inplace=True)
 
@@ -64,7 +64,7 @@ class Agent(object):
     """
 
     def __init__(self,
-                 state_dim: int,
+                 obs_dim: int,
                  hidden_dim: int,
                  action_dim: int,
                  actor_lr: float,
@@ -85,10 +85,10 @@ class Agent(object):
         self.tau = tau
 
         # 策略网络
-        self.actor = PolicyNet(state_dim, hidden_dim, action_dim,
+        self.actor = PolicyNet(obs_dim, hidden_dim, action_dim,
                                action_bound).to(device)
         # 价值网络
-        self.critic = ValueNet(state_dim, hidden_dim, action_dim).to(device)
+        self.critic = ValueNet(obs_dim, hidden_dim, action_dim).to(device)
 
         self.target_actor = copy.deepcopy(self.actor)
         self.target_critic = copy.deepcopy(self.critic)

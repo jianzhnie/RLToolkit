@@ -119,7 +119,7 @@ def main():
     rpm = ReplayBuffer(
         obs_dim=obs_dim, max_size=args.memory_size, batch_size=args.batch_size)
     agent = Agent(
-        state_dim=obs_dim,
+        obs_dim=obs_dim,
         action_dim=action_dim,
         hidden_dim=args.hidden_dim,
         actor_lr=args.actor_lr,

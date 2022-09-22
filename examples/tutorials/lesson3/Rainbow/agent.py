@@ -23,7 +23,7 @@ class Agent(object):
     def __init__(
             self,
             model_name: str,
-            state_dim: int,
+            obs_dim: int,
             action_dim: int,
             hidden_dim: int,
             total_step: int,
@@ -60,14 +60,14 @@ class Agent(object):
         if model_name == 'noisynetwork':
             print('Using NoisyNet')
             self.model = NoisyNet(
-                state_dim=state_dim,
+                obs_dim=obs_dim,
                 action_dim=action_dim,
                 hidden_dim=hidden_dim,
                 std_init=std_init)
         elif model_name == 'noisydulingnetwork':
             print('Using NoisyDulingNetwork')
             self.model = NoisyDulingNet(
-                state_dim=state_dim,
+                obs_dim=obs_dim,
                 action_dim=action_dim,
                 hidden_dim=hidden_dim,
                 atom_size=atom_size,

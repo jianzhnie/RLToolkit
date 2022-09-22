@@ -109,11 +109,11 @@ def main():
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    state_dim = env.observation_space.shape[0]
+    obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
 
     rpm = MultiStepReplayBuffer(
-        obs_dim=state_dim,
+        obs_dim=obs_dim,
         max_size=args.memory_size,
         batch_size=args.batch_size,
         n_step=args.n_step,
@@ -121,7 +121,7 @@ def main():
     # get agent
     agent = Agent(
         model_name=args.model_name,
-        state_dim=state_dim,
+        obs_dim=obs_dim,
         action_dim=action_dim,
         hidden_dim=args.hidden_dim,
         total_step=args.total_steps,

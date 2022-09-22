@@ -8,9 +8,9 @@ from torch.distributions import Categorical
 
 class PolicyNet(nn.Module):
 
-    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int):
+    def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int):
         super(PolicyNet, self).__init__()
-        self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc1 = nn.Linear(obs_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, action_dim)
         self.relu = nn.ReLU(inplace=True)
         self.softmax = nn.Softmax(dim=-1)
@@ -26,14 +26,14 @@ class PolicyNet(nn.Module):
 class Agent(object):
 
     def __init__(self,
-                 state_dim: int,
+                 obs_dim: int,
                  hidden_dim: int,
                  action_dim: int,
                  learning_rate: float,
                  gamma: float,
                  device: Any = None):
         self.gamma = gamma
-        self.model = PolicyNet(state_dim, hidden_dim, action_dim).to(device)
+        self.model = PolicyNet(obs_dim, hidden_dim, action_dim).to(device)
         # 使用Adam优化器
         self.optimizer = torch.optim.Adam(
             self.model.parameters(), lr=learning_rate)

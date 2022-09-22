@@ -96,7 +96,7 @@ def main():
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     agent = Agent(
-        state_dim=obs_dim,
+        obs_dim=obs_dim,
         action_dim=action_dim,
         hidden_dim=args.hidden_dim,
         actor_lr=args.actor_lr,
