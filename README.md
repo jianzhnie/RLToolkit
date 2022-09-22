@@ -99,6 +99,12 @@ RLToolkit implements the following model-free deep reinforcement learning (DRL) 
 For the details of DRL algorithms, please check out the educational webpage [OpenAI Spinning Up](https://spinningup.openai.com/en/latest/).
 
 ## Examples
+
+[//]: # (Image References)
+<p align="center">
+<img src="docs/images/trained.gif" alt="logo" width="1000"/>
+</p>
+
 - [QuickStart](./benchmark/quickstart/train.py)
 - [DQN](./benchmark/dqn/train.py)
 - [DDPG](./benchmark/ddpg/train.py)
@@ -119,6 +125,7 @@ cd  benchmark/quickstart/
 # train
 python train.py
 ```
+
 
 ## Contributions
 
