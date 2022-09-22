@@ -102,10 +102,13 @@ For the details of DRL algorithms, please check out the educational webpage [Ope
 
 [//]: # (Image References)
 <p align="center">
-<img src="docs/images/trained.gif" alt="logo" width="700"/>
+<img src="docs/images/trained.gif" alt="logo" width="820"/>
 </p>
 <p align="center">
-<img src="docs/images/performance.gif" width = "230" height ="200" alt="NeurlIPS2018"/> <img src="docs/images/Half-Cheetah.gif" width = "230" height ="200" alt="Half-Cheetah"/> <img src="docs/images/Breakout.gif" width = "230" height ="200" alt="Breakout"/>
+<img src="examples/tutorials/assets/img/breakout.gif" width = "200" height ="200"/> <img src="examples/tutorials/assets/img/spaceinvaders.gif" width = "200" height ="200"/> <img src="examples/tutorials/assets/img/seaquest.gif" width = "200" height ="200"/><img src="docs/images/Breakout.gif" width = "200" height ="200" alt="Breakout"/>
+<br>
+<p align="center">
+<img src="docs/images/performance.gif" width = "250" height ="200" alt="NeurlIPS2018"/> <img src="docs/images/Half-Cheetah.gif" width = "250" height ="200" alt="Half-Cheetah"/> <img src="examples/tutorials/assets/img/snowballfight.gif" width = "250" height ="200"/>
 <br>
 
 - [QuickStart](./benchmark/quickstart/train.py)
