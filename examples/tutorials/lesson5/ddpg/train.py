@@ -25,7 +25,7 @@ config = {
     'initial_random_steps': 2000,
     'ou_noise_theta': 1.0,
     'ou_noise_sigma': 0.1,
-    'gamma': 0.90,  # discounting factor
+    'gamma': 0.98,  # discounting factor
     'tau': 0.005,  # 软更新参数,
     'sigma': 0.01,
     'batch_size': 64,
@@ -153,6 +153,7 @@ def main():
         total_reward, steps, policy_loss, value_loss = run_train_episode(
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
         cum_steps += steps
+
         logger.info(
             'Current Steps: {}, Plicy Loss {:.2f}, Value Loss {:.2f}, Reward Sum {}.'
             .format(cum_steps, policy_loss, value_loss, total_reward))
@@ -163,6 +164,7 @@ def main():
         tensorboard.add_scalar('{}/value_loss'.format(algo_name), value_loss,
                                cum_steps)
 
+        pbar.update(steps)
         # perform evaluation
         if cum_steps // args.test_every_steps >= test_flag:
             while cum_steps // args.test_every_steps >= test_flag:
