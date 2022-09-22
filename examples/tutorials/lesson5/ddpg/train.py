@@ -4,7 +4,7 @@ import sys
 import gym
 import numpy as np
 import torch
-from agent import ActionNormalizer, Agent
+from agent import Agent
 from tqdm import tqdm
 
 sys.path.append('../../../../')
@@ -18,11 +18,11 @@ config = {
     'total_episode': 800,  # max training steps
     'hidden_dim': 128,
     'total_steps': 20000,  # max training steps
-    'memory_size': 20000,  # Replay buffer size
+    'memory_size': 10000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'actor_lr': 3e-4,  # start learning rate
     'critic_lr': 3e-3,  # end learning rate
-    'initial_random_steps': 0,
+    'initial_random_steps': 2000,
     'ou_noise_theta': 1.0,
     'ou_noise_sigma': 0.1,
     'gamma': 0.98,  # discounting factor
@@ -105,7 +105,6 @@ def main():
     algo_name = 'ddpg'
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
-    env = ActionNormalizer(env)
     test_env = gym.make(args.env)
 
     # set seed
@@ -130,8 +129,8 @@ def main():
         actor_lr=args.actor_lr,
         critic_lr=args.critic_lr,
         initial_random_steps=args.initial_random_steps,
-        ou_noise_theta=1.0,
-        ou_noise_sigma=0.1,
+        ou_noise_theta=args.ou_noise_theta,
+        ou_noise_sigma=args.ou_noise_sigma,
         action_bound=action_bound,
         tau=args.tau,
         gamma=args.gamma,
@@ -155,18 +154,17 @@ def main():
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
         cum_steps += steps
 
-        pbar.set_description('train')
         logger.info(
-            'Plicy Loss {:.2f}, Value Loss {:.2f}, Reward Sum {}.'.format(
-                policy_loss, value_loss, total_reward))
+            'Current Steps: {}, Plicy Loss {:.2f}, Value Loss {:.2f}, Reward Sum {}.'
+            .format(cum_steps, policy_loss, value_loss, total_reward))
         tensorboard.add_scalar('{}/training_rewards'.format(algo_name),
                                total_reward, cum_steps)
-        tensorboard.add_scalar('{}/loss'.format(algo_name), policy_loss,
-                               cum_steps)  # mean of total loss
-        tensorboard.add_scalar('{}/loss'.format(algo_name), value_loss,
-                               cum_steps)  # mean of total loss
-        pbar.update(steps)
+        tensorboard.add_scalar('{}/policy_loss'.format(algo_name), policy_loss,
+                               cum_steps)
+        tensorboard.add_scalar('{}/value_loss'.format(algo_name), value_loss,
+                               cum_steps)
 
+        pbar.update(steps)
         # perform evaluation
         if cum_steps // args.test_every_steps >= test_flag:
             while cum_steps // args.test_every_steps >= test_flag:
