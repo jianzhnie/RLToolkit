@@ -18,12 +18,13 @@ config = {
     'hidden_dim': 128,
     'total_steps': 10000,  # max training steps
     'memory_size': 2000,  # Replay buffer size
-    'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
+    'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'actor_lr': 3e-4,  # start learning rate
     'critic_lr': 3e-4,  # end learning rate
     'alpha_lr': 3e-4,  # end learning rate
-    'target_entropy': -1,
-    'initial_random_steps': 0,
+    'alpha': 0.2,
+    'automatic_entropy_tuning': True,
+    'initial_random_steps': 1000,
     'gamma': 0.98,  # discounting factor
     'tau': 0.005,  # 软更新参数,
     'batch_size': 64,
@@ -159,6 +160,8 @@ def main():
         actor_lr=args.actor_lr,
         critic_lr=args.critic_lr,
         alpha_lr=args.alpha_lr,
+        alpha=args.alpha,
+        automatic_entropy_tuning=args.automatic_entropy_tuning,
         initial_random_steps=args.initial_random_steps,
         tau=args.tau,
         gamma=args.gamma,

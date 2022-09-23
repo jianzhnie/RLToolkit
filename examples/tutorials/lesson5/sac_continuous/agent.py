@@ -227,23 +227,31 @@ class Agent(object):
         pi, log_pi = self.actor(obs)
         # Target actions come from *current* policy
         next_pi, next_log_pi = self.actor(next_obs)
+
         #  Prediction Q1(s,a), Q2(s,a)
         pred_q1_value = self.critic1(obs, actions)
         pred_q2_value = self.critic2(obs, actions)
 
-        # Min Double-Q: min(Q1(s,π(a|s)), Q2(s,π(a|s))), min(Q1‾(s',π(a'|s')), Q2‾(s',π(a'|s')))
-        q1_pi = self.critic1(obs, actions)
-        q2_pi = self.critic2(obs, actions)
+        # Min Double-Q: min(Q1(s,π(a|s)), Q2(s,π(a|s))),
+        q1_pi = self.critic1(obs, pi)
+        q2_pi = self.critic2(obs, pi)
         min_q_pi = torch.min(q1_pi, q2_pi)
 
         # Target Q-values
+        # Min Double-Q: min(Q1‾(s',π(a'|s')), Q2‾(s',π(a'|s')))
         q1_next_pi = self.target_critic1(next_obs, next_pi)
         q2_next_pi = self.target_critic2(next_obs, next_pi)
         min_q_next_pi = torch.min(q1_next_pi, q2_next_pi)
 
         # TD target for Q regression
-        td_q_target = rewards + self.gamma * (
-            min_q_next_pi - self.alpha * next_log_pi) * (1 - terminal)
+        td_v_target = min_q_next_pi - self.alpha * next_log_pi
+        td_q_target = rewards + self.gamma * td_v_target * (1 - terminal)
+
+        # Entropy-regularized policy loss
+        policy_loss = (self.alpha * log_pi - min_q_pi).mean()
+        self.actor_optimizer.zero_grad()
+        policy_loss.backward()
+        self.actor_optimizer.step()
 
         # MSE loss against Bellman backup
         q1_loss = F.mse_loss(pred_q1_value, td_q_target.detach())
@@ -258,14 +266,6 @@ class Agent(object):
         self.critic2_optimizer.zero_grad()
         q2_loss.backward()
         self.critic2_optimizer.step()
-
-        # Entropy-regularized policy loss
-        policy_loss = (self.alpha * log_pi - min_q_pi).mean()
-        # train actor
-        self.actor.zero_grad()
-        # actor_loss = self.compute_actor_loss(obs)
-        policy_loss.backward()
-        self.actor_optimizer.step()
 
         # If automatic entropy tuning is True, update alpha
         if self.automatic_entropy_tuning:
