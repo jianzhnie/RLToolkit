@@ -141,8 +141,7 @@ class Agent(object):
             action_dim, theta=ou_noise_theta, sigma=ou_noise_sigma)
 
         # 策略网络
-        self.actor = PolicyNet(obs_dim, hidden_dim, action_dim,
-                               action_bound).to(device)
+        self.actor = PolicyNet(obs_dim, hidden_dim, action_dim).to(device)
         # 价值网络
         self.critic = ValueNet(obs_dim, hidden_dim, action_dim).to(device)
 
