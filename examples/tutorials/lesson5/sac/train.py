@@ -14,20 +14,17 @@ from rltoolkit.utils import logger, tensorboard
 config = {
     'train_seed': 42,
     'test_seed': 42,
-    'env': 'Pendulum-v1',
-    'total_episode': 800,  # max training steps
+    'env': 'CartPole-v0',
     'hidden_dim': 128,
-    'total_steps': 10000,  # max training steps
-    'memory_size': 5000,  # Replay buffer size
+    'total_steps': 5000,  # max training steps
+    'memory_size': 2000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
-    'actor_lr': 3e-4,  # start learning rate
-    'critic_lr': 3e-3,  # end learning rate
-    'initial_random_steps': 2000,
-    'ou_noise_theta': 1.0,
-    'ou_noise_sigma': 0.1,
+    'actor_lr': 1e-3,  # start learning rate
+    'critic_lr': 1e-2,  # end learning rate
+    'alpha_lr': 1e-2,  # end learning rate
+    'target_entropy': -1,
     'gamma': 0.98,  # discounting factor
     'tau': 0.005,  # 软更新参数,
-    'sigma': 0.01,
     'batch_size': 64,
     'eval_render': False,  # do eval render
     'test_every_steps': 1000,  # evaluation freq
@@ -59,9 +56,9 @@ def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
             batch_next_obs = samples['next_obs']
             batch_terminal = samples['terminal']
 
-            policy_loss, value_loss = agent.learn(batch_obs, batch_action,
-                                                  batch_reward, batch_next_obs,
-                                                  batch_terminal)
+            policy_loss, value_loss, value_loss2 = agent.learn(
+                batch_obs, batch_action, batch_reward, batch_next_obs,
+                batch_terminal)
             policy_loss_lst.append(policy_loss)
             value_loss_lst.append(value_loss)
 
@@ -117,21 +114,17 @@ def main():
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     obs_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.shape[0]
-    action_bound = env.action_space.high[0]  # 动作最大值
+    action_dim = env.action_space.n
     rpm = ReplayBuffer(
         obs_dim=obs_dim, max_size=args.memory_size, batch_size=args.batch_size)
     agent = Agent(
-        env=env,
         obs_dim=obs_dim,
         action_dim=action_dim,
         hidden_dim=args.hidden_dim,
         actor_lr=args.actor_lr,
         critic_lr=args.critic_lr,
-        initial_random_steps=args.initial_random_steps,
-        ou_noise_theta=args.ou_noise_theta,
-        ou_noise_sigma=args.ou_noise_sigma,
-        action_bound=action_bound,
+        alpha_lr=args.alpha_lr,
+        target_entropy=args.target_entropy,
         tau=args.tau,
         gamma=args.gamma,
         device=device)
