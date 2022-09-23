@@ -16,14 +16,14 @@ config = {
     'test_seed': 42,
     'env': 'CartPole-v0',
     'hidden_dim': 128,
-    'total_steps': 10000,  # max training steps
-    'memory_size': 2000,  # Replay buffer size
-    'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
-    'actor_lr': 1e-3,  # start learning rate
+    'total_steps': 2000,  # max training steps
+    'memory_size': 1000,  # Replay buffer size
+    'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
+    'actor_lr': 1e-2,  # start learning rate
     'critic_lr': 1e-2,  # end learning rate
     'alpha_lr': 1e-2,  # end learning rate
     'target_entropy': -1,
-    'initial_random_steps': 2000,
+    'initial_random_steps': 0,
     'gamma': 0.98,  # discounting factor
     'tau': 0.005,  # 软更新参数,
     'batch_size': 64,

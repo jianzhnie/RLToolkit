@@ -76,7 +76,9 @@ class Agent(object):
         self.env = env
         self.action_dim = action_dim
         self.global_update_step = 0
-        self.target_entropy = target_entropy  # 目标熵的大小
+        # 目标熵的大小
+        self.target_entropy = target_entropy
+        # 折扣因子
         self.gamma = gamma
         # 目标网络软更新参数
         self.tau = tau
@@ -103,7 +105,6 @@ class Agent(object):
         self.log_alpha.requires_grad = True  # 可以对alpha求梯度
         self.log_alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
 
-        # 折扣因子
         self.device = device
 
     def sample(self, obs: np.ndarray):
@@ -120,15 +121,16 @@ class Agent(object):
 
     def predict(self, obs) -> int:
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-        # 根据动作概率选择概率最高的动作
-        select_action = self.actor(obs).argmax().item()
-        return select_action
+        probs = self.actor(obs)
+        action_dist = Categorical(probs)
+        action = action_dist.sample().item()
+        return action
 
     # 计算目标Q值,直接用策略网络的输出概率进行期望计算
     def calc_target(self, rewards, next_obs, terminal):
         next_probs = self.actor(next_obs)
-        next_log_probs = torch.log(next_probs + 1e-8)
-        entropy = -torch.sum(next_probs * next_log_probs, dim=1, keepdim=True)
+        prob_dist = Categorical(next_probs)
+        entropy = prob_dist.entropy()
         q1_value = self.target_ceritic1(next_obs)
         q2_value = self.target_ceritic2(next_obs)
         min_qvalue = torch.sum(
@@ -173,9 +175,9 @@ class Agent(object):
 
         # 更新策略网络
         probs = self.actor(obs)
-        log_probs = torch.log(probs + 1e-8)
+        probs_dist = Categorical(probs)
         # 直接根据概率计算熵
-        entropy = -torch.sum(probs * log_probs, dim=1, keepdim=True)
+        entropy = probs_dist.entropy()
         q1_value = self.ceritic1(obs)
         q2_value = self.ceritic2(obs)
         min_qvalue = torch.sum(
@@ -196,5 +198,6 @@ class Agent(object):
 
         self.soft_update(self.ceritic1, self.target_ceritic1)
         self.soft_update(self.ceritic2, self.target_ceritic2)
+        self.global_update_step += 1
 
         return actor_loss.item(), ceritic1_loss.item(), ceritic2_loss.item()
