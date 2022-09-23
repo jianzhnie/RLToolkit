@@ -32,7 +32,7 @@ class PolicyNet(nn.Module):
         self.log_std_max = log_std_max
 
         self.fc1 = nn.Linear(obs_dim, hidden_dim)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU()
 
         # set log_std layer
         self.log_std_layer = nn.Linear(hidden_dim, action_dim)
@@ -73,7 +73,7 @@ class CriticQ(nn.Module):
         super(CriticQ, self).__init__()
         self.fc1 = nn.Linear(obs_dim + action_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, action_dim)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU()
 
     def forward(self, x: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         # 拼接状态和动作
@@ -154,14 +154,14 @@ class Agent(object):
             action = self.env.action_space.sample()
         else:
             obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-            action, probs = self.actor(obs)
+            action, log_probs = self.actor(obs)
             action = action.detach().cpu().numpy().flatten()
         return action
 
     def predict(self, obs) -> int:
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-        action, probs = self.actor(obs)
-        action = action.detach().cpu().numpy()
+        action, log_probs = self.actor(obs)
+        action = action.detach().cpu().numpy().flatten()
         return action
 
     # Set up function for computing SAC Q-losses
@@ -230,24 +230,36 @@ class Agent(object):
 
         alpha = self.log_alpha.exp()  # used for the actor loss calculation
 
+        # q function loss
         pred_q1_value = self.critic1(obs, actions)
         pred_q2_value = self.critic2(obs, actions)
         # Bellman backup for Q functions
-        with torch.no_grad():
-            # Target actions come from *current* policy
-            next_action, next_action_logp = self.actor(next_obs)
-            # Target Q-values
-            q1_target = self.target_critic1(next_obs, next_action)
-            q2_target = self.target_critic2(next_obs, next_action)
 
-            q_target = torch.min(q1_target, q2_target)
-            td_target = rewards + self.gamma * (
-                q_target - self.alpha * next_action_logp) * (1 - terminal)
+        # Target actions come from *current* policy
+        next_action, next_action_logp = self.actor(next_obs)
+        # Target Q-values
+        q1_target = self.target_critic1(next_obs, next_action)
+        q2_target = self.target_critic2(next_obs, next_action)
+
+        q_target = torch.min(q1_target, q2_target)
+        td_target = rewards + self.gamma * (
+            q_target - alpha * next_action_logp) * (1 - terminal)
 
         # MSE loss against Bellman backup
         q1_loss = F.mse_loss(pred_q1_value, td_target.detach())
         q2_loss = F.mse_loss(pred_q2_value, td_target.detach())
         q_loss = q1_loss + q2_loss
+
+        #  train Q functions
+        # First run one gradient descent step for Q1 and Q2
+        self.critic1_optimizer.zero_grad()
+        # q_loss = self.compute_critic_loss(obs, actions, rewards, next_obs,
+        #                                   terminal)
+        q1_loss.backward()
+        self.critic1_optimizer.step()
+        self.critic2_optimizer.zero_grad()
+        q2_loss.backward()
+        self.critic2_optimizer.step()
 
         # actor loss
         q1_pi = self.critic1(obs, new_action)
@@ -256,20 +268,11 @@ class Agent(object):
         # Entropy-regularized policy loss
         actor_loss = (alpha * log_prob - q_pi).mean()
 
-        #  train Q functions
-        # First run one gradient descent step for Q1 and Q2
-        self.critic1.zero_grad()
-        # q_loss = self.compute_critic_loss(obs, actions, rewards, next_obs,
-        #                                   terminal)
-        q_loss.backward()
-        self.critic1_optimizer.step()
-
         # train actor
         self.actor.zero_grad()
         # actor_loss = self.compute_actor_loss(obs)
         actor_loss.backward()
         self.actor_optimizer.step()
-
         self.soft_update(self.critic1, self.target_critic1)
         self.soft_update(self.critic2, self.target_critic2)
         self.global_update_step += 1
