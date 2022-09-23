@@ -14,17 +14,18 @@ from rltoolkit.utils import logger, tensorboard
 config = {
     'train_seed': 42,
     'test_seed': 42,
-    'env': 'CartPole-v0',
+    'env': 'Pendulum-v1',
     'hidden_dim': 128,
-    'total_steps': 3000,  # max training steps
-    'memory_size': 2000,  # Replay buffer size
-    'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
-    'actor_lr': 1e-3,  # start learning rate
-    'critic_lr': 1e-2,  # end learning rate
-    'alpha_lr': 1e-2,  # end learning rate
-    'target_entropy': -1,
-    'initial_random_steps': 0,
-    'gamma': 0.98,  # discounting factor
+    'total_steps': 20000,  # max training steps
+    'memory_size': 5000,  # Replay buffer size
+    'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
+    'actor_lr': 3e-4,  # start learning rate
+    'critic_lr': 3e-4,  # end learning rate
+    'alpha_lr': 3e-4,  # end learning rate
+    'alpha': 0.2,
+    'automatic_entropy_tuning': True,
+    'initial_random_steps': 1000,
+    'gamma': 0.99,  # discounting factor
     'tau': 0.005,  # 软更新参数,
     'batch_size': 64,
     'eval_render': False,  # do eval render
@@ -57,9 +58,9 @@ def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
             batch_next_obs = samples['next_obs']
             batch_terminal = samples['terminal']
 
-            policy_loss, value_loss, value_loss2 = agent.learn(
-                batch_obs, batch_action, batch_reward, batch_next_obs,
-                batch_terminal)
+            policy_loss, value_loss = agent.learn(batch_obs, batch_action,
+                                                  batch_reward, batch_next_obs,
+                                                  batch_terminal)
             policy_loss_lst.append(policy_loss)
             value_loss_lst.append(value_loss)
 
@@ -99,12 +100,41 @@ def evaluate(agent: Agent,
     return mean_reward, std_reward
 
 
+class ActionNormalizer(gym.ActionWrapper):
+    """Rescale and relocate the actions."""
+
+    def action(self, action: np.ndarray) -> np.ndarray:
+        """Change the range (-1, 1) to (low, high)."""
+        low = self.action_space.low
+        high = self.action_space.high
+
+        scale_factor = (high - low) / 2
+        reloc_factor = high - scale_factor
+
+        action = action * scale_factor + reloc_factor
+        action = np.clip(action, low, high)
+
+        return action
+
+    def reverse_action(self, action: np.ndarray) -> np.ndarray:
+        """Change the range (low, high) to (-1, 1)."""
+        low = self.action_space.low
+        high = self.action_space.high
+
+        scale_factor = (high - low) / 2
+        reloc_factor = high - scale_factor
+
+        action = (action - reloc_factor) / scale_factor
+        action = np.clip(action, -1.0, 1.0)
+
+        return action
+
+
 def main():
     algo_name = 'ddpg'
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
     test_env = gym.make(args.env)
-
     # set seed
     torch.manual_seed(args.train_seed)
     torch.cuda.manual_seed_all(args.train_seed)
@@ -115,7 +145,8 @@ def main():
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     obs_dim = env.observation_space.shape[0]
-    action_dim = env.action_space.n
+    action_dim = env.action_space.shape[0]
+    action_bound = env.action_space.high[0]  # 动作最大值
     rpm = ReplayBuffer(
         obs_dim=obs_dim, max_size=args.memory_size, batch_size=args.batch_size)
     agent = Agent(
@@ -126,7 +157,9 @@ def main():
         actor_lr=args.actor_lr,
         critic_lr=args.critic_lr,
         alpha_lr=args.alpha_lr,
-        target_entropy=args.target_entropy,
+        alpha=args.alpha,
+        action_bound=action_bound,
+        automatic_entropy_tuning=args.automatic_entropy_tuning,
         initial_random_steps=args.initial_random_steps,
         tau=args.tau,
         gamma=args.gamma,

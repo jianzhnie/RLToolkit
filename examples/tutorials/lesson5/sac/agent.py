@@ -87,18 +87,16 @@ class Agent(object):
         # 策略网络
         self.actor = PolicyNet(obs_dim, hidden_dim, action_dim).to(device)
         # 价值网络
-        self.ceritic1 = ValueNet(obs_dim, hidden_dim, action_dim).to(device)
-        self.ceritic2 = ValueNet(obs_dim, hidden_dim, action_dim).to(device)
-        self.target_ceritic1 = copy.deepcopy(self.ceritic1)
-        self.target_ceritic2 = copy.deepcopy(self.ceritic2)
+        self.critic1 = ValueNet(obs_dim, hidden_dim, action_dim).to(device)
+        self.critic2 = ValueNet(obs_dim, hidden_dim, action_dim).to(device)
+        self.target_critic1 = copy.deepcopy(self.critic1)
+        self.target_critic2 = copy.deepcopy(self.critic2)
 
         # 策略网络优化器
         self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
         # 价值网络优化器
-        self.ceritic1_optimizer = Adam(
-            self.ceritic1.parameters(), lr=critic_lr)
-        self.ceritic2_optimizer = torch.optim.Adam(
-            self.ceritic2.parameters(), lr=critic_lr)
+        self.critic1_optimizer = Adam(self.critic1.parameters(), lr=critic_lr)
+        self.critic2_optimizer = Adam(self.critic2.parameters(), lr=critic_lr)
         # 使用alpha的log值,可以使训练结果比较稳定
         self.log_alpha = torch.tensor(
             np.log(0.01), dtype=torch.float, device=device)
@@ -131,8 +129,8 @@ class Agent(object):
         next_probs = self.actor(next_obs)
         prob_dist = Categorical(next_probs)
         entropy = prob_dist.entropy()
-        q1_value = self.target_ceritic1(next_obs)
-        q2_value = self.target_ceritic2(next_obs)
+        q1_value = self.target_critic1(next_obs)
+        q2_value = self.target_critic2(next_obs)
         min_qvalue = torch.sum(
             next_probs * torch.min(q1_value, q2_value), dim=1, keepdim=True)
         next_value = min_qvalue + self.log_alpha.exp() * entropy
@@ -159,27 +157,27 @@ class Agent(object):
 
         # 更新两个Q网络
         td_target = self.calc_target(rewards, next_obs, terminal)
-        ceritic1_q_values = self.ceritic1(obs).gather(1, actions)
-        ceritic1_loss = F.mse_loss(ceritic1_q_values, td_target.detach())
-        ceritic2_q_values = self.ceritic2(obs).gather(1, actions)
-        ceritic2_loss = F.mse_loss(ceritic2_q_values, td_target.detach())
+        critic1_q_values = self.critic1(obs).gather(1, actions)
+        critic1_loss = F.mse_loss(critic1_q_values, td_target.detach())
+        critic2_q_values = self.critic2(obs).gather(1, actions)
+        critic2_loss = F.mse_loss(critic2_q_values, td_target.detach())
 
-        # ceritic1_loss backward
-        self.ceritic1_optimizer.zero_grad()
-        ceritic1_loss.backward()
-        self.ceritic1_optimizer.step()
-        # ceritic1_loss backward
-        self.ceritic2_optimizer.zero_grad()
-        ceritic2_loss.backward()
-        self.ceritic2_optimizer.step()
+        # critic1_loss backward
+        self.critic1_optimizer.zero_grad()
+        critic1_loss.backward()
+        self.critic1_optimizer.step()
+        # critic1_loss backward
+        self.critic2_optimizer.zero_grad()
+        critic2_loss.backward()
+        self.critic2_optimizer.step()
 
         # 更新策略网络
         probs = self.actor(obs)
         probs_dist = Categorical(probs)
         # 直接根据概率计算熵
         entropy = probs_dist.entropy()
-        q1_value = self.ceritic1(obs)
-        q2_value = self.ceritic2(obs)
+        q1_value = self.critic1(obs)
+        q2_value = self.critic2(obs)
         min_qvalue = torch.sum(
             probs * torch.min(q1_value, q2_value), dim=1, keepdim=True)
         # 直接根据概率计算期望
@@ -196,8 +194,8 @@ class Agent(object):
         alpha_loss.backward()
         self.log_alpha_optimizer.step()
 
-        self.soft_update(self.ceritic1, self.target_ceritic1)
-        self.soft_update(self.ceritic2, self.target_ceritic2)
+        self.soft_update(self.critic1, self.target_critic1)
+        self.soft_update(self.critic2, self.target_critic2)
         self.global_update_step += 1
 
-        return actor_loss.item(), ceritic1_loss.item(), ceritic2_loss.item()
+        return actor_loss.item(), critic1_loss.item(), critic2_loss.item()
