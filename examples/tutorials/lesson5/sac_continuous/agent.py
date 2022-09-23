@@ -112,6 +112,7 @@ class Agent(object):
                  tau: float,
                  gamma: float,
                  alpha: float = 0.2,
+                 automatic_entropy_tuning: bool = False,
                  initial_random_steps: int = int(1e4),
                  device: Any = None):
 
@@ -123,6 +124,7 @@ class Agent(object):
         # 目标网络软更新参数
         self.tau = tau
         self.alpha = alpha
+        self.automatic_entropy_tuning = automatic_entropy_tuning
         self.initial_random_steps = initial_random_steps
 
         # 策略网络
@@ -141,9 +143,12 @@ class Agent(object):
 
         # 使用alpha的log值,可以使训练结果比较稳定
         # automatic entropy tuning
-        self.target_entropy = -np.prod((action_dim, )).item()  # heuristic
-        self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
-        self.alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
+        # If automatic entropy tuning is True,
+        # initialize a target entropy, a log alpha and an alpha optimizer
+        if self.automatic_entropy_tuning:
+            self.target_entropy = -np.prod((action_dim, )).item()  # heuristic
+            self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
+            self.alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
 
         self.device = device
 
@@ -218,63 +223,62 @@ class Agent(object):
         rewards = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
         terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
 
-        new_action, log_prob = self.actor(obs)
-
-        # train alpha (dual problem)
-        alpha_loss = (-self.log_alpha.exp() *
-                      (log_prob + self.target_entropy).detach()).mean()
-
-        self.alpha_optimizer.zero_grad()
-        alpha_loss.backward()
-        self.alpha_optimizer.step()
-
-        alpha = self.log_alpha.exp()  # used for the actor loss calculation
-
-        # q function loss
+        # Prediction π(a|s), logπ(a|s), π(a'|s'), logπ(a'|s'),
+        pi, log_pi = self.actor(obs)
+        # Target actions come from *current* policy
+        next_pi, next_log_pi = self.actor(next_obs)
+        #  Prediction Q1(s,a), Q2(s,a)
         pred_q1_value = self.critic1(obs, actions)
         pred_q2_value = self.critic2(obs, actions)
-        # Bellman backup for Q functions
 
-        # Target actions come from *current* policy
-        next_action, next_action_logp = self.actor(next_obs)
+        # Min Double-Q: min(Q1(s,π(a|s)), Q2(s,π(a|s))), min(Q1‾(s',π(a'|s')), Q2‾(s',π(a'|s')))
+        q1_pi = self.critic1(obs, actions)
+        q2_pi = self.critic2(obs, actions)
+        min_q_pi = torch.min(q1_pi, q2_pi)
+
         # Target Q-values
-        q1_target = self.target_critic1(next_obs, next_action)
-        q2_target = self.target_critic2(next_obs, next_action)
+        q1_next_pi = self.target_critic1(next_obs, next_pi)
+        q2_next_pi = self.target_critic2(next_obs, next_pi)
+        min_q_next_pi = torch.min(q1_next_pi, q2_next_pi)
 
-        q_target = torch.min(q1_target, q2_target)
-        td_target = rewards + self.gamma * (
-            q_target - alpha * next_action_logp) * (1 - terminal)
+        # TD target for Q regression
+        td_q_target = rewards + self.gamma * (
+            min_q_next_pi - self.alpha * next_log_pi) * (1 - terminal)
 
         # MSE loss against Bellman backup
-        q1_loss = F.mse_loss(pred_q1_value, td_target.detach())
-        q2_loss = F.mse_loss(pred_q2_value, td_target.detach())
+        q1_loss = F.mse_loss(pred_q1_value, td_q_target.detach())
+        q2_loss = F.mse_loss(pred_q2_value, td_q_target.detach())
         q_loss = q1_loss + q2_loss
 
         #  train Q functions
         # First run one gradient descent step for Q1 and Q2
         self.critic1_optimizer.zero_grad()
-        # q_loss = self.compute_critic_loss(obs, actions, rewards, next_obs,
-        #                                   terminal)
         q1_loss.backward()
         self.critic1_optimizer.step()
         self.critic2_optimizer.zero_grad()
         q2_loss.backward()
         self.critic2_optimizer.step()
 
-        # actor loss
-        q1_pi = self.critic1(obs, new_action)
-        q2_pi = self.critic2(obs, new_action)
-        q_pi = torch.min(q1_pi, q2_pi)
         # Entropy-regularized policy loss
-        actor_loss = (alpha * log_prob - q_pi).mean()
-
+        policy_loss = (self.alpha * log_pi - min_q_pi).mean()
         # train actor
         self.actor.zero_grad()
         # actor_loss = self.compute_actor_loss(obs)
-        actor_loss.backward()
+        policy_loss.backward()
         self.actor_optimizer.step()
+
+        # If automatic entropy tuning is True, update alpha
+        if self.automatic_entropy_tuning:
+            alpha_loss = -(self.log_alpha *
+                           (log_pi + self.target_entropy).detach()).mean()
+            self.alpha_optimizer.zero_grad()
+            alpha_loss.backward()
+            self.alpha_optimizer.step()
+            # used for the actor loss calculation
+            self.alpha = self.log_alpha.exp()
+
         self.soft_update(self.critic1, self.target_critic1)
         self.soft_update(self.critic2, self.target_critic2)
         self.global_update_step += 1
 
-        return actor_loss.item(), q_loss.item()
+        return policy_loss.item(), q_loss.item()
