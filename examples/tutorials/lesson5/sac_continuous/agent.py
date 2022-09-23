@@ -63,7 +63,6 @@ class PolicyNet(nn.Module):
         action = z.tanh()
         log_prob = dist.log_prob(z) - torch.log(1 - action.pow(2) + 1e-7)
         log_prob = log_prob.sum(-1, keepdim=True)
-
         return action, log_prob
 
 
@@ -109,6 +108,7 @@ class Agent(object):
                  actor_lr: float,
                  critic_lr: float,
                  alpha_lr: float,
+                 action_bound: float,
                  tau: float,
                  gamma: float,
                  alpha: float = 0.2,
@@ -124,6 +124,8 @@ class Agent(object):
         # 目标网络软更新参数
         self.tau = tau
         self.alpha = alpha
+        # action_bound是环境可以接受的动作最大值
+        self.action_bound = action_bound
         self.automatic_entropy_tuning = automatic_entropy_tuning
         self.initial_random_steps = initial_random_steps
 
@@ -132,21 +134,24 @@ class Agent(object):
         # 价值网络
         self.critic1 = CriticQ(obs_dim, hidden_dim, action_dim).to(device)
         self.critic2 = CriticQ(obs_dim, hidden_dim, action_dim).to(device)
+        #  Target network
         self.target_critic1 = copy.deepcopy(self.critic1)
         self.target_critic2 = copy.deepcopy(self.critic2)
 
         # 策略网络优化器
         self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
         # 价值网络优化器
-        self.critic1_optimizer = Adam(self.critic1.parameters(), lr=critic_lr)
-        self.critic2_optimizer = Adam(self.critic2.parameters(), lr=critic_lr)
+        # Concat the Q-network parameters to use one optim
+        self.Qnet_parameters = list(self.critic1.parameters()) + list(
+            self.critic2.parameters())
+        self.critic_optimizer = Adam(self.Qnet_parameters, lr=critic_lr)
 
-        # 使用alpha的log值,可以使训练结果比较稳定
         # automatic entropy tuning
         # If automatic entropy tuning is True,
         # initialize a target entropy, a log alpha and an alpha optimizer
         if self.automatic_entropy_tuning:
             self.target_entropy = -np.prod((action_dim, )).item()  # heuristic
+            # 使用alpha的log值,可以使训练结果比较稳定
             self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
             self.alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
 
@@ -156,18 +161,24 @@ class Agent(object):
         """Select an action from the input state."""
         # if initial random action should be conducted
         if self.global_update_step < self.initial_random_steps:
-            action = self.env.action_space.sample()
+            selected_action = self.env.action_space.sample()
         else:
             obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
             action, log_probs = self.actor(obs)
-            action = action.detach().cpu().numpy().flatten()
-        return action
+            action = action.detach().cpu().numpy()
+            selected_action = np.clip(action, -1.0, 1.0)
+            selected_action *= self.action_bound
+        selected_action = selected_action.flatten()
+        return selected_action
 
     def predict(self, obs) -> int:
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         action, log_probs = self.actor(obs)
         action = action.detach().cpu().numpy().flatten()
-        return action
+        selected_action = np.clip(action, -1.0, 1.0)
+        selected_action *= self.action_bound
+        selected_action = selected_action.flatten()
+        return selected_action
 
     # Set up function for computing SAC Q-losses
     def compute_critic_loss(self, obs: torch.Tensor, action: torch.Tensor,
@@ -248,7 +259,7 @@ class Agent(object):
         td_q_target = rewards + self.gamma * td_v_target * (1 - terminal)
 
         # Entropy-regularized policy loss
-        policy_loss = (self.alpha * log_pi - min_q_pi).mean()
+        policy_loss = torch.mean(self.alpha * log_pi - min_q_pi)
         self.actor_optimizer.zero_grad()
         policy_loss.backward()
         self.actor_optimizer.step()
@@ -258,14 +269,11 @@ class Agent(object):
         q2_loss = F.mse_loss(pred_q2_value, td_q_target.detach())
         q_loss = q1_loss + q2_loss
 
-        #  train Q functions
+        # Update two Q-network parameter
         # First run one gradient descent step for Q1 and Q2
-        self.critic1_optimizer.zero_grad()
-        q1_loss.backward()
-        self.critic1_optimizer.step()
-        self.critic2_optimizer.zero_grad()
-        q2_loss.backward()
-        self.critic2_optimizer.step()
+        self.critic_optimizer.zero_grad()
+        q_loss.backward()
+        self.critic_optimizer.step()
 
         # If automatic entropy tuning is True, update alpha
         if self.automatic_entropy_tuning:
