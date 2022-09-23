@@ -16,8 +16,8 @@ config = {
     'test_seed': 42,
     'env': 'Pendulum-v1',
     'hidden_dim': 128,
-    'total_steps': 10000,  # max training steps
-    'memory_size': 2000,  # Replay buffer size
+    'total_steps': 20000,  # max training steps
+    'memory_size': 5000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'actor_lr': 3e-4,  # start learning rate
     'critic_lr': 3e-4,  # end learning rate
@@ -25,7 +25,7 @@ config = {
     'alpha': 0.2,
     'automatic_entropy_tuning': True,
     'initial_random_steps': 1000,
-    'gamma': 0.98,  # discounting factor
+    'gamma': 0.99,  # discounting factor
     'tau': 0.005,  # 软更新参数,
     'batch_size': 64,
     'eval_render': False,  # do eval render
@@ -135,9 +135,6 @@ def main():
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
     test_env = gym.make(args.env)
-    env = ActionNormalizer(env)
-    test_env = ActionNormalizer(test_env)
-
     # set seed
     torch.manual_seed(args.train_seed)
     torch.cuda.manual_seed_all(args.train_seed)
@@ -149,7 +146,7 @@ def main():
 
     obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
-    print(obs_dim, action_dim)
+    action_bound = env.action_space.high[0]  # 动作最大值
     rpm = ReplayBuffer(
         obs_dim=obs_dim, max_size=args.memory_size, batch_size=args.batch_size)
     agent = Agent(
@@ -161,6 +158,7 @@ def main():
         critic_lr=args.critic_lr,
         alpha_lr=args.alpha_lr,
         alpha=args.alpha,
+        action_bound=action_bound,
         automatic_entropy_tuning=args.automatic_entropy_tuning,
         initial_random_steps=args.initial_random_steps,
         tau=args.tau,
