@@ -16,13 +16,14 @@ config = {
     'test_seed': 42,
     'env': 'CartPole-v0',
     'hidden_dim': 128,
-    'total_steps': 5000,  # max training steps
+    'total_steps': 10000,  # max training steps
     'memory_size': 2000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'actor_lr': 1e-3,  # start learning rate
     'critic_lr': 1e-2,  # end learning rate
     'alpha_lr': 1e-2,  # end learning rate
     'target_entropy': -1,
+    'initial_random_steps': 2000,
     'gamma': 0.98,  # discounting factor
     'tau': 0.005,  # 软更新参数,
     'batch_size': 64,
@@ -118,6 +119,7 @@ def main():
     rpm = ReplayBuffer(
         obs_dim=obs_dim, max_size=args.memory_size, batch_size=args.batch_size)
     agent = Agent(
+        env=env,
         obs_dim=obs_dim,
         action_dim=action_dim,
         hidden_dim=args.hidden_dim,
@@ -125,6 +127,7 @@ def main():
         critic_lr=args.critic_lr,
         alpha_lr=args.alpha_lr,
         target_entropy=args.target_entropy,
+        initial_random_steps=args.initial_random_steps,
         tau=args.tau,
         gamma=args.gamma,
         device=device)
