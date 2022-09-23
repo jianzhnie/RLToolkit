@@ -16,12 +16,12 @@ config = {
     'test_seed': 42,
     'env': 'Pendulum-v1',
     'hidden_dim': 128,
-    'total_steps': 3000,  # max training steps
+    'total_steps': 10000,  # max training steps
     'memory_size': 2000,  # Replay buffer size
     'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
-    'actor_lr': 1e-3,  # start learning rate
-    'critic_lr': 1e-2,  # end learning rate
-    'alpha_lr': 1e-2,  # end learning rate
+    'actor_lr': 3e-4,  # start learning rate
+    'critic_lr': 3e-4,  # end learning rate
+    'alpha_lr': 3e-4,  # end learning rate
     'target_entropy': -1,
     'initial_random_steps': 0,
     'gamma': 0.98,  # discounting factor
