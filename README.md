@@ -41,9 +41,7 @@ RLToolkit is a flexible and high-efficient reinforcement learning framework. RLT
   - [Hierarchical Reinforcement Learning Agents](#hierarchical-reinforcement-learning-agents)
   - [Memory Types](#memory-types)
   - [Exploration Techniques](#exploration-techniques)
-  - [Policy Gradient Series](#policy-gradient-series)
-  - [DQN Series](#dqn-series)
-  - [Supported Envs](#supported-envs)
+- [Supported Envs](#supported-envs)
 - [Examples](#examples)
 - [Experimental Demos](#experimental-demos)
 - [Contributions](#contributions)
@@ -122,7 +120,8 @@ RLToolkit implements the following model-free deep reinforcement learning (DRL) 
 * [Bootstrapped Deep Q Network](https://arxiv.org/abs/1602.04621)  ([code]())
 * [UCB Exploration via Q-Ensembles (UCB)](https://arxiv.org/abs/1706.01502) ([code]())
 * [Noisy Networks for Exploration](https://arxiv.org/abs/1706.10295) ([code]())
-###  Supported Envs
+
+##  Supported Envs
 
 - **OpenAI Gym**
 - **Atari**
