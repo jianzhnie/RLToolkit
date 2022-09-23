@@ -44,12 +44,12 @@ class PolicyNet(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.fc1(x)
-        out = self.relu(x)
+        out = self.relu(out)
 
         # get mean
         mu = torch.tanh(self.mu_layer(out))
         # get std
-        log_std = self.log_std_layer(x).tanh()
+        log_std = self.log_std_layer(out).tanh()
         log_std = self.log_std_min + 0.5 * (self.log_std_max -
                                             self.log_std_min) * (
                                                 log_std + 1)
@@ -109,7 +109,6 @@ class Agent(object):
                  actor_lr: float,
                  critic_lr: float,
                  alpha_lr: float,
-                 target_entropy: float,
                  tau: float,
                  gamma: float,
                  alpha: float = 0.2,
@@ -119,8 +118,6 @@ class Agent(object):
         self.env = env
         self.action_dim = action_dim
         self.global_update_step = 0
-        # 目标熵的大小
-        self.target_entropy = target_entropy
         # 折扣因子
         self.gamma = gamma
         # 目标网络软更新参数
@@ -145,8 +142,8 @@ class Agent(object):
         # 使用alpha的log值,可以使训练结果比较稳定
         # automatic entropy tuning
         self.target_entropy = -np.prod((action_dim, )).item()  # heuristic
-        self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
-        self.alpha_optimizer = Adam([self.log_alpha], lr=3e-4)
+        self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
+        self.alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
 
         self.device = device
 
@@ -158,7 +155,7 @@ class Agent(object):
         else:
             obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
             action, probs = self.actor(obs)
-            action = action.detach().cpu().numpy()
+            action = action.detach().cpu().numpy().flatten()
         return action
 
     def predict(self, obs) -> int:
