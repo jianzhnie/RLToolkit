@@ -15,7 +15,6 @@ config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'Pendulum-v1',
-    'total_episode': 800,  # max training steps
     'hidden_dim': 128,
     'total_steps': 10000,  # max training steps
     'memory_size': 5000,  # Replay buffer size
