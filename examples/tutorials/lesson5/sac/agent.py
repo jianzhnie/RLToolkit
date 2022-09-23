@@ -1,6 +1,7 @@
 import copy
 from typing import Any, Tuple
 
+import gym
 import numpy as np
 import torch
 import torch.nn as nn
@@ -59,6 +60,7 @@ class Agent(object):
     """
 
     def __init__(self,
+                 env: gym.Env,
                  obs_dim: int,
                  hidden_dim: int,
                  action_dim: int,
@@ -68,14 +70,17 @@ class Agent(object):
                  target_entropy: float,
                  tau: float,
                  gamma: float,
+                 initial_random_steps: int = int(1e4),
                  device: Any = None):
 
+        self.env = env
         self.action_dim = action_dim
         self.global_update_step = 0
         self.target_entropy = target_entropy  # 目标熵的大小
         self.gamma = gamma
         # 目标网络软更新参数
         self.tau = tau
+        self.initial_random_steps = initial_random_steps
 
         # 策略网络
         self.actor = PolicyNet(obs_dim, hidden_dim, action_dim).to(device)
@@ -93,19 +98,25 @@ class Agent(object):
         self.ceritic2_optimizer = torch.optim.Adam(
             self.ceritic2.parameters(), lr=critic_lr)
         # 使用alpha的log值,可以使训练结果比较稳定
-        self.log_alpha = torch.tensor(np.log(0.01), dtype=torch.float)
+        self.log_alpha = torch.tensor(
+            np.log(0.01), dtype=torch.float, device=device)
         self.log_alpha.requires_grad = True  # 可以对alpha求梯度
-        self.log_alpha_optimizer = torch.optim.Adam([self.log_alpha],
-                                                    lr=alpha_lr)
+        self.log_alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
+
         # 折扣因子
         self.device = device
 
     def sample(self, obs: np.ndarray):
-        obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-        probs = self.actor(obs)
-        action_dist = Categorical(probs)
-        action = action_dist.sample()
-        return action.item()
+        """Select an action from the input state."""
+        # if initial random action should be conducted
+        if self.global_update_step < self.initial_random_steps:
+            action = self.env.action_space.sample()
+        else:
+            obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+            probs = self.actor(obs)
+            action_dist = Categorical(probs)
+            action = action_dist.sample().item()
+        return action
 
     def predict(self, obs) -> int:
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
