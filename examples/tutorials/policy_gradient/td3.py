@@ -267,7 +267,7 @@ class TD3Agent(object):
 
         samples = self.memory.sample_batch()
         states = torch.FloatTensor(samples['obs']).to(device)
-        next_states = torch.FloatTensor(samples['next_obs']).to(device)
+        next_obs = torch.FloatTensor(samples['next_obs']).to(device)
         actions = torch.FloatTensor(samples['acts'].reshape(-1, 1)).to(device)
         rewards = torch.FloatTensor(samples['rews'].reshape(-1, 1)).to(device)
         dones = torch.FloatTensor(samples['done'].reshape(-1, 1)).to(device)
@@ -278,12 +278,12 @@ class TD3Agent(object):
         clipped_noise = torch.clamp(noise, -self.target_policy_noise_clip,
                                     self.target_policy_noise_clip)
 
-        next_actions = (self.actor_target(next_states) + clipped_noise).clamp(
+        next_actions = (self.actor_target(next_obs) + clipped_noise).clamp(
             -1.0, 1.0)
 
         # min (Q_1', Q_2')
-        next_values1 = self.critic_target1(next_states, next_actions)
-        next_values2 = self.critic_target2(next_states, next_actions)
+        next_values1 = self.critic_target1(next_obs, next_actions)
+        next_values2 = self.critic_target2(next_obs, next_actions)
         next_values = torch.min(next_values1, next_values2)
 
         # G_t   = r + gamma * v(s_{t+1})  if state != Terminal
