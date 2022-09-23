@@ -193,13 +193,15 @@ class Agent(object):
         rewards = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
         terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
 
-        next_actions = self.target_actor(next_obs)
-        next_q_values = self.target_critic(next_obs, next_actions)
+        pred_q_values = self.critic(obs, actions)
+        with torch.no_grad():
+            next_actions = self.target_actor(next_obs)
+            next_q_values = self.target_critic(next_obs, next_actions)
 
         # 时序差分目标
         q_targets = rewards + self.gamma * next_q_values * (1 - terminal)
         # 均方误差损失函数
-        value_loss = F.mse_loss(self.critic(obs, actions), q_targets)
+        value_loss = F.mse_loss(pred_q_values, q_targets)
         # update value network
         self.critic_optimizer.zero_grad()
         value_loss.backward()
