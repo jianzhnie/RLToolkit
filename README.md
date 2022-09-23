@@ -33,14 +33,21 @@ RLToolkit is a flexible and high-efficient reinforcement learning framework. RLT
   - [Model](#model)
   - [Algorithm](#algorithm)
   - [Agent](#agent)
-- [Contents](#contents)
+- [Supported Algorithms](#supported-algorithms)
+  - [Value Optimization Agents](#value-optimization-agents)
+  - [Policy Optimization Agents](#policy-optimization-agents)
+  - [General Agents](#general-agents)
+  - [Imitation Learning Agents](#imitation-learning-agents)
+  - [Hierarchical Reinforcement Learning Agents](#hierarchical-reinforcement-learning-agents)
+  - [Memory Types](#memory-types)
+  - [Exploration Techniques](#exploration-techniques)
   - [Policy Gradient Series](#policy-gradient-series)
   - [DQN Series](#dqn-series)
   - [Supported Envs](#supported-envs)
 - [Examples](#examples)
 - [Experimental Demos](#experimental-demos)
 - [Contributions](#contributions)
-- [Reference](#reference)
+- [References](#references)
 - [Citation](#citation)
 
 
@@ -62,33 +69,59 @@ The main abstractions introduced by PARL that are used to build an agent recursi
 ### Agent
 `Agent`, a data bridge between the environment and the algorithm, is responsible for data I/O with the outside environment and describes data preprocessing before feeding data into the training process.
 
+## Supported Algorithms
 
-## Contents
 RLToolkit implements the following model-free deep reinforcement learning (DRL) algorithms:
 
-- **DDPG, TD3, SAC, PPO, REDQ** for continuous actions in single-agent environment,
-- **DQN, Double DQN, D3QN, SAC** for discrete actions in single-agent environment,
-- **QMIX, VDN, MADDPG, MAPPO, MATD3** in multi-agent environment.
+<img src="docs/images/algorithms.png" alt="Coach Design" style="width: 800px;"/>
 
-### Policy Gradient Series
-1. Advantage Actor-Critic (A2C)
-2. Proximal Policy Optimization Algorithms (PPO)
-3. Deep Deterministic Policy Gradient (DDPG)
-4. Twin Delayed Deep Deterministic Policy Gradient Algorithm (TD3)
-5. Soft Actor-Critic (SAC)
-6. DDPG from Demonstration (DDPGfD)
-7. Behavior Cloning (with DDPG)
+### Value Optimization Agents
+* [Deep Q Network (DQN)](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)  ([code]())
+* [Double Deep Q Network (DDQN)](https://arxiv.org/pdf/1509.06461.pdf)  ([code]())
+* [Dueling Q Network](https://arxiv.org/abs/1511.06581) ([code]())
+* [Mixed Monte Carlo (MMC)](https://arxiv.org/abs/1703.01310)  ([code]())
+* [Persistent Advantage Learning (PAL)](https://arxiv.org/abs/1512.04860)  ([code]())
+* [Categorical Deep Q Network (C51)](https://arxiv.org/abs/1707.06887)  ([code]())
+* [Quantile Regression Deep Q Network (QR-DQN)](https://arxiv.org/pdf/1710.10044v1.pdf)  ([code]())
+* [N-Step Q Learning](https://arxiv.org/abs/1602.01783)  ([code]())
+* [Neural Episodic Control (NEC)](https://arxiv.org/abs/1703.01988)  ([code]())
+* [Normalized Advantage Functions (NAF)](https://arxiv.org/abs/1603.00748.pdf)  ([code]())
+* [Rainbow](https://arxiv.org/abs/1710.02298)  ([code]())
 
-### DQN Series
-1.  DQN
-2.  DoubleDQN
-3.  PrioritizedExperienceReplay
-4.  DuelingNet
-5.  NoisyNet
-6.  CategoricalDQN
-7.  N-stepLearning
-8.  Rainbow
+### Policy Optimization Agents
+* [Policy Gradients (PG)](http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf)  ([code]())
+* [Asynchronous Advantage Actor-Critic (A3C)](https://arxiv.org/abs/1602.01783)  ([code]())
+* [Deep Deterministic Policy Gradients (DDPG)](https://arxiv.org/abs/1509.02971)  ([code]())
+* [Proximal Policy Optimization (PPO)](https://arxiv.org/pdf/1707.06347.pdf)  ([code]())
+* [Clipped Proximal Policy Optimization (CPPO)](https://arxiv.org/pdf/1707.06347.pdf)  ([code]())
+* [Generalized Advantage Estimation (GAE)](https://arxiv.org/abs/1506.02438) ([code]())
+* [Sample Efficient Actor-Critic with Experience Replay (ACER)](https://arxiv.org/abs/1611.01224)  ([code]())
+* [Soft Actor-Critic (SAC)](https://arxiv.org/abs/1801.01290) ([code]())
+* [Twin Delayed Deep Deterministic Policy Gradient (TD3)](https://arxiv.org/pdf/1802.09477.pdf) ([code]())
 
+### General Agents
+
+* [Direct Future Prediction (DFP)](https://arxiv.org/abs/1611.01779)  ([code]())
+
+### Imitation Learning Agents
+* Behavioral Cloning (BC)  ([code]())
+* [Conditional Imitation Learning](https://arxiv.org/abs/1710.02410) ([code]())
+### Hierarchical Reinforcement Learning Agents
+* [Hierarchical Actor Critic (HAC)](https://arxiv.org/abs/1712.00948.pdf) ([code]())
+
+### Memory Types
+* [Hindsight Experience Replay (HER)](https://arxiv.org/abs/1707.01495.pdf) ([code]())
+* [Prioritized Experience Replay (PER)](https://arxiv.org/abs/1511.05952) ([code]())
+
+### Exploration Techniques
+* E-Greedy ([code]())
+* Boltzmann ([code]())
+* Ornstein–Uhlenbeck process ([code]())
+* Normal Noise ([code]())
+* Truncated Normal Noise ([code]())
+* [Bootstrapped Deep Q Network](https://arxiv.org/abs/1602.04621)  ([code]())
+* [UCB Exploration via Q-Ensembles (UCB)](https://arxiv.org/abs/1706.01502) ([code]())
+* [Noisy Networks for Exploration](https://arxiv.org/abs/1706.10295) ([code]())
 ###  Supported Envs
 
 - **OpenAI Gym**
@@ -157,7 +190,7 @@ We welcome any contributions to the codebase, but we ask that you please **do no
 
 We're actively working on refactoring and trying to make the codebase cleaner and more performant as a whole. If you'd like to help us clean up some code, we'd strongly encourage you to also watch [Uncle Bob's clean coding lessons](https://www.youtube.com/playlist?list=PLmmYSbUCWJ4x1GO839azG_BBw8rkh-zOj) if you haven't already.
 
-## Reference
+## References
 
 1. Deep Q-Network (DQN) <sub><sup> ([V. Mnih et al. 2015](https://storage.googleapis.com/deepmind-media/dqn/DQNNaturePaper.pdf)) </sup></sub>
 2. Double DQN (DDQN) <sub><sup> ([H. Van Hasselt et al. 2015](https://arxiv.org/abs/1509.06461)) </sup></sub>
@@ -170,6 +203,62 @@ We're actively working on refactoring and trying to make the codebase cleaner an
 9. Twin Delayed DDPG (TD3) <sub><sup> ([S. Fujimoto et al. 2018](https://arxiv.org/abs/1802.09477)) </sup></sub>
 10. Soft Actor-Critic (SAC) <sub><sup> ([T. Haarnoja et al. 2018](https://arxiv.org/abs/1801.01290)) </sup></sub>
 11. SAC with automatic entropy adjustment (SAC-AEA) <sub><sup> ([T. Haarnoja et al. 2018](https://arxiv.org/abs/1812.05905)) </sup></sub>
+
+---
+
+[1] jeremykun.com [Markov Chain Monte Carlo Without all the Bullshit](https://jeremykun.com/2015/04/06/markov-chain-monte-carlo-without-all-the-bullshit/)
+
+[2] Richard S. Sutton and Andrew G. Barto. [Reinforcement Learning: An Introduction; 2nd Edition](http://incompleteideas.net/book/bookdraft2017nov5.pdf). 2017.
+
+[3] John Schulman, et al. [“High-dimensional continuous control using generalized advantage estimation."](https://arxiv.org/pdf/1506.02438.pdf) ICLR 2016.
+
+[4] Thomas Degris, Martha White, and Richard S. Sutton. [“Off-policy actor-critic."](https://arxiv.org/pdf/1205.4839.pdf) ICML 2012.
+
+[5] timvieira.github.io [Importance sampling](http://timvieira.github.io/blog/post/2014/12/21/importance-sampling/)
+
+[6] Mnih, Volodymyr, et al. [“Asynchronous methods for deep reinforcement learning."](https://arxiv.org/abs/1602.01783) ICML. 2016.
+
+[7] David Silver, et al. [“Deterministic policy gradient algorithms."](https://hal.inria.fr/file/index/docid/938992/filename/dpg-icml2014.pdf) ICML. 2014.
+
+[8] Timothy P. Lillicrap, et al. [“Continuous control with deep reinforcement learning."](https://arxiv.org/pdf/1509.02971.pdf) arXiv preprint arXiv:1509.02971 (2015).
+
+[9] Ryan Lowe, et al. [“Multi-agent actor-critic for mixed cooperative-competitive environments."](https://arxiv.org/pdf/1706.02275.pdf) NIPS. 2017.
+
+[10] John Schulman, et al. [“Trust region policy optimization."](https://arxiv.org/pdf/1502.05477.pdf) ICML. 2015.
+
+[11] Ziyu Wang, et al. [“Sample efficient actor-critic with experience replay."](https://arxiv.org/pdf/1611.01224.pdf) ICLR 2017.
+
+[12] Rémi Munos, Tom Stepleton, Anna Harutyunyan, and Marc Bellemare. [“Safe and efficient off-policy reinforcement learning”](http://papers.nips.cc/paper/6538-safe-and-efficient-off-policy-reinforcement-learning.pdf) NIPS. 2016.
+
+[13] Yuhuai Wu, et al. [“Scalable trust-region method for deep reinforcement learning using Kronecker-factored approximation."](https://arxiv.org/pdf/1708.05144.pdf) NIPS. 2017.
+
+[14] kvfrans.com [A intuitive explanation of natural gradient descent](http://kvfrans.com/a-intuitive-explanation-of-natural-gradient-descent/)
+
+[15] Sham Kakade. [“A Natural Policy Gradient."](https://papers.nips.cc/paper/2073-a-natural-policy-gradient.pdf). NIPS. 2002.
+
+[16] [“Going Deeper Into Reinforcement Learning: Fundamentals of Policy Gradients."](https://danieltakeshi.github.io/2017/03/28/going-deeper-into-reinforcement-learning-fundamentals-of-policy-gradients/) - Seita’s Place, Mar 2017.
+
+[17] [“Notes on the Generalized Advantage Estimation Paper."](https://danieltakeshi.github.io/2017/04/02/notes-on-the-generalized-advantage-estimation-paper/) - Seita’s Place, Apr, 2017.
+
+[18] Gabriel Barth-Maron, et al. [“Distributed Distributional Deterministic Policy Gradients."](https://arxiv.org/pdf/1804.08617.pdf) ICLR 2018 poster.
+
+[19] Tuomas Haarnoja, Aurick Zhou, Pieter Abbeel, and Sergey Levine. [“Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor."](https://arxiv.org/pdf/1801.01290.pdf) arXiv preprint arXiv:1801.01290 (2018).
+
+[20] Scott Fujimoto, Herke van Hoof, and Dave Meger. [“Addressing Function Approximation Error in Actor-Critic Methods."](https://arxiv.org/abs/1802.09477) arXiv preprint arXiv:1802.09477 (2018).
+
+[21] Tuomas Haarnoja, et al. [“Soft Actor-Critic Algorithms and Applications."](https://arxiv.org/abs/1812.05905) arXiv preprint arXiv:1812.05905 (2018).
+
+[22] David Knowles. [“Lagrangian Duality for Dummies”](https://cs.stanford.edu/people/davidknowles/lagrangian_duality.pdf) Nov 13, 2010.
+
+[23] Yang Liu, et al. [“Stein variational policy gradient."](https://arxiv.org/abs/1704.02399) arXiv preprint arXiv:1704.02399 (2017).
+
+[24] Qiang Liu and Dilin Wang. [“Stein variational gradient descent: A general purpose bayesian inference algorithm."](https://papers.nips.cc/paper/6338-stein-variational-gradient-descent-a-general-purpose-bayesian-inference-algorithm.pdf) NIPS. 2016.
+
+[25] Lasse Espeholt, et al. [“IMPALA: Scalable Distributed Deep-RL with Importance Weighted Actor-Learner Architectures”](https://arxiv.org/abs/1802.01561) arXiv preprint 1802.01561 (2018).
+
+[26] Karl Cobbe, et al. [“Phasic Policy Gradient."](https://arxiv.org/abs/2009.04416) arXiv preprint arXiv:2009.04416 (2020).
+
+[27] Chloe Ching-Yun Hsu, et al. [“Revisiting Design Choices in Proximal Policy Optimization."](https://arxiv.org/abs/2009.10897) arXiv preprint arXiv:2009.10897 (2020).
 
 ## Citation
 
