@@ -208,36 +208,46 @@ class Agent(object):
                             reward: torch.Tensor, next_obs: torch.Tensor,
                             terminal: torch.Tensor) -> torch.Tensor:
 
+        # Prediction π(a|s), logπ(a|s),
+        # π(a'|s'), logπ(a'|s'),
+        pi, log_pi = self.actor(obs)
+        # Target actions come from *current* policy
+        next_pi, next_log_pi = self.actor(next_obs)
+
+        # Prediction Q1(s,a), Q2(s,a)
         pred_q1_value = self.critic1(obs, action)
         pred_q2_value = self.critic2(obs, action)
-        # Bellman backup for Q functions
-        with torch.no_grad():
-            # Target actions come from *current* policy
-            next_action, next_action_logp = self.actor(next_obs)
-            # Target Q-values
-            q1_target = self.target_critic1(next_obs, next_action)
-            q2_target = self.target_critic2(next_obs, next_action)
 
-            q_target = torch.min(q1_target, q2_target)
-            td_target = reward + self.gamma * (
-                q_target - self.alpha * next_action_logp) * (1 - terminal)
+        # Target Q-values
+        # Min Double-Q: min(Q1‾(s',π(a'|s')), Q2‾(s',π(a'|s')))
+        q1_next_pi = self.target_critic1(next_obs, next_pi)
+        q2_next_pi = self.target_critic2(next_obs, next_pi)
+        min_q_next_pi = torch.min(q1_next_pi, q2_next_pi)
+
+        # TD target for Q regression
+        td_v_target = min_q_next_pi - self.alpha * next_log_pi
+        td_q_target = reward + self.gamma * td_v_target * (1 - terminal)
 
         # MSE loss against Bellman backup
-        q1_loss = F.mse_loss(pred_q1_value, td_target.detach())
-        q2_loss = F.mse_loss(pred_q2_value, td_target.detach())
+        q1_loss = F.mse_loss(pred_q1_value, td_q_target.detach())
+        q2_loss = F.mse_loss(pred_q2_value, td_q_target.detach())
         q_loss = q1_loss + q2_loss
 
         return q_loss
 
     # Set up function for computing SAC pi loss
     def compute_actor_loss(self, obs: torch.Tensor) -> torch.Tensor:
-        next_action, log_prob = self.actor(obs)
-        q1_pi = self.critic1(obs, next_action)
-        q2_pi = self.critic2(obs, next_action)
-        q_pi = torch.min(q1_pi, q2_pi)
+        # Prediction π(a|s), logπ(a|s),
+        # π(a'|s'), logπ(a'|s'),
+        pi, log_pi = self.actor(obs)
+
+        # Min Double-Q: min(Q1(s,π(a|s)), Q2(s,π(a|s))),
+        q1_pi = self.critic1(obs, pi)
+        q2_pi = self.critic2(obs, pi)
+        min_q_pi = torch.min(q1_pi, q2_pi)
 
         # Entropy-regularized policy loss
-        actor_loss = (self.alpha * log_prob - q_pi).mean()
+        actor_loss = (self.alpha * log_pi - min_q_pi).mean()
         return actor_loss
 
     def soft_update(self, net, target_net):
