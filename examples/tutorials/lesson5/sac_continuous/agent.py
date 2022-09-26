@@ -79,15 +79,18 @@ class PolicyNet(nn.Module):
         # https://pytorch.org/docs/stable/distributions.html#normal
         dist = Normal(mu, std)
         # Reparameterization trick (mean + std * N(0,1))
-        pi = dist.rsample()
+        x_t = dist.rsample()
+
+        pi = torch.tanh(x_t)
         # normalize action and log_prob
-        log_pi = dist.log_prob(pi).sum(dim=-1)
-        mu, pi, log_pi = self.apply_squashing_func(mu, pi, log_pi)
+        log_pi = dist.log_prob(x_t)
+        # Enforcing Action Bound
+        log_pi -= torch.log(1 - pi.pow(2) + 1e-7)
+        log_pi = log_pi.sum(-1, keepdim=True)
 
         # Make sure outputs are in correct range
         mu = mu * self.action_bound
         pi = pi * self.action_bound
-
         return pi, log_pi
 
 
@@ -208,9 +211,7 @@ class Agent(object):
                             reward: torch.Tensor, next_obs: torch.Tensor,
                             terminal: torch.Tensor) -> torch.Tensor:
 
-        # Prediction π(a|s), logπ(a|s),
-        # π(a'|s'), logπ(a'|s'),
-        pi, log_pi = self.actor(obs)
+        # Prediction π(a'|s'), logπ(a'|s')
         # Target actions come from *current* policy
         next_pi, next_log_pi = self.actor(next_obs)
 
