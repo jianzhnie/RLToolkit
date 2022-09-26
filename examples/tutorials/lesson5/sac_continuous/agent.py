@@ -203,7 +203,6 @@ class Agent(object):
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         action, log_probs = self.actor(obs)
         action = action.detach().cpu().numpy().flatten()
-        action = action.flatten()
         return action
 
     # Set up function for computing SAC Q-losses
