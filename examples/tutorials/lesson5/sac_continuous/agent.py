@@ -24,9 +24,13 @@ class PolicyNet(nn.Module):
                  obs_dim: int,
                  hidden_dim: int,
                  action_dim: int,
+                 action_bound: float,
                  log_std_min: float = -20,
                  log_std_max: float = 2):
         super(PolicyNet, self).__init__()
+
+        # action_bound是环境可以接受的动作最大值
+        self.action_bound = action_bound
         # set the log std range
         self.log_std_min = log_std_min
         self.log_std_max = log_std_max
@@ -42,12 +46,28 @@ class PolicyNet(nn.Module):
         self.mu_layer = nn.Linear(hidden_dim, action_dim)
         self.mu_layer = init_layer_uniform(self.mu_layer)
 
+    def clip_but_pass_gradient(self, x, l=-1., u=1.):
+        clip_up = (x > u).float()
+        clip_low = (x < l).float()
+        clip_value = (u - x) * clip_up + (l - x) * clip_low
+        return x + clip_value.detach()
+
+    def apply_squashing_func(self, mu, pi, log_pi):
+        mu = torch.tanh(mu)
+        pi = torch.tanh(pi)
+        # To avoid evil machine precision error, strictly clip 1-pi**2 to [0,1] range.
+        log_pi -= torch.sum(
+            torch.log(
+                self.clip_but_pass_gradient(1 - pi.pow(2), l=0., u=1.) + 1e-6),
+            dim=-1)
+        return mu, pi, log_pi
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.fc1(x)
         out = self.relu(out)
 
         # get mean
-        mu = torch.tanh(self.mu_layer(out))
+        mu = self.mu_layer(out)
         # get std
         log_std = self.log_std_layer(out).tanh()
         log_std = self.log_std_min + 0.5 * (self.log_std_max -
@@ -56,14 +76,19 @@ class PolicyNet(nn.Module):
         std = torch.exp(log_std)
 
         # sample actions
+        # https://pytorch.org/docs/stable/distributions.html#normal
         dist = Normal(mu, std)
-        z = dist.rsample()
+        # Reparameterization trick (mean + std * N(0,1))
+        pi = dist.rsample()
         # normalize action and log_prob
-        # see appendix C of [2]
-        action = z.tanh()
-        log_prob = dist.log_prob(z) - torch.log(1 - action.pow(2) + 1e-7)
-        log_prob = log_prob.sum(-1, keepdim=True)
-        return action, log_prob
+        log_pi = dist.log_prob(pi).sum(dim=-1)
+        mu, pi, log_pi = self.apply_squashing_func(mu, pi, log_pi)
+
+        # Make sure outputs are in correct range
+        mu = mu * self.action_bound
+        pi = pi * self.action_bound
+
+        return pi, log_pi
 
 
 class CriticQ(nn.Module):
@@ -130,7 +155,9 @@ class Agent(object):
         self.initial_random_steps = initial_random_steps
 
         # 策略网络
-        self.actor = PolicyNet(obs_dim, hidden_dim, action_dim).to(device)
+        self.actor = PolicyNet(
+            obs_dim, hidden_dim, action_dim,
+            action_bound=self.action_bound).to(device)
         # 价值网络
         self.critic1 = CriticQ(obs_dim, hidden_dim, action_dim).to(device)
         self.critic2 = CriticQ(obs_dim, hidden_dim, action_dim).to(device)
@@ -161,24 +188,20 @@ class Agent(object):
         """Select an action from the input state."""
         # if initial random action should be conducted
         if self.global_update_step < self.initial_random_steps:
-            selected_action = self.env.action_space.sample()
+            action = self.env.action_space.sample()
         else:
             obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
             action, log_probs = self.actor(obs)
             action = action.detach().cpu().numpy()
-            selected_action = np.clip(action, -1.0, 1.0)
-            selected_action *= self.action_bound
-        selected_action = selected_action.flatten()
-        return selected_action
+        action = action.flatten()
+        return action
 
     def predict(self, obs) -> int:
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         action, log_probs = self.actor(obs)
         action = action.detach().cpu().numpy().flatten()
-        selected_action = np.clip(action, -1.0, 1.0)
-        selected_action *= self.action_bound
-        selected_action = selected_action.flatten()
-        return selected_action
+        action = action.flatten()
+        return action
 
     # Set up function for computing SAC Q-losses
     def compute_critic_loss(self, obs: torch.Tensor, action: torch.Tensor,
