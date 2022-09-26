@@ -96,21 +96,12 @@ class PolicyNet_(nn.Module):
 
 class PolicyNet(nn.Module):
 
-    def __init__(self,
-                 obs_dim: int,
-                 hidden_dim: int,
-                 action_dim: int,
-                 action_bound: float,
-                 log_std_min: float = -20,
-                 log_std_max: float = 2):
+    def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int,
+                 action_bound: float):
         super(PolicyNet, self).__init__()
 
         # action_bound是环境可以接受的动作最大值
         self.action_bound = action_bound
-        # set the log std range
-        self.log_std_min = log_std_min
-        self.log_std_max = log_std_max
-
         self.fc1 = nn.Linear(obs_dim, hidden_dim)
         self.relu = nn.ReLU()
 
@@ -137,7 +128,7 @@ class PolicyNet(nn.Module):
         # normalize action and log_prob
         log_pi = dist.log_prob(x_t)
         # Enforcing Action Bound
-        log_pi -= torch.log(1 - pi.pow(2) + 1e-7)
+        log_pi = log_pi - torch.log(1 - pi.pow(2) + 1e-7)
 
         # Make sure outputs are in correct range
         mu = mu * self.action_bound
@@ -195,7 +186,7 @@ class Agent(object):
                  gamma: float,
                  alpha: float = 0.2,
                  automatic_entropy_tuning: bool = False,
-                 initial_random_steps: int = int(1e4),
+                 initial_random_steps: int = 100,
                  device: Any = None):
 
         self.env = env
@@ -239,7 +230,10 @@ class Agent(object):
             self.target_entropy = -np.prod((action_dim, )).item()  # heuristic
             # 使用alpha的log值,可以使训练结果比较稳定
             self.log_alpha = torch.tensor(
-                np.log(0.01), requires_grad=True, device=device)
+                np.log(0.01),
+                dtype=torch.float,
+                requires_grad=True,
+                device=device)
             self.alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
 
         self.device = device
@@ -313,9 +307,9 @@ class Agent(object):
             param_target.data.copy_(param_target.data * (1.0 - self.tau) +
                                     param.data * self.tau)
 
-    def learn_(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
-               next_obs: np.ndarray,
-               terminal: np.ndarray) -> Tuple[float, float]:
+    def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
+              next_obs: np.ndarray,
+              terminal: np.ndarray) -> Tuple[float, float]:
 
         device = self.device  # for shortening the following lines
         obs = torch.FloatTensor(obs).to(device)
@@ -332,14 +326,21 @@ class Agent(object):
         # Target actions come from *current* policy
         next_pi, next_log_pi = self.actor(next_obs)
 
+        # ###### train alpha #####
+        # If automatic entropy tuning is True, update alpha
+        if self.automatic_entropy_tuning:
+            alpha_loss = -torch.mean((self.log_alpha.exp() *
+                                      (log_pi + self.target_entropy).detach()))
+            self.alpha_optimizer.zero_grad()
+            alpha_loss.backward()
+            self.alpha_optimizer.step()
+            # used for the actor loss calculation
+            self.alpha = self.log_alpha.exp()
+
+        # ###### train Critic Network #####
         #  Prediction Q1(s,a), Q2(s,a)
         pred_q1_value = self.critic1(obs, actions)
         pred_q2_value = self.critic2(obs, actions)
-
-        # Min Double-Q: min(Q1(s,π(a|s)), Q2(s,π(a|s))),
-        q1_pi = self.critic1(obs, pi)
-        q2_pi = self.critic2(obs, pi)
-        min_q_pi = torch.min(q1_pi, q2_pi)
 
         # Target Q-values
         # Min Double-Q: min(Q1‾(s',π(a'|s')), Q2‾(s',π(a'|s')))
@@ -362,67 +363,17 @@ class Agent(object):
         q_loss.backward()
         self.critic_optimizer.step()
 
+        # ###### train Policy network #####
+        # Min Double-Q: min(Q1(s,π(a|s)), Q2(s,π(a|s))),
+        q1_pi = self.critic1(obs, pi)
+        q2_pi = self.critic2(obs, pi)
+        min_q_pi = torch.min(q1_pi, q2_pi)
+
         # Entropy-regularized policy loss
         policy_loss = torch.mean(self.alpha * log_pi - min_q_pi)
         self.actor_optimizer.zero_grad()
         policy_loss.backward()
         self.actor_optimizer.step()
-
-        # If automatic entropy tuning is True, update alpha
-        if self.automatic_entropy_tuning:
-            alpha_loss = -(self.log_alpha *
-                           (log_pi + self.target_entropy).detach()).mean()
-            self.alpha_optimizer.zero_grad()
-            alpha_loss.backward()
-            self.alpha_optimizer.step()
-            # used for the actor loss calculation
-            self.alpha = self.log_alpha.exp()
-
-        self.soft_update(self.critic1, self.target_critic1)
-        self.soft_update(self.critic2, self.target_critic2)
-        self.global_update_step += 1
-
-        return policy_loss.item(), q_loss.item()
-
-    def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
-              next_obs: np.ndarray,
-              terminal: np.ndarray) -> Tuple[float, float]:
-
-        device = self.device  # for shortening the following lines
-        obs = torch.FloatTensor(obs).to(device)
-        next_obs = torch.FloatTensor(next_obs).to(device)
-        actions = torch.LongTensor(action.reshape(-1, 1)).to(device)
-        rewards = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
-        terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
-
-        # 对倒立摆环境的奖励进行重塑以便训练
-        rewards = (rewards + 8.0) / 8.0
-        # MSE loss against Bellman backup
-        q_loss, q1_loss, q2_loss = self.compute_critic_loss(
-            obs, actions, rewards, next_obs, terminal)
-
-        self.critic1_optimizer.zero_grad()
-        q1_loss.backward()
-        self.critic1_optimizer.step()
-        self.critic2_optimizer.zero_grad()
-        q2_loss.backward()
-        self.critic2_optimizer.step()
-
-        # Entropy-regularized policy loss
-        policy_loss, log_pi = self.compute_actor_loss(obs)
-        self.actor_optimizer.zero_grad()
-        policy_loss.backward()
-        self.actor_optimizer.step()
-
-        # If automatic entropy tuning is True, update alpha
-        if self.automatic_entropy_tuning:
-            alpha_loss = -(self.log_alpha *
-                           (log_pi + self.target_entropy).detach()).mean()
-            self.alpha_optimizer.zero_grad()
-            alpha_loss.backward()
-            self.alpha_optimizer.step()
-            # used for the actor loss calculation
-            self.alpha = self.log_alpha.exp()
 
         self.soft_update(self.critic1, self.target_critic1)
         self.soft_update(self.critic2, self.target_critic2)
