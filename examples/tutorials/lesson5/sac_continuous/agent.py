@@ -18,7 +18,7 @@ def init_layer_uniform(layer: nn.Linear, init_w: float = 3e-3) -> nn.Linear:
     return layer
 
 
-class PolicyNet(nn.Module):
+class PolicyNet_(nn.Module):
 
     def __init__(self,
                  obs_dim: int,
@@ -94,12 +94,64 @@ class PolicyNet(nn.Module):
         return pi, log_pi
 
 
+class PolicyNet(nn.Module):
+
+    def __init__(self,
+                 obs_dim: int,
+                 hidden_dim: int,
+                 action_dim: int,
+                 action_bound: float,
+                 log_std_min: float = -20,
+                 log_std_max: float = 2):
+        super(PolicyNet, self).__init__()
+
+        # action_bound是环境可以接受的动作最大值
+        self.action_bound = action_bound
+        # set the log std range
+        self.log_std_min = log_std_min
+        self.log_std_max = log_std_max
+
+        self.fc1 = nn.Linear(obs_dim, hidden_dim)
+        self.relu = nn.ReLU()
+
+        # set log_std layer
+        self.std_layer = nn.Linear(hidden_dim, action_dim)
+
+        # set mean layer
+        self.mu_layer = nn.Linear(hidden_dim, action_dim)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out = self.fc1(x)
+        out = self.relu(out)
+
+        # get mean
+        mu = self.mu_layer(out)
+        # get std
+        std = F.softplus(self.std_layer(out))
+        # sample actions
+        dist = Normal(mu, std)
+        # Reparameterization trick (mean + std * N(0,1))
+        x_t = dist.rsample()
+
+        pi = torch.tanh(x_t)
+        # normalize action and log_prob
+        log_pi = dist.log_prob(x_t)
+        # Enforcing Action Bound
+        log_pi -= torch.log(1 - pi.pow(2) + 1e-7)
+
+        # Make sure outputs are in correct range
+        mu = mu * self.action_bound
+        pi = pi * self.action_bound
+        return pi, log_pi
+
+
 class CriticQ(nn.Module):
 
     def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int):
         super(CriticQ, self).__init__()
         self.fc1 = nn.Linear(obs_dim + action_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, action_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, action_dim)
         self.relu = nn.ReLU()
 
     def forward(self, x: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
@@ -108,6 +160,8 @@ class CriticQ(nn.Module):
         out = self.fc1(cat)
         out = self.relu(out)
         out = self.fc2(out)
+        out = self.relu(out)
+        out = self.fc3(out)
         return out
 
 
@@ -171,6 +225,8 @@ class Agent(object):
         # 策略网络优化器
         self.actor_optimizer = Adam(self.actor.parameters(), lr=actor_lr)
         # 价值网络优化器
+        self.critic1_optimizer = Adam(self.critic1.parameters(), lr=critic_lr)
+        self.critic2_optimizer = Adam(self.critic2.parameters(), lr=critic_lr)
         # Concat the Q-network parameters to use one optim
         self.Qnet_parameters = list(self.critic1.parameters()) + list(
             self.critic2.parameters())
@@ -182,7 +238,8 @@ class Agent(object):
         if self.automatic_entropy_tuning:
             self.target_entropy = -np.prod((action_dim, )).item()  # heuristic
             # 使用alpha的log值,可以使训练结果比较稳定
-            self.log_alpha = torch.zeros(1, requires_grad=True, device=device)
+            self.log_alpha = torch.tensor(
+                np.log(0.01), requires_grad=True, device=device)
             self.alpha_optimizer = Adam([self.log_alpha], lr=alpha_lr)
 
         self.device = device
@@ -233,7 +290,7 @@ class Agent(object):
         q2_loss = F.mse_loss(pred_q2_value, td_q_target.detach())
         q_loss = q1_loss + q2_loss
 
-        return q_loss
+        return q_loss, q1_loss, q2_loss
 
     # Set up function for computing SAC pi loss
     def compute_actor_loss(self, obs: torch.Tensor) -> torch.Tensor:
@@ -248,7 +305,7 @@ class Agent(object):
 
         # Entropy-regularized policy loss
         actor_loss = (self.alpha * log_pi - min_q_pi).mean()
-        return actor_loss
+        return actor_loss, log_pi
 
     def soft_update(self, net, target_net):
         for param_target, param in zip(target_net.parameters(),
@@ -256,9 +313,9 @@ class Agent(object):
             param_target.data.copy_(param_target.data * (1.0 - self.tau) +
                                     param.data * self.tau)
 
-    def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
-              next_obs: np.ndarray,
-              terminal: np.ndarray) -> Tuple[float, float]:
+    def learn_(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
+               next_obs: np.ndarray,
+               terminal: np.ndarray) -> Tuple[float, float]:
 
         device = self.device  # for shortening the following lines
         obs = torch.FloatTensor(obs).to(device)
@@ -266,6 +323,9 @@ class Agent(object):
         actions = torch.LongTensor(action.reshape(-1, 1)).to(device)
         rewards = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
         terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
+
+        # 对倒立摆环境的奖励进行重塑以便训练
+        rewards = (rewards + 8.0) / 8.0
 
         # Prediction π(a|s), logπ(a|s), π(a'|s'), logπ(a'|s'),
         pi, log_pi = self.actor(obs)
@@ -291,12 +351,6 @@ class Agent(object):
         td_v_target = min_q_next_pi - self.alpha * next_log_pi
         td_q_target = rewards + self.gamma * td_v_target * (1 - terminal)
 
-        # Entropy-regularized policy loss
-        policy_loss = torch.mean(self.alpha * log_pi - min_q_pi)
-        self.actor_optimizer.zero_grad()
-        policy_loss.backward()
-        self.actor_optimizer.step()
-
         # MSE loss against Bellman backup
         q1_loss = F.mse_loss(pred_q1_value, td_q_target.detach())
         q2_loss = F.mse_loss(pred_q2_value, td_q_target.detach())
@@ -307,6 +361,58 @@ class Agent(object):
         self.critic_optimizer.zero_grad()
         q_loss.backward()
         self.critic_optimizer.step()
+
+        # Entropy-regularized policy loss
+        policy_loss = torch.mean(self.alpha * log_pi - min_q_pi)
+        self.actor_optimizer.zero_grad()
+        policy_loss.backward()
+        self.actor_optimizer.step()
+
+        # If automatic entropy tuning is True, update alpha
+        if self.automatic_entropy_tuning:
+            alpha_loss = -(self.log_alpha *
+                           (log_pi + self.target_entropy).detach()).mean()
+            self.alpha_optimizer.zero_grad()
+            alpha_loss.backward()
+            self.alpha_optimizer.step()
+            # used for the actor loss calculation
+            self.alpha = self.log_alpha.exp()
+
+        self.soft_update(self.critic1, self.target_critic1)
+        self.soft_update(self.critic2, self.target_critic2)
+        self.global_update_step += 1
+
+        return policy_loss.item(), q_loss.item()
+
+    def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
+              next_obs: np.ndarray,
+              terminal: np.ndarray) -> Tuple[float, float]:
+
+        device = self.device  # for shortening the following lines
+        obs = torch.FloatTensor(obs).to(device)
+        next_obs = torch.FloatTensor(next_obs).to(device)
+        actions = torch.LongTensor(action.reshape(-1, 1)).to(device)
+        rewards = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
+        terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
+
+        # 对倒立摆环境的奖励进行重塑以便训练
+        rewards = (rewards + 8.0) / 8.0
+        # MSE loss against Bellman backup
+        q_loss, q1_loss, q2_loss = self.compute_critic_loss(
+            obs, actions, rewards, next_obs, terminal)
+
+        self.critic1_optimizer.zero_grad()
+        q1_loss.backward()
+        self.critic1_optimizer.step()
+        self.critic2_optimizer.zero_grad()
+        q2_loss.backward()
+        self.critic2_optimizer.step()
+
+        # Entropy-regularized policy loss
+        policy_loss, log_pi = self.compute_actor_loss(obs)
+        self.actor_optimizer.zero_grad()
+        policy_loss.backward()
+        self.actor_optimizer.step()
 
         # If automatic entropy tuning is True, update alpha
         if self.automatic_entropy_tuning:
