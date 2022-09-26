@@ -17,14 +17,14 @@ config = {
     'env': 'Pendulum-v1',
     'hidden_dim': 128,
     'total_steps': 20000,  # max training steps
-    'memory_size': 5000,  # Replay buffer size
+    'memory_size': 10000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'actor_lr': 3e-4,  # start learning rate
-    'critic_lr': 3e-4,  # end learning rate
+    'critic_lr': 3e-3,  # end learning rate
     'alpha_lr': 3e-4,  # end learning rate
     'alpha': 0.2,
     'automatic_entropy_tuning': True,
-    'initial_random_steps': 1000,
+    'initial_random_steps': 0,
     'gamma': 0.99,  # discounting factor
     'tau': 0.005,  # 软更新参数,
     'batch_size': 64,
@@ -38,15 +38,18 @@ config = {
 def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
                       memory_warmup_size: int):
     total_reward = 0
-    obs = env.reset()
     step = 0
     policy_loss_lst = []
     value_loss_lst = []
-    while True:
+    obs = env.reset()
+    done = False
+    while not done:
         step += 1
         action = agent.sample(obs)
         next_obs, reward, done, _ = env.step(action)
         rpm.append(obs, action, reward, next_obs, done)
+        total_reward += reward
+        obs = next_obs
         # train model
         if rpm.size() > memory_warmup_size:
             # s,a,r,s',done
@@ -64,10 +67,6 @@ def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
             policy_loss_lst.append(policy_loss)
             value_loss_lst.append(value_loss)
 
-        total_reward += reward
-        obs = next_obs
-        if done:
-            break
     return total_reward, step, np.mean(policy_loss_lst), np.mean(
         value_loss_lst)
 
@@ -100,38 +99,8 @@ def evaluate(agent: Agent,
     return mean_reward, std_reward
 
 
-class ActionNormalizer(gym.ActionWrapper):
-    """Rescale and relocate the actions."""
-
-    def action(self, action: np.ndarray) -> np.ndarray:
-        """Change the range (-1, 1) to (low, high)."""
-        low = self.action_space.low
-        high = self.action_space.high
-
-        scale_factor = (high - low) / 2
-        reloc_factor = high - scale_factor
-
-        action = action * scale_factor + reloc_factor
-        action = np.clip(action, low, high)
-
-        return action
-
-    def reverse_action(self, action: np.ndarray) -> np.ndarray:
-        """Change the range (low, high) to (-1, 1)."""
-        low = self.action_space.low
-        high = self.action_space.high
-
-        scale_factor = (high - low) / 2
-        reloc_factor = high - scale_factor
-
-        action = (action - reloc_factor) / scale_factor
-        action = np.clip(action, -1.0, 1.0)
-
-        return action
-
-
 def main():
-    algo_name = 'ddpg'
+    algo_name = 'sac'
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
     test_env = gym.make(args.env)
