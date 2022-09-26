@@ -108,9 +108,9 @@ class Agent(object):
                  action_dim: int,
                  actor_lr: float,
                  critic_lr: float,
-                 tau: float,
-                 gamma: float,
-                 action_bound: float,
+                 tau: float = 0.005,
+                 gamma: float = 0.99,
+                 action_bound: float = 1.0,
                  exploration_noise: float = 0.1,
                  target_policy_noise: float = 0.2,
                  target_policy_noise_clip: float = 0.5,
@@ -200,23 +200,23 @@ class Agent(object):
         clipped_noise = torch.clamp(noise, -self.target_policy_noise_clip,
                                     self.target_policy_noise_clip)
 
-        next_actions = (self.target_actor(next_obs) + clipped_noise).clamp(
-            -1.0, 1.0)
+        next_action = self.target_actor(next_obs)
+        next_actions = (next_action + clipped_noise).clamp(-1.0, 1.0)
         next_actions *= self.action_bound
 
         #  pred q value
         pred_values1 = self.critic1(obs, actions)
         pred_values2 = self.critic2(obs, actions)
 
-        # min (Q_1', Q_2')
-        next_values1 = self.target_critic1(next_obs, next_actions)
-        next_values2 = self.target_critic2(next_obs, next_actions)
-        next_values = torch.min(next_values1, next_values2)
+        # Min Double-Q: min(Q1‾(s',𝜇(s')), Q2‾(s',𝜇(s')))
+        next_q1_pi_tgt = self.target_critic1(next_obs, next_actions)
+        next_q2_pi_tgt = self.target_critic2(next_obs, next_actions)
+        min_next_q_pi_tgt = torch.min(next_q1_pi_tgt, next_q2_pi_tgt)
 
         # 时序差分目标
         # G_t   = r + gamma * v(s_{t+1})  if state != Terminal
         #       = r                       otherwise
-        td_target = rewards + self.gamma * next_values * (1 - terminal)
+        td_target = rewards + self.gamma * min_next_q_pi_tgt * (1 - terminal)
 
         # 均方误差损失函数
         critic1_loss = F.mse_loss(pred_values1, td_target.detach())
@@ -228,24 +228,22 @@ class Agent(object):
         critic_loss.backward()
         self.critic_optimizer.step()
 
+        pi = self.actor(obs)
+        q1_pi = self.critic1(obs, pi)
+        actor_loss = -torch.mean(q1_pi)
+
         # cal policy loss
         if self.global_update_step % self.policy_update_freq == 0:
             # train actor
-            actor_loss = -torch.mean(self.critic1(obs, self.actor(obs)).mean())
-
             self.actor_optimizer.zero_grad()
             actor_loss.backward()
             self.actor_optimizer.step()
 
             # 软更新策略网络
             self.soft_update(self.actor, self.target_actor)
-        else:
-            actor_loss = torch.zeros(1)
-
-        # 软更新价值网络
-        self.soft_update(self.critic2, self.target_critic2)
-        self.soft_update(self.critic1, self.target_critic1)
+            # 软更新价值网络
+            self.soft_update(self.critic2, self.target_critic2)
+            self.soft_update(self.critic1, self.target_critic1)
 
         self.global_update_step += 1
-
         return actor_loss.item(), critic1_loss.item()

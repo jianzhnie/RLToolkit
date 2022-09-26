@@ -16,7 +16,7 @@ config = {
     'test_seed': 42,
     'env': 'Pendulum-v1',
     'hidden_dim': 128,
-    'total_steps': 10000,  # max training steps
+    'total_steps': 20000,  # max training steps
     'memory_size': 5000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'actor_lr': 3e-4,  # start learning rate
