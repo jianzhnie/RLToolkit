@@ -124,7 +124,6 @@ class Agent(object):
         self.action_bound = action_bound
         # 目标网络软更新参数
         self.tau = tau
-        self.action_dim = action_dim
         self.global_update_step = 0
         self.initial_random_steps = initial_random_steps
         self.policy_update_freq = policy_update_freq
@@ -200,17 +199,17 @@ class Agent(object):
         clipped_noise = torch.clamp(noise, -self.target_policy_noise_clip,
                                     self.target_policy_noise_clip)
 
-        next_action = self.target_actor(next_obs)
-        next_actions = (next_action + clipped_noise).clamp(-1.0, 1.0)
-        next_actions *= self.action_bound
+        next_pi_tgt = self.target_actor(next_obs)
+        next_pi_tgt = (next_pi_tgt + clipped_noise).clamp(-1.0, 1.0)
+        next_pi_tgt *= self.action_bound
 
-        #  pred q value
+        # pred q value
         pred_values1 = self.critic1(obs, actions)
         pred_values2 = self.critic2(obs, actions)
 
         # Min Double-Q: min(Q1‾(s',𝜇(s')), Q2‾(s',𝜇(s')))
-        next_q1_pi_tgt = self.target_critic1(next_obs, next_actions)
-        next_q2_pi_tgt = self.target_critic2(next_obs, next_actions)
+        next_q1_pi_tgt = self.target_critic1(next_obs, next_pi_tgt)
+        next_q2_pi_tgt = self.target_critic2(next_obs, next_pi_tgt)
         min_next_q_pi_tgt = torch.min(next_q1_pi_tgt, next_q2_pi_tgt)
 
         # 时序差分目标
@@ -242,8 +241,8 @@ class Agent(object):
             # 软更新策略网络
             self.soft_update(self.actor, self.target_actor)
             # 软更新价值网络
-            self.soft_update(self.critic2, self.target_critic2)
             self.soft_update(self.critic1, self.target_critic1)
+            self.soft_update(self.critic2, self.target_critic2)
 
         self.global_update_step += 1
         return actor_loss.item(), critic1_loss.item()
