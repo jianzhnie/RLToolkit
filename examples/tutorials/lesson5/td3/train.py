@@ -17,16 +17,17 @@ config = {
     'env': 'Pendulum-v1',
     'hidden_dim': 128,
     'total_steps': 20000,  # max training steps
-    'memory_size': 5000,  # Replay buffer size
-    'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
-    'actor_lr': 3e-4,  # start learning rate
+    'memory_size': 10000,  # Replay buffer size
+    'memory_warmup_size': 2000,  # Replay buffer memory_warmup_size
+    'actor_lr': 1e-3,  # start learning rate
     'critic_lr': 1e-3,  # end learning rate
+    'exploration_noise': 0.1,
+    'target_policy_noise': 0.2,
+    'target_policy_noise_clip': 0.5,
     'initial_random_steps': 2000,
-    'ou_noise_theta': 1.0,
-    'ou_noise_sigma': 0.1,
+    'policy_update_freq': 2,
     'gamma': 0.99,  # discounting factor
     'tau': 0.005,  # 软更新参数,
-    'sigma': 0.01,
     'batch_size': 64,
     'eval_render': False,  # do eval render
     'test_every_steps': 1000,  # evaluation freq
@@ -46,6 +47,8 @@ def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
         step += 1
         action = agent.sample(obs)
         next_obs, reward, done, _ = env.step(action)
+        # # 对倒立摆环境的奖励进行重塑以便训练
+        reward = (reward + 8.0) / 8.0
         rpm.append(obs, action, reward, next_obs, done)
         # train model
         if rpm.size() > memory_warmup_size:
@@ -130,7 +133,11 @@ def main():
         tau=args.tau,
         gamma=args.gamma,
         action_bound=action_bound,
+        exploration_noise=args.exploration_noise,
+        target_policy_noise=args.target_policy_noise,
+        target_policy_noise_clip=args.target_policy_noise_clip,
         initial_random_steps=args.initial_random_steps,
+        policy_update_freq=args.policy_update_freq,
         device=device)
 
     # start training, memory warm up
