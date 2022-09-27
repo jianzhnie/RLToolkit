@@ -27,8 +27,8 @@ config = {
     'update_target_step': 100,  # target model update freq
     'start_lr': 0.01,  # start learning rate
     'end_lr': 0.00001,  # end learning rate
-    'start_epslion': 1,  # start greedy epslion
-    'end_epslion': 0.1,  # end greedy epslion
+    'start_epsilon': 1,  # start greedy epsilon
+    'end_epsilon': 0.1,  # end greedy epsilon
     'gamma': 0.99,  # discounting factor
     'eval_render': True,  # do eval render
     'test_every_steps': 1000,  # evaluation freq
@@ -135,8 +135,8 @@ def main():
         update_target_step=args.update_target_step,
         start_lr=args.start_lr,
         end_lr=args.end_lr,
-        start_epslion=args.start_epslion,
-        end_epsilon=args.end_epslion,
+        start_epsilon=args.start_epsilon,
+        end_epsilon=args.end_epsilon,
         n_step=args.n_step,
         device=device)
 
@@ -159,13 +159,13 @@ def main():
         cum_steps += steps
 
         pbar.set_description('[train]exploration:{}, learning rate:{}'.format(
-            agent.curr_epslion, agent.alg.optimizer.param_groups[0]['lr']))
+            agent.curr_epsilon, agent.alg.optimizer.param_groups[0]['lr']))
         tensorboard.add_scalar('{}/training_rewards'.format(algo_name),
                                total_reward, cum_steps)
         tensorboard.add_scalar('{}/loss'.format(algo_name), loss,
                                cum_steps)  # mean of total loss
         tensorboard.add_scalar('{}/exploration'.format(algo_name),
-                               agent.curr_epslion, cum_steps)
+                               agent.curr_epsilon, cum_steps)
 
         pbar.update(steps)
 
