@@ -16,16 +16,16 @@ config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'CartPole-v0',
-    'algo': 'dqn',
+    'algo': 'duling_dqn',
     'hidden_dim': 128,
     'total_steps': 10000,  # max training steps
-    'memory_size': 5000,  # Replay buffer size
+    'memory_size': 10000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'batch_size': 64,  # repaly sample batch size
     'update_target_step': 100,  # target model update freq
     'learning_rate': 0.001,  # start learning rate
     'epsilon': 1,  # start greedy epsilon
-    'epsilon_decay': 0.995,  # end greedy epsilon
+    'epsilon_decay': 0.9995,  # epsilon decay rate
     'min_epsilon': 0.1,
     'gamma': 0.99,  # discounting factor
     'eval_render': True,  # do eval render
@@ -38,10 +38,10 @@ config = {
 def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
                       memory_warmup_size: int):
     total_reward = 0
-    obs = env.reset()
     step = 0
-    loss_lst = []
-    while True:
+    obs = env.reset()
+    done = False
+    while not done:
         step += 1
         action = agent.sample(obs)
         next_obs, reward, done, _ = env.step(action)
@@ -57,40 +57,41 @@ def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
             batch_next_obs = samples['next_obs']
             batch_terminal = samples['terminal']
 
-            train_loss = agent.learn(batch_obs, batch_action, batch_reward,
-                                     batch_next_obs, batch_terminal)
-            loss_lst.append(train_loss)
-
+            agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs,
+                        batch_terminal)
         total_reward += reward
         obs = next_obs
-        if done:
-            break
-    return total_reward, step, np.mean(loss_lst)
+    return total_reward, step
 
 
 def run_evaluate_episodes(agent: Agent,
                           env: gym.Env,
+                          n_eval_episodes: int = 5,
                           render: bool = False,
                           video_folder: str = None):
     if video_folder is not None:
         env = gym.wrappers.RecordVideo(env, video_folder=video_folder)
-    obs = env.reset()
-    done = False
-    score = 0
-    while not done:
-        action = agent.predict(obs)
-        next_obs, reward, done, _ = env.step(action)
-        obs = next_obs
-        score += reward
-        if render:
-            env.render()
-        if done:
-            obs = env.close()
-    return score
+    eval_rewards = []
+    for _ in range(n_eval_episodes):
+        obs = env.reset()
+        done = False
+        score = 0
+        while not done:
+            action = agent.predict(obs)
+            next_obs, reward, done, _ = env.step(action)
+            obs = next_obs
+            score += reward
+            if render:
+                env.render()
+            if done:
+                obs = env.close()
+        eval_rewards.append(score)
+    mean_reward = np.mean(eval_rewards)
+    std_reward = np.std(eval_rewards)
+    return mean_reward, std_reward
 
 
 def main():
-    algo_name = 'dulingdqn'
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
     test_env = gym.make(args.env)
@@ -127,7 +128,7 @@ def main():
             total=args.memory_warmup_size,
             desc='[Replay Memory Warm Up]') as pbar:
         while rpm.size() < args.memory_warmup_size:
-            total_reward, steps, _ = run_train_episode(
+            total_reward, steps = run_train_episode(
                 agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
             pbar.update(steps)
 
@@ -136,17 +137,17 @@ def main():
     test_flag = 0
     while cum_steps < args.total_steps:
         # start epoch
-        total_reward, steps, loss = run_train_episode(
+        total_reward, steps = run_train_episode(
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
         cum_steps += steps
 
-        pbar.set_description('[train]exploration:{}, learning rate:{}'.format(
-            agent.epsilon, agent.optimizer.param_groups[0]['lr']))
-        tensorboard.add_scalar('{}/training_rewards'.format(algo_name),
+        logger.info(
+            '[Train], current steps: {}, exploration:{}, learning rate:{}, Reward Sum {}.'
+            .format(cum_steps, agent.epsilon,
+                    agent.optimizer.param_groups[0]['lr'], total_reward))
+        tensorboard.add_scalar('{}/training_rewards'.format(args.algo),
                                total_reward, cum_steps)
-        tensorboard.add_scalar('{}/loss'.format(algo_name), loss,
-                               cum_steps)  # mean of total loss
-        tensorboard.add_scalar('{}/exploration'.format(algo_name),
+        tensorboard.add_scalar('{}/exploration'.format(args.algo),
                                agent.epsilon, cum_steps)
 
         pbar.update(steps)
@@ -156,13 +157,12 @@ def main():
             while cum_steps // args.test_every_steps >= test_flag:
                 test_flag += 1
             eval_rewards_mean = run_evaluate_episodes(agent, test_env)
-            pbar.write('testing')
             logger.info(
                 'eval_agent done, (steps, eval_reward): ({}, {})'.format(
                     cum_steps, eval_rewards_mean))
 
             tensorboard.add_scalar(
-                '{}/mean_validation_rewards'.format(algo_name),
+                '{}/mean_validation_rewards'.format(args.algo),
                 eval_rewards_mean, cum_steps)
 
     # render and record video
