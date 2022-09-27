@@ -16,7 +16,7 @@ config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'CartPole-v0',
-    'algo': 'duling_dqn',
+    'algo': 'dqn',
     'hidden_dim': 128,
     'total_steps': 10000,  # max training steps
     'memory_size': 10000,  # Replay buffer size
@@ -142,7 +142,7 @@ def main():
         cum_steps += steps
 
         logger.info(
-            '[Train], current steps: {}, exploration:{}, learning rate:{}, Reward Sum {}.'
+            '[Train], steps: {}, exploration:{}, learning rate:{}, Reward Sum {}.'
             .format(cum_steps, agent.epsilon,
                     agent.optimizer.param_groups[0]['lr'], total_reward))
         tensorboard.add_scalar('{}/training_rewards'.format(args.algo),
@@ -156,18 +156,20 @@ def main():
         if cum_steps // args.test_every_steps >= test_flag:
             while cum_steps // args.test_every_steps >= test_flag:
                 test_flag += 1
-            eval_rewards_mean = run_evaluate_episodes(agent, test_env)
-            logger.info(
-                'eval_agent done, (steps, eval_reward): ({}, {})'.format(
-                    cum_steps, eval_rewards_mean))
-
+            mean_reward, std_reward = run_evaluate_episodes(agent, test_env)
+            logger.info('[Eval], steps: {}, mean: {}, std: {:.2f}'.format(
+                cum_steps, mean_reward, std_reward))
             tensorboard.add_scalar(
-                '{}/mean_validation_rewards'.format(args.algo),
-                eval_rewards_mean, cum_steps)
+                '{}/mean_validation_rewards'.format(args.algo), mean_reward,
+                cum_steps)
 
     # render and record video
     run_evaluate_episodes(
-        agent, test_env, render=True, video_folder=args.video_folder)
+        agent,
+        test_env,
+        n_eval_episodes=1,
+        render=True,
+        video_folder=args.video_folder)
     pbar.close()
 
 
