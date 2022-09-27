@@ -41,6 +41,7 @@ class PolicyNet(nn.Module):
                  obs_dim: int,
                  hidden_dim: int,
                  action_dim: int,
+                 action_bound: float = 1.0,
                  init_w: float = 3e-3):
         super(PolicyNet, self).__init__()
         self.fc1 = nn.Linear(obs_dim, hidden_dim)
@@ -48,6 +49,7 @@ class PolicyNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.fc2.weight.data.uniform_(-init_w, init_w)
         self.fc2.bias.data.uniform_(-init_w, init_w)
+        self.action_bound = action_bound
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.fc1(x)
@@ -56,6 +58,7 @@ class PolicyNet(nn.Module):
         # 连续动作空间，利用 tanh() 函数将特征映射到 [-1, 1],
         # 然后通过变换，得到 [low, high] 的输出
         out = torch.tanh(x)
+        out = out * self.action_bound
         return out
 
 
@@ -114,7 +117,7 @@ class Agent(object):
                  exploration_noise: float = 0.1,
                  target_policy_noise: float = 0.2,
                  target_policy_noise_clip: float = 0.5,
-                 initial_random_steps: int = int(1e3),
+                 initial_random_steps: int = int(1e4),
                  policy_update_freq: int = 2,
                  device: Any = None):
 
@@ -137,7 +140,8 @@ class Agent(object):
         self.target_policy_noise_clip = target_policy_noise_clip
 
         # 策略网络
-        self.actor = PolicyNet(obs_dim, hidden_dim, action_dim).to(device)
+        self.actor = PolicyNet(obs_dim, hidden_dim, action_dim,
+                               action_bound).to(device)
         # 价值网络
         self.critic1 = Critic(obs_dim, hidden_dim, action_dim).to(device)
         self.critic2 = Critic(obs_dim, hidden_dim, action_dim).to(device)
@@ -159,22 +163,21 @@ class Agent(object):
 
     def sample(self, obs: np.ndarray):
         if self.global_update_step < self.initial_random_steps:
-            selected_action = self.env.action_space.sample()
+            action = self.env.action_space.sample()
         else:
             obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-            selected_action = self.actor(obs).detach().cpu().numpy()
+            action = self.actor(obs).detach().cpu().numpy()
             # add noise for exploration during training
             noise = self.exploration_noise.sample()
-            selected_action = np.clip(selected_action + noise, -1.0, 1.0)
-            selected_action *= self.action_bound
-        selected_action = selected_action.flatten()
-        return selected_action
+            action += noise
+            action = np.clip(action, -self.action_bound, self.action_bound)
+        action = action.flatten()
+        return action
 
     def predict(self, obs):
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-        selected_action = self.actor(obs).detach().cpu().numpy().flatten()
-        selected_action *= self.action_bound
-        return selected_action
+        action = self.actor(obs).detach().cpu().numpy().flatten()
+        return action
 
     def soft_update(self, net, target_net):
         for param_target, param in zip(target_net.parameters(),
@@ -200,9 +203,8 @@ class Agent(object):
                                     self.target_policy_noise_clip)
 
         next_pi_tgt = self.target_actor(next_obs)
-        next_pi_tgt = (next_pi_tgt + clipped_noise).clamp(-1.0, 1.0)
-        next_pi_tgt *= self.action_bound
-
+        next_pi_tgt = torch.clamp(next_pi_tgt + clipped_noise,
+                                  -self.action_bound, self.action_bound)
         # pred q value
         # Prediction Q1(s,𝜇(s)), Q1(s,a), Q2(s,a)
         pred_values1 = self.critic1(obs, actions)
@@ -228,13 +230,12 @@ class Agent(object):
         critic_loss.backward()
         self.critic_optimizer.step()
 
+        pi = self.actor(obs)
+        q1_pi = self.critic1(obs, pi)
+        actor_loss = -torch.mean(q1_pi)
+
         # cal policy loss
         if self.global_update_step % self.policy_update_freq == 0:
-
-            pi = self.actor(obs)
-            q1_pi = self.critic1(obs, pi)
-            actor_loss = -torch.mean(q1_pi)
-
             # train actor
             self.actor_optimizer.zero_grad()
             actor_loss.backward()
@@ -245,9 +246,6 @@ class Agent(object):
             # 软更新价值网络
             self.soft_update(self.critic1, self.target_critic1)
             self.soft_update(self.critic2, self.target_critic2)
-
-        else:
-            actor_loss = torch.zeros(1)
 
         self.global_update_step += 1
         return actor_loss.item(), critic1_loss.item()

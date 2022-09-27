@@ -18,8 +18,8 @@ config = {
     'hidden_dim': 128,
     'total_steps': 20000,  # max training steps
     'memory_size': 10000,  # Replay buffer size
-    'memory_warmup_size': 2000,  # Replay buffer memory_warmup_size
-    'actor_lr': 1e-3,  # start learning rate
+    'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
+    'actor_lr': 3e-4,  # start learning rate
     'critic_lr': 1e-3,  # end learning rate
     'exploration_noise': 0.1,
     'target_policy_noise': 0.2,
