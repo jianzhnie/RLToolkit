@@ -114,7 +114,7 @@ class Agent(object):
                  exploration_noise: float = 0.1,
                  target_policy_noise: float = 0.2,
                  target_policy_noise_clip: float = 0.5,
-                 initial_random_steps: int = int(1e4),
+                 initial_random_steps: int = int(1e3),
                  policy_update_freq: int = 2,
                  device: Any = None):
 
@@ -228,12 +228,13 @@ class Agent(object):
         critic_loss.backward()
         self.critic_optimizer.step()
 
-        pi = self.actor(obs)
-        q1_pi = self.critic1(obs, pi)
-        actor_loss = -torch.mean(q1_pi)
-
         # cal policy loss
         if self.global_update_step % self.policy_update_freq == 0:
+
+            pi = self.actor(obs)
+            q1_pi = self.critic1(obs, pi)
+            actor_loss = -torch.mean(q1_pi)
+
             # train actor
             self.actor_optimizer.zero_grad()
             actor_loss.backward()
@@ -244,6 +245,9 @@ class Agent(object):
             # 软更新价值网络
             self.soft_update(self.critic1, self.target_critic1)
             self.soft_update(self.critic2, self.target_critic2)
+
+        else:
+            actor_loss = torch.zeros(1)
 
         self.global_update_step += 1
         return actor_loss.item(), critic1_loss.item()
