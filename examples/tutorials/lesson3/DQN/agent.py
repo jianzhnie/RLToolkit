@@ -3,7 +3,7 @@ import copy
 import numpy as np
 import torch
 import torch.nn.functional as F
-from network import QNet
+from network import DulingNet, QNet
 from torch.optim import Adam
 
 from rltoolkit.models.utils import hard_target_update
@@ -13,10 +13,10 @@ class Agent(object):
     """Agent.
 
     Args:
-        algorithm (`parl.Algorithm`): algorithm to be used in this agent.
+        algo (`Algorithm`): algorithm to be used in this agent.
         action_dim (int): action space dimension
         total_step (int): total epsilon decay steps
-        start_lr (float): initial learning rate
+        learning_rate (float): initial learning rate
         update_target_step (int): target network update frequency
     """
 
@@ -44,7 +44,10 @@ class Agent(object):
         self.action_dim = action_dim
 
         # Main network
-        self.qnet = QNet(obs_dim, hidden_dim, action_dim).to(device)
+        if 'duling' in algo:
+            self.qnet = DulingNet(obs_dim, hidden_dim, action_dim).to(device)
+        else:
+            self.qnet = QNet(obs_dim, hidden_dim, action_dim).to(device)
         # Target network
         self.target_qnet = copy.deepcopy(self.qnet)
         # Create an optimizer
@@ -117,10 +120,10 @@ class Agent(object):
         pred_value = self.qnet(obs).gather(1, action)
 
         # Target for Q regression
-        if self.algo == 'dqn':
+        if self.algo in ['dqn', 'duling_dqn']:
             next_q_value = self.target_qnet(next_obs).max(1, keepdim=True)[0]
 
-        elif self.algo == 'ddqn':
+        elif self.algo in ['ddqn', 'duling_ddqn']:
             greedy_action = self.qnet(next_obs).max(dim=1, keepdim=True)[1]
             next_q_value = self.target_qnet(next_obs).gather(1, greedy_action)
 
