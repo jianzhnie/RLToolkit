@@ -23,7 +23,7 @@ class Agent(Agent):
                  update_target_step: int,
                  start_lr: float = 0.001,
                  end_lr: float = 0.00001,
-                 start_epslion: float = 1.0,
+                 start_epsilon: float = 1.0,
                  end_epsilon: float = 0.1,
                  n_step: int = 3,
                  device='cpu'):
@@ -31,12 +31,12 @@ class Agent(Agent):
         self.global_update_step = 0
         self.update_target_step = update_target_step
         self.action_dim = action_dim
-        self.curr_epslion = start_epslion
-        self.end_epslion = end_epsilon
+        self.curr_epsilon = start_epsilon
+        self.end_epsilon = end_epsilon
         self.end_lr = end_lr
         self.n_step = n_step
         self.device = device
-        self.ep_scheduler = LinearDecayScheduler(start_epslion, total_step)
+        self.ep_scheduler = LinearDecayScheduler(start_epsilon, total_step)
         self.lr_scheduler = LinearDecayScheduler(start_lr, total_step)
 
     def sample(self, obs) -> int:
@@ -51,14 +51,14 @@ class Agent(Agent):
             act (int): action
         """
         explore = np.random.choice(
-            [True, False], p=[self.curr_epslion, 1 - self.curr_epslion])
+            [True, False], p=[self.curr_epsilon, 1 - self.curr_epsilon])
         if explore:
             act = np.random.randint(self.action_dim)
         else:
             act = self.predict(obs)
 
-        # epslion decay
-        self.curr_epslion = max(self.ep_scheduler.step(1), self.end_epslion)
+        # epsilon decay
+        self.curr_epsilon = max(self.ep_scheduler.step(1), self.end_epsilon)
         return act
 
     def predict(self, obs) -> int:
