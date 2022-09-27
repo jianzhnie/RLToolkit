@@ -20,11 +20,11 @@ config = {
     'memory_size': 10000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'actor_lr': 3e-4,  # start learning rate
-    'critic_lr': 3e-3,  # end learning rate
+    'critic_lr': 3e-4,  # end learning rate
     'alpha_lr': 3e-4,  # end learning rate
     'alpha': 0.2,
     'automatic_entropy_tuning': True,
-    'initial_random_steps': 0,
+    'initial_random_steps': 2000,
     'gamma': 0.99,  # discounting factor
     'tau': 0.005,  # 软更新参数,
     'batch_size': 64,
