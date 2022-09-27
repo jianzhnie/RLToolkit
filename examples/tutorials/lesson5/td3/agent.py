@@ -204,6 +204,7 @@ class Agent(object):
         next_pi_tgt *= self.action_bound
 
         # pred q value
+        # Prediction Q1(s,𝜇(s)), Q1(s,a), Q2(s,a)
         pred_values1 = self.critic1(obs, actions)
         pred_values2 = self.critic2(obs, actions)
 
