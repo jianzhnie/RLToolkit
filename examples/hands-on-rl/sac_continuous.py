@@ -99,11 +99,10 @@ class SACContinuous:
 
     def calc_target(self, rewards, next_states, dones):  # 计算目标Q值
         next_actions, log_prob = self.actor(next_states)
-        entropy = -log_prob
         q1_value = self.target_critic_1(next_states, next_actions)
         q2_value = self.target_critic_2(next_states, next_actions)
         next_value = torch.min(q1_value,
-                               q2_value) + self.log_alpha.exp() * entropy
+                               q2_value) + self.log_alpha.exp() * (-log_prob)
         td_target = rewards + self.gamma * next_value * (1 - dones)
         return td_target
 
@@ -146,18 +145,17 @@ class SACContinuous:
 
         # 更新策略网络
         new_actions, log_prob = self.actor(states)
-        entropy = -log_prob
         q1_value = self.critic_1(states, new_actions)
         q2_value = self.critic_2(states, new_actions)
-        actor_loss = torch.mean(-self.log_alpha.exp() * entropy -
+        actor_loss = torch.mean(self.log_alpha.exp() * log_prob -
                                 torch.min(q1_value, q2_value))
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
         # 更新alpha值
-        alpha_loss = torch.mean(
-            (entropy - self.target_entropy).detach() * self.log_alpha.exp())
+        alpha_loss = torch.mean(-(log_prob + self.target_entropy).detach() *
+                                self.log_alpha.exp())
         self.log_alpha_optimizer.zero_grad()
         alpha_loss.backward()
         self.log_alpha_optimizer.step()
