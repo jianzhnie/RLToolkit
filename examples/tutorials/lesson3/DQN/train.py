@@ -8,26 +8,25 @@ from tqdm import tqdm
 
 sys.path.append('../../../../')
 from agent import Agent
-from network import DulingNet, QNet
 
 from rltoolkit.data.buffer.replaybuffer import ReplayBuffer
-from rltoolkit.policy.modelfree import DDQN, DQN
 from rltoolkit.utils import logger, tensorboard
 
 config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'CartPole-v0',
+    'algo': 'dqn',
     'hidden_dim': 128,
     'total_steps': 10000,  # max training steps
-    'memory_size': 2000,  # Replay buffer size
-    'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
+    'memory_size': 5000,  # Replay buffer size
+    'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'batch_size': 64,  # repaly sample batch size
     'update_target_step': 100,  # target model update freq
-    'start_lr': 0.003,  # start learning rate
-    'end_lr': 0.00001,  # end learning rate
-    'start_epslion': 1,  # start greedy epslion
-    'end_epslion': 0.1,  # end greedy epslion
+    'learning_rate': 0.001,  # start learning rate
+    'epsilon': 1,  # start greedy epsilon
+    'epsilon_decay': 0.995,  # end greedy epsilon
+    'min_epsilon': 0.1,
     'gamma': 0.99,  # discounting factor
     'eval_render': True,  # do eval render
     'test_every_steps': 1000,  # evaluation freq
@@ -108,30 +107,19 @@ def main():
     action_dim = env.action_space.n
     rpm = ReplayBuffer(
         obs_dim=obs_dim, max_size=args.memory_size, batch_size=args.batch_size)
-    # get model
-    model = QNet(
-        obs_dim=obs_dim, action_dim=action_dim, hidden_dim=args.hidden_dim)
-    # get algorithm
-
-    if algo_name == 'dqn':
-        alg = DQN(model, gamma=args.gamma, lr=args.start_lr, device=device)
-    elif algo_name == 'ddqn':
-        alg = DDQN(model, gamma=args.gamma, lr=args.start_lr, device=device)
-    elif algo_name == 'dulingdqn':
-        model = DulingNet(
-            obs_dim=obs_dim, action_dim=action_dim, hidden_dim=args.hidden_dim)
-        alg = DDQN(model, gamma=args.gamma, lr=args.start_lr, device=device)
 
     # get agent
     agent = Agent(
-        alg,
+        obs_dim=obs_dim,
+        hidden_dim=args.hidden_dim,
         action_dim=action_dim,
-        total_step=args.total_steps,
+        algo=args.algo,
+        gamma=args.gamma,
+        epsilon=args.epsilon,
+        epsilon_decay=args.epsilon_decay,
+        min_epsilon=args.min_epsilon,
+        learning_rate=args.learning_rate,
         update_target_step=args.update_target_step,
-        start_lr=args.start_lr,
-        end_lr=args.end_lr,
-        start_epslion=args.start_epslion,
-        end_epsilon=args.end_epslion,
         device=device)
 
     # start training, memory warm up
@@ -143,7 +131,7 @@ def main():
                 agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
             pbar.update(steps)
 
-    pbar = tqdm(total=args.total_steps, desc='[Training]')
+    pbar = tqdm(total=args.total_steps)
     cum_steps = 0  # this is the current timestep
     test_flag = 0
     while cum_steps < args.total_steps:
@@ -153,13 +141,13 @@ def main():
         cum_steps += steps
 
         pbar.set_description('[train]exploration:{}, learning rate:{}'.format(
-            agent.curr_epslion, agent.alg.optimizer.param_groups[0]['lr']))
+            agent.epsilon, agent.optimizer.param_groups[0]['lr']))
         tensorboard.add_scalar('{}/training_rewards'.format(algo_name),
                                total_reward, cum_steps)
         tensorboard.add_scalar('{}/loss'.format(algo_name), loss,
                                cum_steps)  # mean of total loss
         tensorboard.add_scalar('{}/exploration'.format(algo_name),
-                               agent.curr_epslion, cum_steps)
+                               agent.epsilon, cum_steps)
 
         pbar.update(steps)
 
