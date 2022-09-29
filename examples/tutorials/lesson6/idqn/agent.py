@@ -30,7 +30,9 @@ class QNet(nn.Module):
             q_values[agent_i] = getattr(self, 'agent_{}'.format(agent_i))(
                 obs[:, agent_i, :]).unsqueeze(1)
 
-        return torch.cat(q_values, dim=1)
+        # batch_size * num_agents * acion_dim
+        q_value = torch.cat(q_values, dim=1)
+        return q_value
 
 
 class Agent(object):
@@ -47,6 +49,7 @@ class Agent(object):
                  device='cpu'):
         super().__init__()
 
+        self.env = env
         self.algo = algo
         self.gamma = gamma
         self.epsilon = epsilon
@@ -65,27 +68,21 @@ class Agent(object):
         self.device = device
 
     def sample(self, obs):
-        obs = torch.tensor(obs, dtype=torch.float).unsqueeze(0)
-        out = self.qnet(obs)
-        mask = (torch.rand((out.shape[0], )) <= self.epsilon)
-        action = torch.empty((
-            out.shape[0],
-            out.shape[1],
-        ))
-        action[mask] = torch.randint(0, out.shape[2],
-                                     action[mask].shape).float()
-        action[~mask] = out[~mask].argmax(dim=2).float()
-        action = action[0].cpu().numpy().tolist()
+
+        if np.random.rand() <= self.epsilon <= self.epsilon:
+            action = self.env.action_space.sample()
+        else:
+            action = self.predict(obs)
+
+        # Decaying epsilon
+        self.epsilon *= self.epsilon_decay
+        self.epsilon = max(self.epsilon, self.min_epsilon)
         return action
 
     def predict(self, obs):
         obs = torch.tensor(obs, dtype=torch.float).unsqueeze(0)
         out = self.qnet(obs)
-        action = torch.empty((
-            out.shape[0],
-            out.shape[1],
-        ))
-        action = out.argmax(dim=2).float()
+        action = out.argmax(dim=2)
         action = action[0].cpu().numpy().tolist()
         return action
 
@@ -99,9 +96,7 @@ class Agent(object):
         reward = torch.FloatTensor(reward).to(device)
         terminal = torch.FloatTensor(terminal).to(device)
 
-        pred_value = self.qnet(obs).gather(
-            2,
-            action.unsqueeze(-1).long()).squeeze(-1)
+        pred_value = self.qnet(obs).gather(2, action.unsqueeze(-1)).squeeze(-1)
         next_q_value = self.target_qnet(next_obs).max(dim=2)[0]
 
         target = reward + self.gamma * next_q_value * terminal
