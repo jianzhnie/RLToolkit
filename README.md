@@ -1,4 +1,5 @@
 <!--
+
  * @Author: jianzhnie
  * @LastEditors: jianzhnie
  * @Description: RLToolKit is a flexible and high-efficient reinforcement learning framework.
@@ -71,9 +72,16 @@ The main abstractions introduced by PARL that are used to build an agent recursi
 
 RLToolkit implements the following model-free deep reinforcement learning (DRL) algorithms:
 
+![../_images/rl_algorithms_9_15.svg](https://spinningup.openai.com/en/latest/_images/rl_algorithms_9_15.svg)
+
+A non-exhaustive, but useful taxonomy of algorithms in modern RL.
+
+
+
 <img src="docs/images/algorithms.png" alt="Coach Design" style="width: 800px;"/>
 
 ### Value Optimization Agents
+
 * [Deep Q Network (DQN)](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)  ([code]())
 * [Double Deep Q Network (DDQN)](https://arxiv.org/pdf/1509.06461.pdf)  ([code]())
 * [Dueling Q Network](https://arxiv.org/abs/1511.06581) ([code]())
@@ -202,6 +210,30 @@ We're actively working on refactoring and trying to make the codebase cleaner an
 9. Twin Delayed DDPG (TD3) <sub><sup> ([S. Fujimoto et al. 2018](https://arxiv.org/abs/1802.09477)) </sup></sub>
 10. Soft Actor-Critic (SAC) <sub><sup> ([T. Haarnoja et al. 2018](https://arxiv.org/abs/1801.01290)) </sup></sub>
 11. SAC with automatic entropy adjustment (SAC-AEA) <sub><sup> ([T. Haarnoja et al. 2018](https://arxiv.org/abs/1812.05905)) </sup></sub>
+
+
+| Policy Optimization | Algorithms                                    | Paper                                                        | Link |
+| ------------------- | --------------------------------------------- | ------------------------------------------------------------ | ---- |
+| Policy Optimization | [A2C / A3C](https://arxiv.org/abs/1602.01783) | (Asynchronous Advantage Actor-Critic): Mnih et al, 2016      |      |
+| Policy Optimization | [PPO](https://arxiv.org/abs/1707.06347)       | (Proximal Policy Optimization): Schulman et al, 2017         |      |
+| Policy Optimization |                                               | [TRPO](https://arxiv.org/abs/1502.05477) (Trust Region Policy Optimization): Schulman et al, 2015 |      |
+| Policy Optimization |                                               |                                                              |      |
+|                     |                                               |                                                              |      |
+|                     |                                               |                                                              |      |
+|                     |                                               |                                                              |      |
+| Q-Learning          | DQN                                           | [DQN](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf) (Deep Q-Networks): Mnih et al, 2013 |      |
+| Q-Learning          | QR-DQN                                        | [QR-DQN](https://arxiv.org/abs/1710.10044) (Quantile Regression DQN): Dabney et al, 2017 |      |
+| Q-Learning          | C51                                           | [C51](https://arxiv.org/abs/1707.06887) (Categorical 51-Atom DQN): Bellemare et al, 2017 |      |
+| Q-Learning          | HER                                           | [HER](https://arxiv.org/abs/1707.01495) (Hindsight Experience Replay): Andrychowicz et al, 2017 |      |
+| Q-Learning          |                                               |                                                              |      |
+| Po & Q-Learning     |                                               | [DDPG](https://arxiv.org/abs/1509.02971) (Deep Deterministic Policy Gradient): Lillicrap et al, 2015 |      |
+| Po & Q-Learning     |                                               | [TD3](https://arxiv.org/abs/1802.09477) (Twin Delayed DDPG): Fujimoto et al, 2018 |      |
+| Po & Q-Learning     |                                               | [SAC](https://arxiv.org/abs/1801.01290) (Soft Actor-Critic): Haarnoja et al, 2018 |      |
+| Po & Q-Learning     |                                               |                                                              |      |
+|                     |                                               |                                                              |      |
+|                     |                                               |                                                              |      |
+|                     |                                               |                                                              |      |
+|                     |                                               |                                                              |      |
 
 ---
 
