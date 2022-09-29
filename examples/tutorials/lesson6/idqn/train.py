@@ -15,6 +15,7 @@ config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'ma_gym:Switch2-v1',
+    'use_wandb': True,
     'algo': 'dqn',
     'hidden_dim': 128,
     'total_steps': 10000,  # max training steps
@@ -61,7 +62,7 @@ def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
                         batch_terminal)
         score += np.array(reward)
         obs = next_obs
-    return score, step
+    return np.sum(score), step
 
 
 def run_evaluate_episodes(agent: Agent,
@@ -85,7 +86,7 @@ def run_evaluate_episodes(agent: Agent,
                 env.render()
             if done:
                 obs = env.close()
-        eval_rewards.append(score)
+        eval_rewards.append(np.sum(score))
     mean_reward = np.mean(eval_rewards)
     std_reward = np.std(eval_rewards)
     return mean_reward, std_reward
@@ -142,6 +143,12 @@ def main():
         total_reward, steps = run_train_episode(
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
         cum_steps += steps
+        if args.use_wandb:
+            wandb.log({
+                'steps': cum_steps,
+                'epsilon': agent.epsilon,
+                'train-score': total_reward
+            })
 
         pbar.update(steps)
 
@@ -151,15 +158,25 @@ def main():
                 test_flag += 1
             mean_reward, std_reward = run_evaluate_episodes(agent, test_env)
 
-    # render and record video
-    run_evaluate_episodes(
-        agent,
-        test_env,
-        n_eval_episodes=1,
-        render=True,
-        video_folder=args.video_folder)
+        if args.use_wandb:
+            wandb.log({
+                'steps': cum_steps,
+                'epsilon': agent.epsilon,
+                'mean_reward': mean_reward,
+                'std_reward': std_reward
+            })
     pbar.close()
+    # render and record video
+    run_evaluate_episodes(agent, test_env, n_eval_episodes=1, render=True)
 
 
 if __name__ == '__main__':
+    import wandb
+    wandb.init(
+        project='minimal-marl',
+        config={
+            'algo': 'idqn',
+            **kwargs
+        },
+        monitor_gym=True)
     main()
