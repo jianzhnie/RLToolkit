@@ -1,7 +1,6 @@
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
-import torch
 
 
 class ReplayBuffer(object):
@@ -81,22 +80,11 @@ class ReplayBuffer(object):
             reward_chunk.append(reward)
             terminal_chunk.append(terminal)
 
-        obs_chunk = torch.tensor(obs_chunk).view(self.batch_size, chunk_size,
-                                                 self.num_agents, self.obs_dim)
-        next_obs_chunk = torch.tensor(next_obs_chunk).view(
-            self.batch_size, chunk_size, self.num_agents, self.obs_dim)
-
-        action_chunk = torch.tensor(action_chunk).view(self.batch_size,
-                                                       chunk_size,
-                                                       self.num_agents,
-                                                       self.obs_dim)
-
-        reward_chunk = torch.tensor(reward_chunk).view(self.batch_size,
-                                                       chunk_size,
-                                                       self.num_agents,
-                                                       self.obs_dim)
-        terminal_chunk = torch.tensor(terminal_chunk).view(
-            self.batch_size, chunk_size, self.num_agents, self.obs_dim)
+        obs_chunk = np.stack(obs_chunk, axis=0)
+        next_obs_chunk = np.stack(next_obs_chunk, axis=0)
+        action_chunk = np.stack(action_chunk, axis=0)
+        reward_chunk = np.stack(reward_chunk, axis=0)
+        terminal_chunk = np.stack(terminal_chunk, axis=0)
 
         batch = dict(
             obs=obs_chunk,
