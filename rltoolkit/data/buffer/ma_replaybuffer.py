@@ -101,3 +101,13 @@ class ReplayBuffer(object):
 
     def __len__(self):
         return self._curr_size
+
+
+if __name__ == '__main__':
+
+    x = [1, 2]
+    y = [2, 3]
+    z = [False, True]
+
+    for _ in zip(x, y, z):
+        print(_)
