@@ -22,13 +22,13 @@ config = {
     'memory_size': 50000,  # Replay buffer size
     'memory_warmup_size': 10000,  # Replay buffer memory_warmup_size
     'batch_size': 64,  # repaly sample batch size
+    'log_interval': 20,
     'update_target_step': 100,  # target model update freq
     'learning_rate': 0.0005,  # start learning rate
     'epsilon': 1,  # start greedy epsilon
     'min_epsilon': 0.1,
     'gamma': 0.99,  # discounting factor
     'eval_render': True,  # do eval render
-    'test_every_steps': 1000,  # evaluation freq
     'video_folder': 'results'
 }
 
@@ -61,7 +61,7 @@ def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
                         batch_terminal)
         score += np.array(reward)
         obs = next_obs
-    return np.sum(score), step
+    return sum(score), step
 
 
 def run_evaluate_episodes(agent: Agent,
@@ -71,24 +71,19 @@ def run_evaluate_episodes(agent: Agent,
                           video_folder: str = None):
     if video_folder is not None:
         env = gym.wrappers.RecordVideo(env, video_folder=video_folder)
-    eval_rewards = []
+
+    score = np.zeros(env.n_agents)
     for _ in range(n_eval_episodes):
         obs = env.reset()
-        done = False
-        score = np.zeros(env.n_agents)
-        while not done:
+        done = [False for _ in range(env.n_agents)]
+        while not all(done):
             action = agent.predict(obs)
             next_obs, reward, done, _ = env.step(action)
             obs = next_obs
             score += np.array(reward)
             if render:
                 env.render()
-            if done:
-                obs = env.close()
-        eval_rewards.append(np.sum(score))
-    mean_reward = np.mean(eval_rewards)
-    std_reward = np.std(eval_rewards)
-    return mean_reward, std_reward
+    return sum(score / n_eval_episodes)
 
 
 def main():
@@ -129,40 +124,34 @@ def main():
             total=args.memory_warmup_size,
             desc='[Replay Memory Warm Up]') as pbar:
         while rpm.size() < args.memory_warmup_size:
-            total_reward, steps = run_train_episode(
+            rewards, steps = run_train_episode(
                 agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
             pbar.update(steps)
 
     pbar = tqdm(total=args.total_steps)
+    episode_cnt = 0
     cum_steps = 0  # this is the current timestep
-    test_flag = 0
     while cum_steps < args.total_steps:
         # start epoch
-        total_reward, steps = run_train_episode(
+        episode_score = 0
+        rewards, steps = run_train_episode(
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
+        episode_cnt += 1
+        episode_score += rewards
         cum_steps += steps
-        if args.use_wandb:
-            wandb.log({
-                'steps': cum_steps,
-                'epsilon': agent.epsilon,
-                'train-score': total_reward
-            })
-
         pbar.update(steps)
+        if episode_cnt % args.log_interval == 0:
+            train_score = episode_score / args.log_interval
+            test_score = run_evaluate_episodes(agent, test_env)
+            if args.use_wandb:
+                wandb.log({
+                    'steps': cum_steps,
+                    'episode': episode_cnt,
+                    'epsilon': agent.curr_epsilon,
+                    'test-score': test_score,
+                    'train-score': train_score
+                })
 
-        # perform evaluation
-        if cum_steps // args.test_every_steps >= test_flag:
-            while cum_steps // args.test_every_steps >= test_flag:
-                test_flag += 1
-            mean_reward, std_reward = run_evaluate_episodes(agent, test_env)
-
-        if args.use_wandb:
-            wandb.log({
-                'steps': cum_steps,
-                'epsilon': agent.epsilon,
-                'mean_reward': mean_reward,
-                'std_reward': std_reward
-            })
     pbar.close()
     # render and record video
     run_evaluate_episodes(agent, test_env, n_eval_episodes=1, render=True)

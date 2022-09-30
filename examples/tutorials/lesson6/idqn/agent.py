@@ -13,10 +13,7 @@ from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 class QNet(nn.Module):
 
-    def __init__(self,
-                 observation_space,
-                 action_space,
-                 hiddend_dim: int = 128):
+    def __init__(self, observation_space, action_space):
         super(QNet, self).__init__()
         self.num_agents = len(observation_space)
         for agent_i in range(self.num_agents):
@@ -106,7 +103,7 @@ class Agent(object):
         # Target for Q regression
         next_q_value = self.target_qnet(next_obs).max(dim=2)[0]
 
-        target = reward + self.gamma * next_q_value * terminal
+        target = reward + self.gamma * next_q_value * (1 - terminal)
         loss = F.smooth_l1_loss(pred_value, target.detach())
 
         self.optimizer.zero_grad()
