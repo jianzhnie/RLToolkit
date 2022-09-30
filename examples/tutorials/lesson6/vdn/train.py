@@ -23,6 +23,9 @@ config = {
     'memory_size': 50000,  # Replay buffer size
     'memory_warmup_size': 10000,  # Replay buffer memory_warmup_size
     'batch_size': 32,  # repaly sample batch size
+    'chunk_size': 10,
+    'recurrent': True,
+    'grad_clip_norm': 5.0,
     'log_interval': 10,
     'update_target_step': 100,  # target model update freq
     'learning_rate': 0.0005,  # start learning rate
@@ -56,9 +59,6 @@ def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
             batch_reward = samples['reward']
             batch_next_obs = samples['next_obs']
             batch_terminal = samples['terminal']
-
-            print(batch_action.shape)
-            print(batch_obs.shape)
             agent.learn(batch_obs, batch_action, batch_reward, batch_next_obs,
                         batch_terminal)
         score += np.array(reward)
@@ -120,6 +120,10 @@ def main():
         epsilon=args.epsilon,
         min_epsilon=args.min_epsilon,
         learning_rate=args.learning_rate,
+        batch_size=args.batch_size,
+        chunk_size=args.chunk_size,
+        recurrent=args.recurrent,
+        grad_clip_norm=args.grad_clip_norm,
         total_steps=args.total_steps,
         update_target_step=args.update_target_step,
         device=device)
