@@ -5,6 +5,7 @@
 1. https://github.com/kengz/SLM-Lab
 
 2. https://github.com/rail-berkeley/rlkit
+3. https://github.com/ChenglongChen/pytorch-DRL
 
 
 ## DDPG DDPG([Deep Deterministic Policy Gradient](https://arxiv.org/abs/1509.02971))
