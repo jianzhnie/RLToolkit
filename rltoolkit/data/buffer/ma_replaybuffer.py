@@ -62,33 +62,41 @@ class ReplayBuffer(object):
         return batch
 
     def sample_chunk(self, chunk_size) -> Dict[str, np.ndarray]:
+
         start_idx = np.random.randint(
             self._curr_size - chunk_size, size=self.batch_size)
 
-        obs_chunk = torch.tensor(self.obs_buf[idx:idx + chunk_size]
-                                 for idx in start_idx).view(
-                                     self.batch_size, chunk_size,
-                                     self.num_agents, self.obs_dim)
+        obs_chunk, next_obs_chunk, action_chunk, reward_chunk, terminal_chunk = [], [], [], [], []
 
-        next_obs_chunk = torch.tensor(self.next_obs_buf[idx:idx + chunk_size]
-                                      for idx in start_idx).view(
-                                          self.batch_size, chunk_size,
-                                          self.num_agents, self.obs_dim)
+        for idx in start_idx:
+            obs = self.obs_buf[idx:idx + chunk_size]
+            next_obs = self.next_obs_buf[idx:idx + chunk_size]
+            action = self.action_buf[idx:idx + chunk_size]
+            reward = self.reward_buf[idx:idx + chunk_size]
+            terminal = self.terminal_buf[idx:idx + chunk_size]
 
-        action_chunk = torch.tensor(self.action_buf[idx:idx + chunk_size]
-                                    for idx in start_idx).view(
-                                        self.batch_size, chunk_size,
-                                        self.num_agents, self.obs_dim)
+            obs_chunk.append(obs)
+            next_obs_chunk.append(next_obs)
+            action_chunk.append(action)
+            reward_chunk.append(reward)
+            terminal_chunk.append(terminal)
 
-        reward_chunk = torch.tensor(self.reward_buf[idx:idx + chunk_size]
-                                    for idx in start_idx).view(
-                                        self.batch_size, chunk_size,
-                                        self.num_agents, self.obs_dim)
+        obs_chunk = torch.tensor(obs_chunk).view(self.batch_size, chunk_size,
+                                                 self.num_agents, self.obs_dim)
+        next_obs_chunk = torch.tensor(next_obs_chunk).view(
+            self.batch_size, chunk_size, self.num_agents, self.obs_dim)
 
-        terminal_chunk = torch.tensor(self.terminal_buf[idx:idx + chunk_size]
-                                      for idx in start_idx).view(
-                                          self.batch_size, chunk_size,
-                                          self.num_agents, self.obs_dim)
+        action_chunk = torch.tensor(action_chunk).view(self.batch_size,
+                                                       chunk_size,
+                                                       self.num_agents,
+                                                       self.obs_dim)
+
+        reward_chunk = torch.tensor(reward_chunk).view(self.batch_size,
+                                                       chunk_size,
+                                                       self.num_agents,
+                                                       self.obs_dim)
+        terminal_chunk = torch.tensor(terminal_chunk).view(
+            self.batch_size, chunk_size, self.num_agents, self.obs_dim)
 
         batch = dict(
             obs=obs_chunk,
