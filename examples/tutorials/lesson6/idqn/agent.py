@@ -7,6 +7,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
 
+from rltoolkit.models.utils import hard_target_update
+from rltoolkit.utils.scheduler import LinearDecayScheduler
+
 
 class QNet(nn.Module):
 
@@ -39,21 +42,19 @@ class Agent(object):
 
     def __init__(self,
                  env: gym.Env,
-                 algo: str = 'dqn',
                  gamma: float = 0.99,
                  epsilon: float = 1.0,
-                 epsilon_decay: float = 0.995,
                  min_epsilon: float = 0.1,
                  learning_rate: float = 0.001,
+                 total_steps: int = int(1e4),
                  update_target_step: int = 100,
                  device='cpu'):
         super().__init__()
 
         self.env = env
-        self.algo = algo
         self.gamma = gamma
         self.epsilon = epsilon
-        self.epsilon_decay = epsilon_decay
+        self.curr_epsilon = epsilon
         self.min_epsilon = min_epsilon
         self.global_update_step = 0
         self.update_target_step = update_target_step
@@ -64,19 +65,19 @@ class Agent(object):
         self.target_qnet = copy.deepcopy(self.qnet)
         # Create an optimizer
         self.optimizer = Adam(self.qnet.parameters(), lr=learning_rate)
+        self.ep_scheduler = LinearDecayScheduler(epsilon, total_steps)
 
         self.device = device
 
     def sample(self, obs):
 
-        if np.random.rand() <= self.epsilon <= self.epsilon:
+        if np.random.rand() <= self.curr_epsilon:
             action = self.env.action_space.sample()
         else:
             action = self.predict(obs)
 
         # Decaying epsilon
-        self.epsilon *= self.epsilon_decay
-        self.epsilon = max(self.epsilon, self.min_epsilon)
+        self.curr_epsilon = max(self.ep_scheduler.step(1), self.min_epsilon)
         return action
 
     def predict(self, obs):
@@ -89,6 +90,9 @@ class Agent(object):
     def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
               next_obs: np.ndarray, terminal: np.ndarray):
 
+        if self.global_update_step % self.update_target_step == 0:
+            hard_target_update(self.qnet, self.target_qnet)
+
         device = self.device  # for shortening the following lines
         obs = torch.FloatTensor(obs).to(device)
         next_obs = torch.FloatTensor(next_obs).to(device)
@@ -96,7 +100,10 @@ class Agent(object):
         reward = torch.FloatTensor(reward).to(device)
         terminal = torch.FloatTensor(terminal).to(device)
 
+        # Prediction Q(s)
         pred_value = self.qnet(obs).gather(2, action.unsqueeze(-1)).squeeze(-1)
+
+        # Target for Q regression
         next_q_value = self.target_qnet(next_obs).max(dim=2)[0]
 
         target = reward + self.gamma * next_q_value * terminal
@@ -105,3 +112,4 @@ class Agent(object):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        self.global_update_step += 1

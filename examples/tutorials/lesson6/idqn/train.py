@@ -18,14 +18,13 @@ config = {
     'use_wandb': True,
     'algo': 'dqn',
     'hidden_dim': 128,
-    'total_steps': 10000,  # max training steps
-    'memory_size': 10000,  # Replay buffer size
-    'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
+    'total_steps': 100000,  # max training steps
+    'memory_size': 50000,  # Replay buffer size
+    'memory_warmup_size': 10000,  # Replay buffer memory_warmup_size
     'batch_size': 64,  # repaly sample batch size
     'update_target_step': 100,  # target model update freq
     'learning_rate': 0.0005,  # start learning rate
     'epsilon': 1,  # start greedy epsilon
-    'epsilon_decay': 0.9995,  # epsilon decay rate
     'min_epsilon': 0.1,
     'gamma': 0.99,  # discounting factor
     'eval_render': True,  # do eval render
@@ -117,12 +116,11 @@ def main():
     # get agent
     agent = Agent(
         env=env,
-        algo=args.algo,
         gamma=args.gamma,
         epsilon=args.epsilon,
-        epsilon_decay=args.epsilon_decay,
         min_epsilon=args.min_epsilon,
         learning_rate=args.learning_rate,
+        total_steps=args.total_steps,
         update_target_step=args.update_target_step,
         device=device)
 
@@ -172,11 +170,5 @@ def main():
 
 if __name__ == '__main__':
     import wandb
-    wandb.init(
-        project='minimal-marl',
-        config={
-            'algo': 'idqn',
-            **kwargs
-        },
-        monitor_gym=True)
+    wandb.init(project='minimal-marl', config=config, monitor_gym=True)
     main()
