@@ -18,11 +18,11 @@ config = {
     'use_wandb': True,
     'algo': 'dqn',
     'hidden_dim': 128,
-    'total_steps': 100000,  # max training steps
+    'total_steps': 1000000,  # max training steps
     'memory_size': 50000,  # Replay buffer size
     'memory_warmup_size': 10000,  # Replay buffer memory_warmup_size
-    'batch_size': 64,  # repaly sample batch size
-    'log_interval': 20,
+    'batch_size': 32,  # repaly sample batch size
+    'log_interval': 10,
     'update_target_step': 100,  # target model update freq
     'learning_rate': 0.0005,  # start learning rate
     'epsilon': 1,  # start greedy epsilon
@@ -131,12 +131,12 @@ def main():
     pbar = tqdm(total=args.total_steps)
     episode_cnt = 0
     cum_steps = 0  # this is the current timestep
+    episode_score = 0
     while cum_steps < args.total_steps:
         # start epoch
-        episode_score = 0
+        episode_cnt += 1
         rewards, steps = run_train_episode(
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
-        episode_cnt += 1
         episode_score += rewards
         cum_steps += steps
         pbar.update(steps)
@@ -145,12 +145,12 @@ def main():
             test_score = run_evaluate_episodes(agent, test_env)
             if args.use_wandb:
                 wandb.log({
-                    'steps': cum_steps,
                     'episode': episode_cnt,
                     'epsilon': agent.curr_epsilon,
                     'test-score': test_score,
                     'train-score': train_score
                 })
+            episode_score = 0
 
     pbar.close()
     # render and record video

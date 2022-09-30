@@ -104,7 +104,7 @@ class Agent(object):
         next_q_value = self.target_qnet(next_obs).max(dim=2)[0]
 
         target = reward + self.gamma * next_q_value * (1 - terminal)
-        loss = F.smooth_l1_loss(pred_value, target.detach())
+        loss = F.mse_loss(pred_value, target)
 
         self.optimizer.zero_grad()
         loss.backward()
