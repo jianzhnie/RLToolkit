@@ -133,6 +133,7 @@ class Agent(object):
         action = torch.LongTensor(action).to(device)
         reward = torch.FloatTensor(reward).to(device)
         terminal = torch.FloatTensor(terminal).to(device)
+        terminal = terminal.bool().all(dim=2, keepdims=True)
 
         hidden = self.qnet.init_hidden(self.batch_size)
         target_hidden = self.target_qnet.init_hidden(self.batch_size)
@@ -143,14 +144,17 @@ class Agent(object):
 
             q_action = q_out.gather(
                 2, action[:, step_i, :].unsqueeze(-1)).squeeze(-1)
+
             sum_q = q_action.sum(dim=1, keepdims=True)
 
             next_q_value, target_hidden = self.target_qnet(
                 next_obs[:, step_i, :, :], target_hidden.detach())
 
-            max_q_value = next_q_value.max(dim=2)[0].squeeze(-1)
+            next_q_value = next_q_value.max(dim=2)[0].squeeze(-1)
+
             target_q = reward[:, step_i, :].sum(dim=1, keepdims=True)
-            target_q += self.gamma * max_q_value.sum(
+
+            target_q += self.gamma * next_q_value.sum(
                 dim=1, keepdims=True) * (1 - terminal[:, step_i])
 
             loss += F.smooth_l1_loss(sum_q, target_q.detach())
