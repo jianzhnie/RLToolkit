@@ -133,7 +133,7 @@ class Agent(object):
         action = torch.LongTensor(action).to(device)
         reward = torch.FloatTensor(reward).to(device)
         terminal = torch.FloatTensor(terminal).to(device)
-        terminal = terminal.bool().all(dim=2, keepdims=True)
+        terminal = terminal.bool().all(dim=2, keepdims=True).float()
 
         hidden = self.qnet.init_hidden(self.batch_size)
         target_hidden = self.target_qnet.init_hidden(self.batch_size)
