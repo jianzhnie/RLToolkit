@@ -1,6 +1,7 @@
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
+import torch
 
 
 class ReplayBuffer(object):
@@ -23,6 +24,8 @@ class ReplayBuffer(object):
 
         self._curr_ptr = 0
         self._curr_size = 0
+        self.obs_dim = obs_dim
+        self.num_agents = num_agents
         self.max_size = max_size
         self.batch_size = batch_size
 
@@ -55,6 +58,44 @@ class ReplayBuffer(object):
             terminal=self.terminal_buf[idxs],
             indices=idxs,  # for N -step Learning
         )
+
+        return batch
+
+    def sample_chunk(self, chunk_size) -> Dict[str, np.ndarray]:
+        start_idx = np.random.randint(
+            self._curr_size - chunk_size, size=self.batch_size)
+
+        obs_chunk = torch.tensor(self.obs_buf[idx:idx + chunk_size]
+                                 for idx in start_idx).view(
+                                     self.batch_size, chunk_size,
+                                     self.num_agents, self.obs_dim)
+
+        next_obs_chunk = torch.tensor(self.next_obs_buf[idx:idx + chunk_size]
+                                      for idx in start_idx).view(
+                                          self.batch_size, chunk_size,
+                                          self.num_agents, self.obs_dim)
+
+        action_chunk = torch.tensor(self.action_buf[idx:idx + chunk_size]
+                                    for idx in start_idx).view(
+                                        self.batch_size, chunk_size,
+                                        self.num_agents, self.obs_dim)
+
+        reward_chunk = torch.tensor(self.reward_buf[idx:idx + chunk_size]
+                                    for idx in start_idx).view(
+                                        self.batch_size, chunk_size,
+                                        self.num_agents, self.obs_dim)
+
+        terminal_chunk = torch.tensor(self.terminal_buf[idx:idx + chunk_size]
+                                      for idx in start_idx).view(
+                                          self.batch_size, chunk_size,
+                                          self.num_agents, self.obs_dim)
+
+        batch = dict(
+            obs=obs_chunk,
+            next_obs=next_obs_chunk,
+            action=action_chunk,
+            reward=reward_chunk,
+            terminal=terminal_chunk)
 
         return batch
 
