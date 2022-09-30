@@ -72,6 +72,7 @@ class Agent(object):
                  learning_rate: float = 0.001,
                  batch_size: int = 32,
                  chunk_size: int = 10,
+                 recurrent: bool = False,
                  grad_clip_norm: float = 5.0,
                  total_steps: int = int(1e4),
                  update_target_step: int = 100,
@@ -87,16 +88,17 @@ class Agent(object):
         self.grad_clip_norm = grad_clip_norm
         self.global_update_step = 0
         self.update_target_step = update_target_step
+        self._chunk_size = chunk_size if recurrent else 1
 
         # Main network
-        self.qnet = QNet(env.observation_space, env.action_space).to(device)
+        self.qnet = QNet(
+            env.observation_space, env.action_space,
+            recurrent=recurrent).to(device)
         # Target network
         self.target_qnet = copy.deepcopy(self.qnet)
         # Create an optimizer
         self.optimizer = Adam(self.qnet.parameters(), lr=learning_rate)
         self.ep_scheduler = LinearDecayScheduler(epsilon, total_steps)
-
-        self._chunk_size = chunk_size if self.qnet.recurrent else 1
 
         self.device = device
 
