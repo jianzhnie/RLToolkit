@@ -15,9 +15,9 @@ from rltoolkit.data.buffer.ma_replaybuffer import ReplayBuffer
 config = {
     'train_seed': 42,
     'test_seed': 42,
-    'env': 'ma_gym:Switch2-v1',
-    'use_wandb': False,
-    'algo': 'dqn',
+    'env': 'ma_gym:Checkers-v0',
+    'use_wandb': True,
+    'algo': 'vdn',
     'hidden_dim': 128,
     'total_steps': 1000000,  # max training steps
     'memory_size': 50000,  # Replay buffer size
