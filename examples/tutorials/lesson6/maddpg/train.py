@@ -15,10 +15,11 @@ config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'ma_gym:Switch2-v2',
-    'use_wandb': True,
+    'use_wandb': False,
     'algo': 'dqn',
     'total_steps': 1000000,  # max training steps
     'memory_size': 50000,  # Replay buffer size
+    'initial_random_steps': 10000,
     'memory_warmup_size': 10000,  # Replay buffer memory_warmup_size
     'batch_size': 32,  # repaly sample batch size
     'log_interval': 10,
@@ -27,6 +28,7 @@ config = {
     'gamma': 0.99,  # discounting factor
     'tau': 0.005,
     'max_episodes': 10000,
+    'temperature': 0.1,
     'gumbel_max': 10,
     'gumbel_min': 0.1,
     'eval_render': True,  # do eval render
@@ -118,7 +120,6 @@ def main():
         tau=args.tau,
         temperature=args.temperature,
         total_steps=args.total_steps,
-        update_target_step=args.update_target_step,
         initial_random_steps=args.initial_random_steps,
         device=device)
 

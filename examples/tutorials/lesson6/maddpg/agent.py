@@ -43,19 +43,23 @@ class QNet(nn.Module):
     def __init__(self, observation_space, action_space):
         super(QNet, self).__init__()
         self.num_agents = len(observation_space)
+        total_action = sum([_.n for _ in action_space])
+        total_obs = sum([_.shape[0] for _ in observation_space])
         for agent_i in range(self.num_agents):
-            obs_dim = observation_space[agent_i].shape[0]
             setattr(
                 self, 'agent_{}'.format(agent_i),
                 nn.Sequential(
-                    nn.Linear(obs_dim, 128), nn.ReLU(), nn.Linear(128, 64),
-                    nn.ReLU(), nn.Linear(64, action_space[agent_i].n)))
+                    nn.Linear(total_obs + total_action, 128), nn.ReLU(),
+                    nn.Linear(128, 64), nn.ReLU(), nn.Linear(64, 1)))
 
-    def forward(self, obs):
+    def forward(self, obs, action):
         q_values = [torch.empty(obs.shape[0], )] * self.num_agents
+        x = torch.cat(
+            (obs.view(obs.shape[0], obs.shape[1] * obs.shape[2]),
+             action.view(action.shape[0], action.shape[1] * action.shape[2])),
+            dim=1)
         for agent_i in range(self.num_agents):
-            q_values[agent_i] = getattr(self, 'agent_{}'.format(agent_i))(
-                obs[:, agent_i, :]).unsqueeze(1)
+            q_values[agent_i] = getattr(self, 'agent_{}'.format(agent_i))(x)
 
         # batch_size * num_agents * acion_dim
         q_value = torch.cat(q_values, dim=1)
