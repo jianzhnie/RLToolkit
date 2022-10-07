@@ -18,7 +18,7 @@ config = {
     'use_wandb': False,
     'algo': 'dqn',
     'total_steps': 1000000,  # max training steps
-    'memory_size': 50000,  # Replay buffer size
+    'memory_size': 100000,  # Replay buffer size
     'initial_random_steps': 10000,
     'memory_warmup_size': 10000,  # Replay buffer memory_warmup_size
     'batch_size': 32,  # repaly sample batch size
@@ -167,6 +167,6 @@ def main():
 
 
 if __name__ == '__main__':
-    import wandb
-    wandb.init(project='minimal-marl', config=config, monitor_gym=True)
+    # import wandb
+    # wandb.init(project='minimal-marl', config=config, monitor_gym=True)
     main()

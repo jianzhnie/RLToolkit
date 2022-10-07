@@ -110,17 +110,11 @@ class Agent(object):
         if self.global_update_step < self.initial_random_steps:
             action = self.env.action_space.sample()
         else:
-            obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-            action_logits = self.actor(obs)
-            action_one_hot = F.gumbel_softmax(
-                logits=action_logits.squeeze(0),
-                tau=self.temperature,
-                hard=True)
-            action = torch.argmax(action_one_hot, dim=1).data.numpy()
+            action = self.predict(obs)
         return action
 
     def predict(self, obs):
-        obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+        obs = torch.tensor(obs).float().unsqueeze(0).to(self.device)
         action_logits = self.actor(obs)
         action_one_hot = F.gumbel_softmax(
             logits=action_logits.squeeze(0), tau=self.temperature, hard=True)
@@ -137,8 +131,12 @@ class Agent(object):
         reward = torch.FloatTensor(reward).to(device)
         terminal = torch.FloatTensor(terminal).to(device)
 
+        action_logits = self.actor(obs)
+        action_one_hot = F.gumbel_softmax(
+            logits=action_logits.squeeze(0), tau=self.temperature, hard=True)
+
         # pred value
-        pred_q_value = self.critic(obs, action)
+        pred_q_value = self.critic(obs, action_one_hot)
 
         with torch.no_grad():
             next_obs_action_logits = self.target_actor(next_obs)
