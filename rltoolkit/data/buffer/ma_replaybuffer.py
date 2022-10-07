@@ -23,6 +23,8 @@ class ReplayBuffer(object):
 
         self._curr_ptr = 0
         self._curr_size = 0
+        self.obs_dim = obs_dim
+        self.num_agents = num_agents
         self.max_size = max_size
         self.batch_size = batch_size
 
@@ -58,9 +60,54 @@ class ReplayBuffer(object):
 
         return batch
 
+    def sample_chunk(self, chunk_size) -> Dict[str, np.ndarray]:
+
+        start_idx = np.random.randint(
+            self._curr_size - chunk_size, size=self.batch_size)
+
+        obs_chunk, next_obs_chunk, action_chunk, reward_chunk, terminal_chunk = [], [], [], [], []
+
+        for idx in start_idx:
+            obs = self.obs_buf[idx:idx + chunk_size]
+            next_obs = self.next_obs_buf[idx:idx + chunk_size]
+            action = self.action_buf[idx:idx + chunk_size]
+            reward = self.reward_buf[idx:idx + chunk_size]
+            terminal = self.terminal_buf[idx:idx + chunk_size]
+
+            obs_chunk.append(obs)
+            next_obs_chunk.append(next_obs)
+            action_chunk.append(action)
+            reward_chunk.append(reward)
+            terminal_chunk.append(terminal)
+
+        obs_chunk = np.stack(obs_chunk, axis=0)
+        next_obs_chunk = np.stack(next_obs_chunk, axis=0)
+        action_chunk = np.stack(action_chunk, axis=0)
+        reward_chunk = np.stack(reward_chunk, axis=0)
+        terminal_chunk = np.stack(terminal_chunk, axis=0)
+
+        batch = dict(
+            obs=obs_chunk,
+            next_obs=next_obs_chunk,
+            action=action_chunk,
+            reward=reward_chunk,
+            terminal=terminal_chunk)
+
+        return batch
+
     def size(self) -> int:
         """get current size of replay memory."""
         return self._curr_size
 
     def __len__(self):
         return self._curr_size
+
+
+if __name__ == '__main__':
+
+    x = [1, 2]
+    y = [2, 3]
+    z = [False, True]
+
+    for _ in zip(x, y, z):
+        print(_)
