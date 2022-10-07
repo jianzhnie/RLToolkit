@@ -15,16 +15,16 @@ config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'ma_gym:Switch2-v2',
-    'use_wandb': False,
+    'use_wandb': True,
     'algo': 'dqn',
     'total_steps': 1000000,  # max training steps
     'memory_size': 100000,  # Replay buffer size
-    'initial_random_steps': 10000,
-    'memory_warmup_size': 10000,  # Replay buffer memory_warmup_size
+    'initial_random_steps': 5000,
+    'memory_warmup_size': 2000,  # Replay buffer memory_warmup_size
     'batch_size': 32,  # repaly sample batch size
     'log_interval': 10,
-    'actor_lr': 3e-4,  # start learning rate
-    'critic_lr': 3e-3,  # end learning rate
+    'actor_lr': 5e-4,  # start learning rate
+    'critic_lr': 1e-3,  # end learning rate
     'gamma': 0.99,  # discounting factor
     'tau': 0.005,
     'max_episodes': 10000,
@@ -155,7 +155,6 @@ def main():
             if args.use_wandb:
                 wandb.log({
                     'episode': episode_cnt,
-                    'epsilon': agent.curr_epsilon,
                     'test-score': test_score,
                     'train-score': train_score
                 })
@@ -167,6 +166,6 @@ def main():
 
 
 if __name__ == '__main__':
-    # import wandb
-    # wandb.init(project='minimal-marl', config=config, monitor_gym=True)
+    import wandb
+    wandb.init(project='minimal-marl', config=config, monitor_gym=True)
     main()
