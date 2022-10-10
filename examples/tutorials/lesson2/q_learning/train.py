@@ -61,15 +61,14 @@ def test_episode(env, agent, n_eval_episodes, render=False, video_folder=None):
 
 
 def main():
-    env = gym.make(
-        'FrozenLake-v1', map_name='4x4',
-        is_slippery=False)  # 0 left, 1 down, 2 right, 3 up
+    env = gym.make('FrozenLake-v1', map_name='4x4', is_slippery=False)
+    # 0 left, 1 down, 2 right, 3 up
     agent = QLearningAgent(
         obs_dim=env.observation_space.n,
         act_dim=env.action_space.n,
         learning_rate=0.1,
         gamma=0.9,
-        epsilon=0.1)
+        epsilon=0.99)
 
     is_render = False
     return_list = []
@@ -84,7 +83,7 @@ def main():
         else:
             is_render = False
     # 训练结束，查看算法效果
-    test_episode(env, agent, n_eval_episodes=10, video_folder='./results')
+    test_episode(env, agent, n_eval_episodes=10)
 
     return return_list
 
