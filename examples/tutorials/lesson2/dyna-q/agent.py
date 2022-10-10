@@ -15,24 +15,24 @@ class DynaQAgent(object):
     """DynaQ 算法."""
 
     def __init__(self,
-                 obs_n,
-                 act_n,
+                 obs_dim,
+                 act_dim,
                  n_planing,
                  learning_rate=0.01,
                  gamma=0.9,
                  epsilon=0.1):
-        self.act_n = act_n  # 动作维度，有几个动作可选
+        self.act_dim = act_dim  # 动作维度，有几个动作可选
         self.n_planing = n_planing  # 执行 Q-planing 的次数， 对应 1 次 Q-planing
         self.lr = learning_rate  # 学习率
         self.gamma = gamma  # reward的衰减率
         self.epsilon = epsilon  # 按一定概率随机选动作
-        self.Q = np.zeros((obs_n, act_n))  # 初始化表格
+        self.Q = np.zeros((obs_dim, act_dim))  # 初始化表格
         self.model = dict()  # 环境模型
 
     # 根据输入观察值，采样输出的动作值，带探索
     def sample(self, obs):
         if np.random.random() < self.epsilon:
-            action = np.random.choice(self.act_n)  # 有一定概率随机探索选取一个动作
+            action = np.random.choice(self.act_dim)  # 有一定概率随机探索选取一个动作
         else:  # 根据table的Q值选动作
             action = self.predict(obs)
         return action

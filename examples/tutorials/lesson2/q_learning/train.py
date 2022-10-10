@@ -7,12 +7,10 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 
 # -*- coding: utf-8 -*-
 
-import time
-
 import gym
 import matplotlib.pyplot as plt
+import numpy as np
 from agent import QLearningAgent
-from gridworld import CliffWalkingWapper
 
 
 def run_episode(env, agent, render=False):
@@ -37,38 +35,45 @@ def run_episode(env, agent, render=False):
     return total_reward, total_steps
 
 
-def test_episode(env, agent):
-    total_reward = 0
-    obs = env.reset()
-    while True:
-        action = agent.predict(obs)  # greedy
-        next_obs, reward, done, _ = env.step(action)
-        total_reward += reward
-        obs = next_obs
-        time.sleep(0.5)
-        env.render()
-        if done:
-            print('test reward = %.1f' % (total_reward))
-            break
+def test_episode(env, agent, n_eval_episodes, render=False, video_folder=None):
+    if video_folder is not None:
+        env = gym.wrappers.RecordVideo(env, video_folder=video_folder)
+
+    episode_rewards = []
+    for episode in range(n_eval_episodes):
+        obs = env.reset()
+        done = False
+        score = 0
+        while not done:
+            action = agent.predict(obs)  # greedy
+            next_obs, reward, done, _ = env.step(action)
+            score += reward
+            obs = next_obs
+            if render:
+                env.render()
+            if done:
+                obs = env.close()
+
+        episode_rewards.append(score)
+    mean_reward = np.mean(episode_rewards)
+    std_reward = np.std(episode_rewards)
+    return mean_reward, std_reward
 
 
 def main():
-    # env = gym.make("FrozenLake-v0", is_slippery=False)  # 0 left, 1 down, 2 right, 3 up
-    # env = FrozenLakeWapper(env)
-
-    env = gym.make('CliffWalking-v0')  # 0 up, 1 right, 2 down, 3 left
-    env = CliffWalkingWapper(env)
-
+    env = gym.make(
+        'FrozenLake-v1', map_name='4x4',
+        is_slippery=False)  # 0 left, 1 down, 2 right, 3 up
     agent = QLearningAgent(
-        obs_n=env.observation_space.n,
-        act_n=env.action_space.n,
+        obs_dim=env.observation_space.n,
+        act_dim=env.action_space.n,
         learning_rate=0.1,
         gamma=0.9,
         epsilon=0.1)
 
     is_render = False
     return_list = []
-    for episode in range(500):
+    for episode in range(300):
         ep_reward, ep_steps = run_episode(env, agent, is_render)
         print('Episode %s: steps = %s , reward = %.1f' %
               (episode, ep_steps, ep_reward))
@@ -79,7 +84,7 @@ def main():
         else:
             is_render = False
     # 训练结束，查看算法效果
-    test_episode(env, agent)
+    test_episode(env, agent, n_eval_episodes=10, video_folder='./results')
 
     return return_list
 
