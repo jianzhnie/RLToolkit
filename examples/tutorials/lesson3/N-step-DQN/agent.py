@@ -1,11 +1,15 @@
+import copy
+
 import numpy as np
 import torch
+import torch.nn.functional as F
+from network import DulingNet, QNet
+from torch.optim import Adam
 
-from rltoolkit.agent.base_agent import Agent
-from rltoolkit.utils.scheduler import LinearDecayScheduler
+from rltoolkit.models.utils import hard_target_update
 
 
-class Agent(Agent):
+class Agent(object):
     """Agent.
 
     Args:
@@ -17,27 +21,37 @@ class Agent(Agent):
     """
 
     def __init__(self,
-                 algorithm,
+                 obs_dim: int,
+                 hidden_dim: int,
                  action_dim: int,
-                 total_step: int,
-                 update_target_step: int,
-                 start_lr: float = 0.001,
-                 end_lr: float = 0.00001,
-                 start_epsilon: float = 1.0,
-                 end_epsilon: float = 0.1,
+                 algo: str = 'dqn',
+                 gamma: float = 0.99,
+                 epsilon: float = 1.0,
+                 learning_rate: float = 0.001,
+                 update_target_step: int = 100,
                  n_step: int = 3,
                  device='cpu'):
-        super().__init__(algorithm)
+        super().__init__()
+
+        self.algo = algo
+        self.gamma = gamma
+        self.epsilon = epsilon
         self.global_update_step = 0
         self.update_target_step = update_target_step
         self.action_dim = action_dim
-        self.curr_epsilon = start_epsilon
-        self.end_epsilon = end_epsilon
-        self.end_lr = end_lr
         self.n_step = n_step
+
+        # Main network
+        if 'duling' in algo:
+            self.qnet = DulingNet(obs_dim, hidden_dim, action_dim).to(device)
+        else:
+            self.qnet = QNet(obs_dim, hidden_dim, action_dim).to(device)
+        # Target network
+        self.target_qnet = copy.deepcopy(self.qnet)
+        # Create an optimizer
+        self.optimizer = Adam(self.qnet.parameters(), lr=learning_rate)
+
         self.device = device
-        self.ep_scheduler = LinearDecayScheduler(start_epsilon, total_step)
-        self.lr_scheduler = LinearDecayScheduler(start_lr, total_step)
 
     def sample(self, obs) -> int:
         """Sample an action when given an observation, base on the current
@@ -50,15 +64,13 @@ class Agent(Agent):
         Returns:
             act (int): action
         """
-        explore = np.random.choice(
-            [True, False], p=[self.curr_epsilon, 1 - self.curr_epsilon])
-        if explore:
+        # Choose a random action with probability epsilon
+        if np.random.rand() <= self.epsilon:
             act = np.random.randint(self.action_dim)
         else:
+            # Choose the action with highest Q-value at the current state
             act = self.predict(obs)
 
-        # epsilon decay
-        self.curr_epsilon = max(self.ep_scheduler.step(1), self.end_epsilon)
         return act
 
     def predict(self, obs) -> int:
@@ -72,7 +84,7 @@ class Agent(Agent):
             act(int): action
         """
         obs = torch.tensor(obs, dtype=torch.float, device=self.device)
-        selected_action = self.alg.predict(obs).argmax().item()
+        selected_action = self.qnet(obs).argmax().item()
         return selected_action
 
     def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
@@ -90,7 +102,7 @@ class Agent(Agent):
             loss (float)
         """
         if self.global_update_step % self.update_target_step == 0:
-            self.alg.sync_target()
+            hard_target_update(self.qnet, self.target_qnet)
 
         device = self.device  # for shortening the following lines
         obs = torch.FloatTensor(obs).to(device)
@@ -98,11 +110,35 @@ class Agent(Agent):
         action = torch.LongTensor(action.reshape(-1, 1)).to(device)
         reward = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
         terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
-        # calculate dqn loss
-        loss = self.alg.learn(obs, action, reward, next_obs, terminal,
-                              self.n_step)
+
+        # Prediction Q(s)
+        pred_value = self.qnet(obs).gather(1, action)
+
+        # Target for Q regression
+        # (max, max_indices) = torch.max(input, dim, keepdim=True)
+        if self.algo in ['dqn', 'duling_dqn']:
+            next_q_value = self.target_qnet(next_obs).max(1, keepdim=True)[0]
+
+        elif self.algo in ['ddqn', 'duling_ddqn']:
+            greedy_action = self.qnet(next_obs).max(dim=1, keepdim=True)[1]
+            next_q_value = self.target_qnet(next_obs).gather(1, greedy_action)
+
+        # n-step td algo
+        if self.n_step is not None:
+            gamma = self.gamma**self.n_step
+        else:
+            gamma = self.gamma
+
+        # Target for Q regression
+        target = reward + (1 - terminal) * gamma * next_q_value
+
+        # TD误差目标
+        loss = F.mse_loss(pred_value, target)
+        # PyTorch中默认梯度会累积,这里需要显式将梯度置为0
+        self.optimizer.zero_grad()
+        loss.backward()
+        # 反向传播更新参数
+        self.optimizer.step()
+
         self.global_update_step += 1
-        # learning rate decay
-        for param_group in self.alg.optimizer.param_groups:
-            param_group['lr'] = max(self.lr_scheduler.step(1), self.end_lr)
-        return loss
+        return loss.item()
