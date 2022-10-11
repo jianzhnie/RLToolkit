@@ -61,8 +61,8 @@ def main(n_planing):
     env = CliffWalkingWapper(env)
 
     agent = DynaQAgent(
-        obs_n=env.observation_space.n,
-        act_n=env.action_space.n,
+        obs_dim=env.observation_space.n,
+        act_dim=env.action_space.n,
         n_planing=n_planing,
         learning_rate=0.1,
         gamma=0.9,

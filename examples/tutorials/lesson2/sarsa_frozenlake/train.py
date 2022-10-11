@@ -56,8 +56,8 @@ def main():
     env = FrozenLakeWapper(env)
 
     agent = SarsaAgent(
-        obs_n=env.observation_space.n,
-        act_n=env.action_space.n,
+        obs_dim=env.observation_space.n,
+        act_dim=env.action_space.n,
         learning_rate=0.1,
         gamma=0.9,
         epsilon=0.1)
