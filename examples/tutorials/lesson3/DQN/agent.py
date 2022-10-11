@@ -27,8 +27,6 @@ class Agent(object):
                  algo: str = 'dqn',
                  gamma: float = 0.99,
                  epsilon: float = 1.0,
-                 epsilon_decay: float = 0.995,
-                 min_epsilon: float = 0.1,
                  learning_rate: float = 0.001,
                  update_target_step: int = 100,
                  device='cpu'):
@@ -37,8 +35,6 @@ class Agent(object):
         self.algo = algo
         self.gamma = gamma
         self.epsilon = epsilon
-        self.epsilon_decay = epsilon_decay
-        self.min_epsilon = min_epsilon
         self.global_update_step = 0
         self.update_target_step = update_target_step
         self.action_dim = action_dim
@@ -73,9 +69,6 @@ class Agent(object):
             # Choose the action with highest Q-value at the current state
             act = self.predict(obs)
 
-        # Decaying epsilon
-        self.epsilon *= self.epsilon_decay
-        self.epsilon = max(self.epsilon, self.min_epsilon)
         return act
 
     def predict(self, obs) -> int:
