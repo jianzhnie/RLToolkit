@@ -51,9 +51,10 @@ class Agent(object):
 
     def predict(self, obs) -> int:
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-        # 根据动作概率选择概率最高的动作
-        select_action = self.model(obs).argmax().item()
-        return select_action
+        prob = self.model(obs)
+        action_dist = Categorical(prob)
+        action = action_dist.sample()
+        return action.item()
 
     def learn(self, log_probs: list, returns: list) -> None:
         """REINFORCE algorithm, also known as Monte Carlo Policy Gradients.
