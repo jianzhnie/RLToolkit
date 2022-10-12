@@ -1,10 +1,15 @@
+
+## for atari
+ale-py
 gym
+gym[atari,accept-rom-license]==0.21.0
 imageio
 matplotlib
 numpy
 opencv-python
 Pillow
 protobuf
+pybullet
 pygame
 pyglet
 PyYAML
