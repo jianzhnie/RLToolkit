@@ -160,7 +160,7 @@ For the details of DRL algorithms, please check out the educational webpage [Ope
 - [PPO](./benchmark/ppo/train.py)
 - [QMIX](./benchmark/qmix/train.py)
 - [MADDPG](./benchmark/mappo/train.py)
-- [MADDPG](./benchmark/mappo/train.py)
+- [MAPPO](./benchmark/mappo/train.py)
 
 
 ## Experimental Demos
