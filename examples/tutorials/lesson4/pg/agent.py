@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical
+from torch.optim import Adam
 
 
 class PolicyNet(nn.Module):
@@ -35,8 +36,7 @@ class Agent(object):
         self.gamma = gamma
         self.model = PolicyNet(obs_dim, hidden_dim, action_dim).to(device)
         # 使用Adam优化器
-        self.optimizer = torch.optim.Adam(
-            self.model.parameters(), lr=learning_rate)
+        self.optimizer = Adam(self.model.parameters(), lr=learning_rate)
         # 折扣因子
         self.gamma = gamma
         self.device = device
@@ -49,7 +49,7 @@ class Agent(object):
         log_prob = action_dist.log_prob(action)
         return action.item(), log_prob
 
-    def predict(self, obs) -> int:
+    def predict(self, obs: np.ndarray) -> int:
         obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
         prob = self.model(obs)
         action_dist = Categorical(prob)
@@ -74,7 +74,7 @@ class Agent(object):
         self.optimizer.zero_grad()
         loss.backward()  # 反向传播计算梯度
         self.optimizer.step()  # 梯度下降
-        return loss
+        return loss.item()
 
     def learn_with_baseline(self, log_probs: list, returns: list) -> float:
         baseline = np.mean(returns)

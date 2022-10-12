@@ -154,7 +154,7 @@ class Agent(object):
         return policy_loss.item(), value_loss.item()
 
     def learn_a2c(self, transition_dict) -> None:
-        """Update the model by gradient descent."""
+        """Update the model by Advantage  Actor-critic."""
         obs = torch.tensor(
             transition_dict['obs'], dtype=torch.float).to(self.device)
         actions = torch.tensor(transition_dict['actions']).view(-1, 1).to(

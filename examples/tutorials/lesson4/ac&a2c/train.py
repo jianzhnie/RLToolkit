@@ -2,13 +2,12 @@ import argparse
 import sys
 
 import gym
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from agent import Agent
 
 sys.path.append('../../../../')
-from rltoolkit.utils import logger, rl_utils
+from rltoolkit.utils import logger
 
 
 # 训练一个episode
@@ -127,20 +126,6 @@ def main():
 
     mean_reward, std_reward = evaluate(
         test_env, agent, n_eval_episodes=1, render=False)
-
-    episodes_list = list(range(len(return_list)))
-    plt.plot(episodes_list, return_list)
-    plt.xlabel('Episodes')
-    plt.ylabel('Returns')
-    plt.title('Actor-critic on {}'.format(args.env))
-    plt.show()
-
-    mv_return = rl_utils.moving_average(return_list, 9)
-    plt.plot(episodes_list, mv_return)
-    plt.xlabel('Episodes')
-    plt.ylabel('Returns')
-    plt.title('Actor-critic on {}'.format(args.env))
-    plt.show()
 
 
 if __name__ == '__main__':
