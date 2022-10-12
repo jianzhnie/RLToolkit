@@ -22,7 +22,7 @@ config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'CartPole-v0',
-    'algo': 'ddqn',
+    'algo': 'duling_dqn',
     'use_wandb': True,
     'hidden_dim': 128,
     'total_steps': 10000,  # max training steps
@@ -199,8 +199,6 @@ def main():
 
             if args.use_wandb:
                 wandb.log({'test-score': mean_reward})
-                wandb.log({'test-score-upper': mean_reward + std_reward})
-                wandb.log({'test-score-lower': mean_reward - std_reward})
 
     pbar.close()
     # render and record video
