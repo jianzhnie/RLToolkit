@@ -60,7 +60,7 @@ def run_train_episode(agent: Agent,
         context.append(obs)
         context = np.stack(context, axis=0)
 
-        action = agent.sample(obs)
+        action = agent.sample(context)
         next_obs, reward, done, _ = env.step(action)
         rpm.append(Experience(obs, action, reward, done))
 
