@@ -116,9 +116,10 @@ def main():
     if args.use_wandb:
         if has_wandb:
             wandb.init(
-                project=args.env,
+                project=args.env + '_' + args.algo,
                 config=args,
                 entity='jianzhnie',
+                sync_tensorboard=True,
                 monitor_gym=True)
         else:
             logger.warning(
@@ -178,8 +179,6 @@ def main():
             if args.use_wandb:
                 wandb.log({
                     'epsilon': agent.epsilon,
-                    'steps': cum_steps,
-                    'episode': episode_cnt,
                     'train-score': total_reward
                 })
 
@@ -194,8 +193,6 @@ def main():
 
             if args.use_wandb:
                 wandb.log({'test-score': mean_reward})
-                wandb.log({'test-score-upper': mean_reward + std_reward})
-                wandb.log({'test-score-lower': mean_reward - std_reward})
 
     pbar.close()
     # render and record video
