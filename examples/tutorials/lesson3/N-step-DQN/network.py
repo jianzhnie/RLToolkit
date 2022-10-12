@@ -1,10 +1,8 @@
 import torch
 import torch.nn as nn
 
-from rltoolkit.models.base_model import Model
 
-
-class QNet(Model):
+class QNet(nn.Module):
     """Initialization.
 
     只有一层隐藏层的Q网络.
@@ -25,7 +23,7 @@ class QNet(Model):
         return x
 
 
-class DulingNet(Model):
+class DulingNet(nn.Module):
     """只有一层隐藏层的A网络和V网络."""
 
     def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int):
