@@ -15,7 +15,7 @@ try:
 except ImportError:
     has_wandb = False
 
-config = {
+CartPole_config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'CartPole-v0',
@@ -24,9 +24,10 @@ config = {
     'total_episode': 800,  # max training steps
     'hidden_dim': 128,
     'lr': 0.001,  # start learning rate
-    'gamma': 0.98,  # discounting factor
+    'gamma': 0.99,  # discounting factor
     'with_baseline': True,
     'eval_render': False,  # do eval render
+    'log_interval': 1,
     'test_every_episode': 10,  # evaluation freq
     'video_folder': 'results'
 }
@@ -93,7 +94,7 @@ def calc_discount_rewards(rewards, gamma):
     return returns
 
 
-def main():
+def main(config):
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
     test_env = gym.make(args.env)
@@ -142,11 +143,12 @@ def main():
         else:
             loss = agent.learn(log_probs=log_probs, returns=returns)
 
-        logger.info('Episode {}, Loss {:.2f}, Reward Sum {}.'.format(
-            curr_episode, loss, episode_rewards))
+        if (curr_episode + 1) % args.log_interval == 0:
+            logger.info('Episode {}, Loss {:.2f}, Reward Sum {}.'.format(
+                curr_episode, loss, episode_rewards))
 
-        if args.use_wandb:
-            wandb.log({'train-score': episode_rewards})
+            if args.use_wandb:
+                wandb.log({'train-score': episode_rewards})
 
         if (curr_episode + 1) % args.test_every_episode == 0:
             mean_reward, std_reward = evaluate(
@@ -166,4 +168,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(CartPole_config)
