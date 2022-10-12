@@ -6,14 +6,17 @@ opencv-python
 Pillow
 protobuf
 pygame
+pyglet
 PyYAML
 requests
 scipy
 six
 stable_baselines3
+tensorboard
 tensorboard-logger
 tensorboardX
 termcolor
 torch
 torchvision
 tqdm
+wandb
