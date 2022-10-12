@@ -7,7 +7,7 @@ import torch
 from agent import Agent
 
 sys.path.append('../../../../')
-from rltoolkit.utils import logger, tensorboard
+from rltoolkit.utils import logger
 
 try:
     import wandb
@@ -25,9 +25,9 @@ config = {
     'hidden_dim': 128,
     'lr': 0.001,  # start learning rate
     'gamma': 0.98,  # discounting factor
-    'with_baseline': False,
+    'with_baseline': True,
     'eval_render': False,  # do eval render
-    'test_every_episode': 50,  # evaluation freq
+    'test_every_episode': 10,  # evaluation freq
     'video_folder': 'results'
 }
 
@@ -132,7 +132,6 @@ def main():
         gamma=args.gamma,
         device=device)
 
-    return_list = []
     for curr_episode in range(args.total_episode):
         rewards, log_probs = run_episode(env, agent)
         episode_rewards = sum(rewards)
@@ -146,9 +145,6 @@ def main():
         logger.info('Episode {}, Loss {:.2f}, Reward Sum {}.'.format(
             curr_episode, loss, episode_rewards))
 
-        tensorboard.add_scalar('{}/training_rewards'.format(args.algo),
-                               episode_rewards, curr_episode)
-
         if args.use_wandb:
             wandb.log({'train-score': episode_rewards})
 
@@ -158,17 +154,15 @@ def main():
             logger.info('Test reward: mean: {}, std: {:.2f}'.format(
                 mean_reward, std_reward))
 
-            tensorboard.add_scalar(
-                '{}/mean_validation_rewards'.format(args.algo), mean_reward,
-                curr_episode)
-
             if args.use_wandb:
                 wandb.log({'test-score': mean_reward})
 
-        return_list.append(episode_rewards)
-
     mean_reward, std_reward = evaluate(
-        test_env, agent, n_eval_episodes=1, render=True)
+        test_env,
+        agent,
+        n_eval_episodes=1,
+        render=True,
+        video_folder=args.video_folder)
 
 
 if __name__ == '__main__':
