@@ -25,9 +25,9 @@ config = {
     'env': 'PongNoFrameskip-v4',
     'algo': 'dqn',
     'use_wandb': True,
-    'total_steps': 10000000,  # max training steps
-    'memory_size': 1000000,  # Replay buffer size
-    'memory_warmup_size': 50000,  # Replay buffer memory_warmup_size
+    'total_steps': 1000000,  # max training steps
+    'memory_size': 100000,  # Replay buffer size
+    'memory_warmup_size': 10000,  # Replay buffer memory_warmup_size
     'batch_size': 32,  # repaly sample batch size
     'update_target_step': 2500,  # target model update freq
     'learning_rate': 0.0003,  # start learning rate
@@ -50,7 +50,7 @@ def run_train_episode(agent: Agent,
                       rpm: ReplayMemory,
                       memory_warmup_size: int,
                       context_len: int = 4,
-                      update_freq: int =4):
+                      update_freq: int = 4):
     total_reward = 0
     step = 0
     obs = env.reset()

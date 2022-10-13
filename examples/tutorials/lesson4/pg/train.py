@@ -18,14 +18,14 @@ except ImportError:
 CartPole_config = {
     'train_seed': 42,
     'test_seed': 42,
-    'env': 'CartPole-v0',
+    'env': 'CartPole-v1',
     'algo': 'reinforce',
     'use_wandb': True,
     'total_episode': 800,  # max training steps
     'hidden_dim': 128,
     'lr': 0.001,  # start learning rate
     'gamma': 0.99,  # discounting factor
-    'with_baseline': True,
+    'with_baseline': False,
     'eval_render': False,  # do eval render
     'log_interval': 1,
     'test_every_episode': 10,  # evaluation freq
