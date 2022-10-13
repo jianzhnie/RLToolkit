@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 from network import AtariModel
 from torch.optim import Adam
+from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 from rltoolkit.models.utils import hard_target_update
 
@@ -26,6 +27,7 @@ class Agent(object):
                  gamma: float = 0.99,
                  epsilon: float = 1.0,
                  learning_rate: float = 0.001,
+                 total_step: int = 1000000,
                  update_target_step: int = 100,
                  device='cpu'):
         super().__init__()
@@ -33,6 +35,7 @@ class Agent(object):
         self.algo = algo
         self.gamma = gamma
         self.epsilon = epsilon
+        self.lr_end = 0.00001
         self.global_update_step = 0
         self.update_target_step = update_target_step
         self.action_dim = action_dim
@@ -47,6 +50,7 @@ class Agent(object):
         self.target_qnet = copy.deepcopy(self.qnet)
         # Create an optimizer
         self.optimizer = Adam(self.qnet.parameters(), lr=learning_rate)
+        self.lr_scheduler = LinearDecayScheduler(learning_rate, total_step)
 
         self.device = device
 
@@ -134,5 +138,10 @@ class Agent(object):
         loss.backward()
         # 反向传播更新参数
         self.optimizer.step()
+
+        # learning rate decay
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = max(self.lr_scheduler.step(1), self.lr_end)
+
         self.global_update_step += 1
         return loss.item()
