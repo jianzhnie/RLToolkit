@@ -5,9 +5,9 @@ import torch
 import torch.nn.functional as F
 from network import AtariModel
 from torch.optim import Adam
-from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 from rltoolkit.models.utils import hard_target_update
+from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 
 class Agent(object):
@@ -42,7 +42,8 @@ class Agent(object):
 
         # Main network
         if algo in ['dqn', 'ddqn']:
-            self.qnet = AtariModel(act_dim=action_dim, dueling=False).to(device)
+            self.qnet = AtariModel(
+                act_dim=action_dim, dueling=False).to(device)
         elif algo in ['duling_dqn', 'duling_ddqn']:
             self.qnet = AtariModel(act_dim=action_dim, dueling=True).to(device)
 
