@@ -24,13 +24,13 @@ config = {
     'test_seed': 42,
     'env': 'PongNoFrameskip-v4',
     'algo': 'dqn',
-    'use_wandb': False,
-    'total_steps': 12000,  # max training steps
-    'memory_size': 10000,  # Replay buffer size
-    'memory_warmup_size': 5000,  # Replay buffer memory_warmup_size
+    'use_wandb': True,
+    'total_steps': 1000000,  # max training steps
+    'memory_size': 1000000,  # Replay buffer size
+    'memory_warmup_size': 50000,  # Replay buffer memory_warmup_size
     'batch_size': 32,  # repaly sample batch size
-    'update_target_step': 100,  # target model update freq
-    'learning_rate': 0.001,  # start learning rate
+    'update_target_step': 2500,  # target model update freq
+    'learning_rate': 0.0003,  # start learning rate
     'epsilon': 1,  # start greedy epsilon
     'epsilon_decay': 0.95,  # epsilon decay rate
     'min_epsilon': 0.1,
@@ -49,7 +49,8 @@ def run_train_episode(agent: Agent,
                       env: gym.Env,
                       rpm: ReplayMemory,
                       memory_warmup_size: int,
-                      context_len: int = 4):
+                      context_len: int = 4,
+                      update_freq: int =4):
     total_reward = 0
     step = 0
     obs = env.reset()
@@ -65,7 +66,7 @@ def run_train_episode(agent: Agent,
         rpm.append(Experience(obs, action, reward, done))
 
         # train model
-        if rpm.size() > memory_warmup_size:
+        if rpm.size() > memory_warmup_size and (step % update_freq == 0):
             # s,a,r,s',done
             (batch_all_obs, batch_action, batch_reward,
              batch_terminal) = rpm.sample_batch()

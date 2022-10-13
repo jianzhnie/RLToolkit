@@ -39,9 +39,9 @@ class Agent(object):
 
         # Main network
         if algo in ['dqn', 'ddqn']:
-            self.qnet = AtariModel(act_dim=action_dim, dueling=False)
+            self.qnet = AtariModel(act_dim=action_dim, dueling=False).to(device)
         elif algo in ['duling_dqn', 'duling_ddqn']:
-            self.qnet = AtariModel(act_dim=action_dim, dueling=True)
+            self.qnet = AtariModel(act_dim=action_dim, dueling=True).to(device)
 
         # Target network
         self.target_qnet = copy.deepcopy(self.qnet)
