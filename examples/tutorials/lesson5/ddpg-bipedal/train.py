@@ -4,22 +4,32 @@ import sys
 import gym
 import numpy as np
 import torch
-from ddpg_agent import Agent, ReplayBuffer
+from ddpg_agent import Agent
 from tqdm import tqdm
+
+from rltoolkit.data.buffer.replaybuffer import ReplayBuffer
 
 sys.path.append('../../../../')
 from rltoolkit.utils import logger, tensorboard
+
+try:
+    import wandb
+    has_wandb = True
+except ImportError:
+    has_wandb = False
 
 config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'BipedalWalker-v3',
+    'algo': 'ddpgn',
+    'use_wandb': True,
     'hidden_dim': 128,
     'total_steps': 100000,  # max training steps
     'memory_size': 100000,  # Replay buffer size
     'memory_warmup_size': 10000,  # Replay buffer memory_warmup_size
-    'actor_lr': 1e-4,  # start learning rate
-    'critic_lr': 3e-4,  # end learning rate
+    'actor_lr': 3e-4,  # start learning rate
+    'critic_lr': 3e-3,  # end learning rate
     'initial_random_steps': 2000,
     'ou_noise_theta': 1.0,
     'ou_noise_sigma': 0.1,
@@ -51,7 +61,7 @@ def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
         # train model
         if rpm.size() > memory_warmup_size:
             # s,a,r,s',done
-            samples = rpm.sample()
+            samples = rpm.sample_batch()
 
             batch_obs = samples['obs']
             batch_action = samples['action']
@@ -100,7 +110,6 @@ def evaluate(agent: Agent,
 
 
 def main():
-    algo_name = 'ddpg'
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
     test_env = gym.make(args.env)
@@ -114,15 +123,29 @@ def main():
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+    if args.use_wandb:
+        if has_wandb:
+            wandb.init(
+                project=args.env + '_' + args.algo,
+                config=args,
+                entity='jianzhnie',
+                sync_tensorboard=True,
+                monitor_gym=True)
+        else:
+            logger.warning(
+                "You've requested to log metrics to wandb but package not found. "
+                'Metrics not being logged to wandb, try `pip install wandb`')
+
     obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.shape[0]
     action_bound = env.action_space.high[0]  # 动作最大值
 
     rpm = ReplayBuffer(
-        action_size=action_dim,
-        buffer_size=args.memory_size,
-        batch_size=args.batch_size,
-        device=device)
+        obs_dim=obs_dim,
+        action_dim=action_dim,
+        max_size=args.memory_size,
+        batch_size=args.batch_size)
+
     agent = Agent(
         env=env,
         obs_dim=obs_dim,
@@ -148,44 +171,53 @@ def main():
 
     pbar = tqdm(total=args.total_steps, desc='[Training]')
     cum_steps = 0  # this is the current timestep
-    test_flag = 0
+    episode_cnt = 0
     while cum_steps < args.total_steps:
         # start epoch
+        # start epoch
+        episode_cnt += 1
         total_reward, steps, policy_loss, value_loss = run_train_episode(
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
         cum_steps += steps
 
-        logger.info(
-            'Current Steps: {}, Plicy Loss {:.2f}, Value Loss {:.2f}, Reward Sum {}.'
-            .format(cum_steps, policy_loss, value_loss, total_reward))
-        tensorboard.add_scalar('{}/training_rewards'.format(algo_name),
-                               total_reward, cum_steps)
-        tensorboard.add_scalar('{}/policy_loss'.format(algo_name), policy_loss,
-                               cum_steps)
-        tensorboard.add_scalar('{}/value_loss'.format(algo_name), value_loss,
-                               cum_steps)
+        if episode_cnt % args.train_log_interval == 0:
+            logger.info(
+                'Current Steps: {}, Plicy Loss {:.2f}, Value Loss {:.2f}, Reward Sum {}.'
+                .format(cum_steps, policy_loss, value_loss, total_reward))
+            tensorboard.add_scalar('{}/training_rewards'.format(args.algo),
+                                   total_reward, cum_steps)
+            tensorboard.add_scalar('{}/policy_loss'.format(args.algo),
+                                   policy_loss, cum_steps)
+            tensorboard.add_scalar('{}/value_loss'.format(args.algo),
+                                   value_loss, cum_steps)
+
+            if args.use_wandb:
+                wandb.log({
+                    'epsilon': agent.epsilon,
+                    'train-score': total_reward
+                })
 
         pbar.update(steps)
         # perform evaluation
-        if cum_steps // args.test_every_steps >= test_flag:
-            while cum_steps // args.test_every_steps >= test_flag:
-                test_flag += 1
+        if episode_cnt % args.test_log_interval == 0:
             mean_reward, std_reward = evaluate(agent, test_env)
             logger.info(
                 'Eval_agent done, steps: {}, mean: {}, std: {:.2f}'.format(
                     cum_steps, mean_reward, std_reward))
             tensorboard.add_scalar(
-                '{}/mean_validation_rewards'.format(algo_name), mean_reward,
+                '{}/mean_validation_rewards'.format(args.algo), mean_reward,
                 cum_steps)
 
-    # render and record video
-    mean_reward, std_reward = evaluate(
-        agent,
-        test_env,
-        n_eval_episodes=1,
-        render=True,
-        video_folder=args.video_folder)
-    pbar.close()
+            if args.use_wandb:
+                wandb.log({'test-score': mean_reward})
+        pbar.close()
+        # render and record video
+        mean_reward, std_reward = evaluate(
+            agent,
+            test_env,
+            n_eval_episodes=1,
+            render=True,
+            video_folder=args.video_folder)
 
 
 if __name__ == '__main__':

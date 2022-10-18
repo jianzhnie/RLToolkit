@@ -18,14 +18,14 @@ from rltoolkit.models.ounoise import OUNoise
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
 
-    def __init__(self, action_size, buffer_size, batch_size, device):
+    def __init__(self, action_dim, buffer_size, batch_size, device):
         """Initialize a ReplayBuffer object.
         Params
         ======
             buffer_size (int): maximum size of buffer
             batch_size (int): size of each training batch
         """
-        self.action_size = action_size
+        self.action_dim = action_dim
         self.memory = deque(maxlen=buffer_size)  # internal memory (deque)
         self.batch_size = batch_size
         self.device = device
@@ -38,7 +38,7 @@ class ReplayBuffer:
         e = self.experience(state, action, reward, next_state, done)
         self.memory.append(e)
 
-    def sample(self):
+    def sample_batch(self):
         """Randomly sample a batch of experiences from memory."""
         experiences = random.sample(self.memory, k=self.batch_size)
 
@@ -134,7 +134,7 @@ class Agent(object):
         if self.global_update_step < self.initial_random_steps:
             selected_action = self.env.action_space.sample()
         else:
-            obs = torch.from_numpy(obs).float().to(device)
+            obs = torch.from_numpy(obs).float().to(self.device)
             self.actor.eval()
             with torch.no_grad():
                 action = self.actor(obs).detach().cpu().numpy()
@@ -177,9 +177,9 @@ class Agent(object):
         device = self.device  # for shortening the following lines
         obs = torch.FloatTensor(obs).to(device)
         next_obs = torch.FloatTensor(next_obs).to(device)
-        actions = torch.FloatTensor(action.reshape(-1, 1)).to(device)
-        rewards = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
-        terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
+        actions = torch.FloatTensor(action).to(device)
+        rewards = torch.FloatTensor(reward).to(device)
+        terminal = torch.FloatTensor(terminal).to(device)
 
         # ---------------------------- update critic ---------------------------- #
         # Get predicted next-obs actions and Q values from target models
@@ -209,8 +209,8 @@ class Agent(object):
         self.actor_optimizer.step()
 
         # ----------------------- update target networks ----------------------- #
-        self.soft_update(self.critic, self.critic_target, TAU)
-        self.soft_update(self.actor, self.actor_target, TAU)
+        self.soft_update(self.critic, self.critic_target, self.tau)
+        self.soft_update(self.actor, self.actor_target, self.tau)
 
         self.global_update_step += 1
         return critic_loss.item(), actor_loss.item()
