@@ -1,9 +1,11 @@
-def hard_target_update(main, target):
-    target.load_state_dict(main.state_dict())
+import torch.nn as nn
 
 
-def soft_target_update(main, target, tau=0.005):
-    for main_param, target_param in zip(main.parameters(),
-                                        target.parameters()):
-        target_param.data.copy_(tau * main_param.data +
-                                (1.0 - tau) * target_param.data)
+def hard_target_update(src: nn.Module, tgt: nn.Module) -> None:
+    tgt.load_state_dict(src.state_dict())
+
+
+def soft_target_update(src: nn.Module, tgt: nn.Module, tau=0.005) -> None:
+    for src_param, tgt_param in zip(src.parameters(), tgt.parameters()):
+        tgt_param.data.copy_(tau * src_param.data +
+                             (1.0 - tau) * tgt_param.data)
