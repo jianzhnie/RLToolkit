@@ -139,3 +139,5 @@ hub/
 周报/
 multiagent-particle-envs/
 results/
+*.mp4
+*.json
