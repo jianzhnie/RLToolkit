@@ -39,7 +39,8 @@ config = {
     'sigma': 0.01,
     'batch_size': 128,
     'eval_render': False,  # do eval render
-    'test_every_steps': 1000,  # evaluation freq
+    'train_log_interval': 1,
+    'test_log_interval': 5,  # evaluation freq
     'video_folder': 'results'
 }
 
@@ -174,7 +175,6 @@ def main():
     episode_cnt = 0
     while cum_steps < args.total_steps:
         # start epoch
-        # start epoch
         episode_cnt += 1
         total_reward, steps, policy_loss, value_loss = run_train_episode(
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
@@ -192,10 +192,10 @@ def main():
                                    value_loss, cum_steps)
 
             if args.use_wandb:
-                wandb.log({
-                    'epsilon': agent.epsilon,
-                    'train-score': total_reward
-                })
+                wandb.log({'episode_length': steps})
+                wandb.log({'policy_loss': policy_loss})
+                wandb.log({'value_loss': value_loss})
+                wandb.log({'train_reward': total_reward})
 
         pbar.update(steps)
         # perform evaluation
@@ -209,15 +209,17 @@ def main():
                 cum_steps)
 
             if args.use_wandb:
-                wandb.log({'test-score': mean_reward})
-        pbar.close()
-        # render and record video
-        mean_reward, std_reward = evaluate(
-            agent,
-            test_env,
-            n_eval_episodes=1,
-            render=True,
-            video_folder=args.video_folder)
+                wandb.log({'test-reward': mean_reward})
+                wandb.log({'std_reward': std_reward})
+
+    pbar.close()
+    # render and record video
+    mean_reward, std_reward = evaluate(
+        agent,
+        test_env,
+        n_eval_episodes=1,
+        render=True,
+        video_folder=args.video_folder)
 
 
 if __name__ == '__main__':
