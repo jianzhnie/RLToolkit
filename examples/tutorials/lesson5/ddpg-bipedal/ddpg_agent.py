@@ -31,11 +31,11 @@ class ReplayBuffer:
         self.device = device
         self.experience = namedtuple(
             'Experience',
-            field_names=['state', 'action', 'reward', 'next_state', 'done'])
+            field_names=['obs', 'action', 'reward', 'next_obs', 'done'])
 
-    def append(self, state, action, reward, next_state, done):
+    def append(self, obs, action, reward, next_obs, done):
         """Add a new experience to memory."""
-        e = self.experience(state, action, reward, next_state, done)
+        e = self.experience(obs, action, reward, next_obs, done)
         self.memory.append(e)
 
     def sample_batch(self):
@@ -44,8 +44,8 @@ class ReplayBuffer:
 
         device = self.device
 
-        states = torch.from_numpy(
-            np.vstack([e.state for e in experiences
+        obs = torch.from_numpy(
+            np.vstack([e.obs for e in experiences
                        if e is not None])).float().to(device)
         actions = torch.from_numpy(
             np.vstack([e.action for e in experiences
@@ -53,16 +53,16 @@ class ReplayBuffer:
         rewards = torch.from_numpy(
             np.vstack([e.reward for e in experiences
                        if e is not None])).float().to(device)
-        next_states = torch.from_numpy(
-            np.vstack([e.next_state for e in experiences
+        next_obs = torch.from_numpy(
+            np.vstack([e.next_obs for e in experiences
                        if e is not None])).float().to(device)
         dones = torch.from_numpy(
             np.vstack([e.done for e in experiences
                        if e is not None]).astype(np.uint8)).float().to(device)
 
         batch = dict(
-            obs=states,
-            next_obs=next_states,
+            obs=obs,
+            next_obs=next_obs,
             action=actions,
             reward=rewards,
             terminal=dones,
@@ -113,7 +113,6 @@ class Agent(object):
         # action_bound是环境可以接受的动作最大值
         self.action_bound = action_bound
         # 目标网络软更新参数
-        self.tau = tau
 
         # Actor Network (w/ Target Network)
         self.actor = Actor(obs_dim, action_dim).to(device)
@@ -155,8 +154,6 @@ class Agent(object):
         action *= self.action_bound
         return action
 
-    def reset(self):
-        self.noise.reset()
 
     def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
               next_obs: np.ndarray,

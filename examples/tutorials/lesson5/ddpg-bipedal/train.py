@@ -25,8 +25,8 @@ config = {
     'algo': 'ddpgn',
     'use_wandb': True,
     'hidden_dim': 128,
-    'total_steps': 100000,  # max training steps
-    'memory_size': 100000,  # Replay buffer size
+    'total_steps': 1000000,  # max training steps
+    'memory_size': 200000,  # Replay buffer size
     'memory_warmup_size': 10000,  # Replay buffer memory_warmup_size
     'actor_lr': 3e-4,  # start learning rate
     'critic_lr': 3e-3,  # end learning rate
@@ -218,7 +218,7 @@ def main():
         agent,
         test_env,
         n_eval_episodes=1,
-        render=True,
+        render=False,
         video_folder=args.video_folder)
 
 
