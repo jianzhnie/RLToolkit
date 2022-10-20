@@ -513,8 +513,7 @@ class DQNAgent(object):
         """Update the model by gradient descent."""
         # PER needs beta to calculate weights
         samples = self.memory.sample_batch(self.beta)
-        weights = torch.FloatTensor(samples['weights'].reshape(-1, 1)).to(
-            self.device)
+        weights = torch.FloatTensor(samples['weights']).to(self.device)
         indices = samples['indices']
 
         # 1-step Learning loss
@@ -629,8 +628,8 @@ class DQNAgent(object):
         state = torch.FloatTensor(samples['obs']).to(device)
         next_state = torch.FloatTensor(samples['next_obs']).to(device)
         action = torch.LongTensor(samples['acts']).to(device)
-        reward = torch.FloatTensor(samples['rews'].reshape(-1, 1)).to(device)
-        done = torch.FloatTensor(samples['done'].reshape(-1, 1)).to(device)
+        reward = torch.FloatTensor(samples['rews']).to(device)
+        done = torch.FloatTensor(samples['done']).to(device)
 
         # Categorical DQN algorithm
         delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)

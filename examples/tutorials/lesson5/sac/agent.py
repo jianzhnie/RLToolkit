@@ -151,9 +151,9 @@ class Agent(object):
         device = self.device  # for shortening the following lines
         obs = torch.FloatTensor(obs).to(device)
         next_obs = torch.FloatTensor(next_obs).to(device)
-        actions = torch.LongTensor(action.reshape(-1, 1)).to(device)
-        rewards = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
-        terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
+        actions = torch.LongTensor(action).to(device)
+        rewards = torch.FloatTensor(reward).to(device)
+        terminal = torch.FloatTensor(terminal).to(device)
 
         # 更新两个Q网络
         td_target = self.calc_target(rewards, next_obs, terminal)

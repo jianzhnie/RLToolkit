@@ -23,7 +23,7 @@ config = {
     'test_seed': 42,
     'env': 'CartPole-v0',
     'algo': 'dqn',
-    'use_wandb': True,
+    'use_wandb': False,
     'hidden_dim': 128,
     'total_steps': 12000,  # max training steps
     'memory_size': 10000,  # Replay buffer size

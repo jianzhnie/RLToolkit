@@ -79,9 +79,9 @@ class Agent(Agent):
         device = self.device  # for shortening the following lines
         obs = torch.FloatTensor(obs).to(device)
         next_obs = torch.FloatTensor(next_obs).to(device)
-        action = torch.LongTensor(action.reshape(-1, 1)).to(device)
-        reward = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
-        terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
+        action = torch.LongTensor(action).to(device)
+        reward = torch.FloatTensor(reward).to(device)
+        terminal = torch.FloatTensor(terminal).to(device)
         # calculate dqn loss
         loss = self.alg.learn(obs, action, reward, next_obs, terminal)
         self.global_update_step += 1
