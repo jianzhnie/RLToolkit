@@ -223,14 +223,15 @@ class MultiStepReplayBuffer(ReplayBuffer):
 
     def __init__(
         self,
-        obs_dim: int,
         max_size: int,
+        obs_dim: Union[int, Tuple],
+        action_dim: Union[int, Tuple] = 1,
         batch_size: int = 32,
         n_step: int = 3,
         gamma: float = 0.99,
     ):
-        super(MultiStepReplayBuffer, self).__init__(obs_dim, max_size,
-                                                    batch_size)
+        super(MultiStepReplayBuffer, self).__init__(max_size, obs_dim,
+                                                    action_dim, batch_size)
 
         # for N-step Learning
         self.n_step_buffer = deque(maxlen=n_step)
