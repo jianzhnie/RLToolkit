@@ -1,6 +1,5 @@
 import copy
 
-import numpy as np
 import torch
 import torch.optim as optim
 
@@ -150,9 +149,9 @@ class Agent(object):
             param_group['lr'] = max(self.lr_scheduler.step(1), self.end_lr)
         return loss.item()
 
-    def _cumpute_noisy_dqn_loss(self, obs: np.ndarray, action: np.ndarray,
-                                reward: np.ndarray, next_obs: np.ndarray,
-                                terminal: np.ndarray) -> float:
+    def _cumpute_noisy_dqn_loss(self, obs: torch.Tensor, action: torch.Tensor,
+                                reward: torch.Tensor, next_obs: torch.Tensor,
+                                terminal: torch.Tensor) -> float:
         """Update model with an episode data.
 
         Args:
@@ -180,9 +179,9 @@ class Agent(object):
         loss = self.mse_loss(pred_value, target)
         return loss
 
-    def _compute_dis_dqn_loss(self, obs: np.ndarray, action: np.ndarray,
-                              reward: np.ndarray, next_obs: np.ndarray,
-                              terminal: np.ndarray) -> torch.Tensor:
+    def _compute_dis_dqn_loss(self, obs: torch.Tensor, action: torch.Tensor,
+                              reward: torch.Tensor, next_obs: torch.Tensor,
+                              terminal: torch.Tensor) -> torch.Tensor:
         # Categorical DQN algorithm
         delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)
 

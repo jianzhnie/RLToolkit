@@ -187,8 +187,6 @@ class Agent(object):
               terminal: torch.Tensor) -> Tuple[float, float]:
         """Update the model by TD actor-critic."""
 
-        action = torch.tensor(action, dtype=torch.long).to(self.device)
-
         # get actions with noise
         noise = torch.FloatTensor(self.target_policy_noise.sample()).to(
             self.device)

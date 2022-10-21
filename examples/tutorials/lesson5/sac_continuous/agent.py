@@ -311,8 +311,6 @@ class Agent(object):
               reward: torch.Tensor, next_obs: torch.Tensor,
               terminal: torch.Tensor) -> Tuple[float, float]:
 
-        action = torch.tensor(action, dtype=torch.long).to(self.device)
-
         # 对倒立摆环境的奖励进行重塑以便训练
         reward = (reward + 8.0) / 8.0
 

@@ -185,8 +185,6 @@ class Agent(object):
               terminal: torch.Tensor) -> Tuple[float, float]:
         """Update the model by TD actor-critic."""
 
-        action = torch.tensor(action, dtype=torch.long).to(self.device)
-
         pred_q_values = self.critic(obs, action)
         with torch.no_grad():
             next_actions = self.target_actor(next_obs)
