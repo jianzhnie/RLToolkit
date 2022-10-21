@@ -9,6 +9,9 @@
 <p align="center">
 <img src="docs/images/logo.png" alt="logo" width="1000"/>
 </p>
+---
+
+[![Documentation Status](https://readthedocs.org/projects/deep-rl-docs/badge/?version=latest)](https://deep-rl-docs.readthedocs.io/en/latest/?badge=latest)
 
 ## Overview
 
