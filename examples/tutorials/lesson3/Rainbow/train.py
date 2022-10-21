@@ -113,11 +113,12 @@ def main():
     action_dim = env.action_space.n
 
     rpm = MultiStepReplayBuffer(
-        obs_dim=obs_dim,
         max_size=args.memory_size,
+        obs_dim=obs_dim,
         batch_size=args.batch_size,
         n_step=args.n_step,
-        gamma=args.gamma)
+        gamma=args.gamma,
+        device=device)
     # get agent
     agent = Agent(
         model_name=args.model_name,

@@ -242,17 +242,16 @@ class TorchReplayBuffer(object):
 class MultiStepReplayBuffer(ReplayBuffer):
     """A simple numpy replay buffer."""
 
-    def __init__(
-        self,
-        max_size: int,
-        obs_dim: Union[int, Tuple],
-        action_dim: Union[int, Tuple] = 1,
-        batch_size: int = 32,
-        n_step: int = 3,
-        gamma: float = 0.99,
-    ):
-        super(MultiStepReplayBuffer, self).__init__(max_size, obs_dim,
-                                                    action_dim, batch_size)
+    def __init__(self,
+                 max_size: int,
+                 obs_dim: Union[int, Tuple],
+                 action_dim: Union[int, Tuple] = 1,
+                 batch_size: int = 32,
+                 n_step: int = 3,
+                 gamma: float = 0.99,
+                 device: str = 'cpu'):
+        super(MultiStepReplayBuffer,
+              self).__init__(max_size, obs_dim, action_dim, batch_size, device)
 
         # for N-step Learning
         self.n_step_buffer = deque(maxlen=n_step)

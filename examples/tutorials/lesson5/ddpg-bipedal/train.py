@@ -142,10 +142,11 @@ def main():
     action_bound = env.action_space.high[0]  # 动作最大值
 
     rpm = ReplayBuffer(
+        max_size=args.memory_size,
         obs_dim=obs_dim,
         action_dim=action_dim,
-        max_size=args.memory_size,
-        batch_size=args.batch_size)
+        batch_size=args.batch_size,
+        device=device)
 
     agent = Agent(
         env=env,
