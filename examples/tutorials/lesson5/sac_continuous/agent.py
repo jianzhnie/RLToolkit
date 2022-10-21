@@ -307,19 +307,14 @@ class Agent(object):
             param_target.data.copy_(param_target.data * (1.0 - self.tau) +
                                     param.data * self.tau)
 
-    def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
-              next_obs: np.ndarray,
-              terminal: np.ndarray) -> Tuple[float, float]:
+    def learn(self, obs: torch.Tensor, action: torch.Tensor,
+              reward: torch.Tensor, next_obs: torch.Tensor,
+              terminal: torch.Tensor) -> Tuple[float, float]:
 
-        device = self.device  # for shortening the following lines
-        obs = torch.FloatTensor(obs).to(device)
-        next_obs = torch.FloatTensor(next_obs).to(device)
-        actions = torch.LongTensor(action).to(device)
-        rewards = torch.FloatTensor(reward).to(device)
-        terminal = torch.FloatTensor(terminal).to(device)
+        action = torch.tensor(action, dtype=torch.long).to(self.device)
 
         # 对倒立摆环境的奖励进行重塑以便训练
-        rewards = (rewards + 8.0) / 8.0
+        reward = (reward + 8.0) / 8.0
 
         # Prediction π(a|s), logπ(a|s), π(a'|s'), logπ(a'|s'),
         pi, log_pi = self.actor(obs)
@@ -339,8 +334,8 @@ class Agent(object):
 
         # ###### train Critic Network #####
         #  Prediction Q1(s,a), Q2(s,a)
-        pred_q1_value = self.critic1(obs, actions)
-        pred_q2_value = self.critic2(obs, actions)
+        pred_q1_value = self.critic1(obs, action)
+        pred_q2_value = self.critic2(obs, action)
 
         # Target Q-values
         # Min Double-Q: min(Q1‾(s',π(a'|s')), Q2‾(s',π(a'|s')))
@@ -350,7 +345,7 @@ class Agent(object):
 
         # TD target for Q regression
         td_v_target = min_q_next_pi - self.alpha * next_log_pi
-        td_q_target = rewards + self.gamma * td_v_target * (1 - terminal)
+        td_q_target = reward + self.gamma * td_v_target * (1 - terminal)
 
         # MSE loss against Bellman backup
         q1_loss = F.mse_loss(pred_q1_value, td_q_target.detach())

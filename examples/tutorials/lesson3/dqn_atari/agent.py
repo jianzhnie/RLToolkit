@@ -93,8 +93,9 @@ class Agent(object):
         select_action = np.random.choice(best_actions)
         return select_action
 
-    def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
-              next_obs: np.ndarray, terminal: np.ndarray) -> float:
+    def learn(self, obs: torch.Tensor, action: torch.Tensor,
+              reward: torch.Tensor, next_obs: torch.Tensor,
+              terminal: torch.Tensor) -> float:
         """Update model with an episode data.
 
         Args:
@@ -112,13 +113,7 @@ class Agent(object):
 
         reward = np.clip(reward, -1, 1)
 
-        device = self.device  # for shortening the following lines
-        obs = torch.FloatTensor(obs).to(device)
-        next_obs = torch.FloatTensor(next_obs).to(device)
-        action = torch.LongTensor(action).unsqueeze(-1).to(device)
-        reward = torch.FloatTensor(reward).unsqueeze(-1).to(device)
-        terminal = torch.FloatTensor(terminal).unsqueeze(-1).to(device)
-
+        action = torch.tensor(action, dtype=torch.long).to(self.device)
         # Prediction Q(s)
         pred_value = self.qnet(obs).gather(1, action)
 
