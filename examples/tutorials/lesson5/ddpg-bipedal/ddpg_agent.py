@@ -154,10 +154,9 @@ class Agent(object):
         action *= self.action_bound
         return action
 
-
-    def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
-              next_obs: np.ndarray,
-              terminal: np.ndarray) -> Tuple[float, float]:
+    def learn(self, obs: torch.Tensor, action: torch.Tensor,
+              reward: torch.Tensor, next_obs: torch.Tensor,
+              terminal: torch.Tensor) -> Tuple[float, float]:
         """Update policy and value parameters using given batch of experience
         tuples.
 
@@ -171,12 +170,6 @@ class Agent(object):
             experiences (Tuple[torch.Tensor]): tuple of (s, a, r, s', done) tuples
             gamma (float): discount factor
         """
-        device = self.device  # for shortening the following lines
-        obs = torch.FloatTensor(obs).to(device)
-        next_obs = torch.FloatTensor(next_obs).to(device)
-        actions = torch.FloatTensor(action).to(device)
-        rewards = torch.FloatTensor(reward).to(device)
-        terminal = torch.FloatTensor(terminal).to(device)
 
         # ---------------------------- update critic ---------------------------- #
         # Get predicted next-obs actions and Q values from target models
@@ -185,11 +178,11 @@ class Agent(object):
             next_Q_targets = self.critic_target(next_obs, next_actions)
 
         # Compute Q targets for current obs (y_i)
-        Q_targets = rewards + self.gamma * next_Q_targets * (1 - terminal)
+        Q_targets = reward + self.gamma * next_Q_targets * (1 - terminal)
 
         # Compute critic loss
-        Q_expected = self.critic(obs, actions)
-        critic_loss = F.mse_loss(Q_expected, Q_targets)
+        Q_expected = self.critic(obs, action)
+        critic_loss = F.smooth_l1_loss(Q_expected, Q_targets)
 
         # Minimize the loss
         self.critic_optimizer.zero_grad()
