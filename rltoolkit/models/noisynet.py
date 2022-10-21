@@ -91,14 +91,14 @@ class NoisyLinear(nn.Module):
 class NoisyNet(Model):
 
     def __init__(self,
-                 state_dim: int,
+                 obs_dim: int,
                  hidden_dim: int,
                  action_dim: int,
                  std_init: float = 0.5):
         """Initialization."""
         super(NoisyNet, self).__init__()
 
-        self.feature = nn.Linear(state_dim, hidden_dim)
+        self.feature = nn.Linear(obs_dim, hidden_dim)
         self.noisy_layer = NoisyLinear(hidden_dim, action_dim, std_init)
         self.relu = nn.ReLU(inplace=True)
 
@@ -117,7 +117,7 @@ class NoisyNet(Model):
 class NoisyDulingNet(Model):
 
     def __init__(self,
-                 state_dim: int,
+                 obs_dim: int,
                  hidden_dim: int,
                  action_dim: int,
                  atom_size: int,
@@ -132,7 +132,7 @@ class NoisyDulingNet(Model):
 
         # set common feature layer
         self.feature_layer = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim),
+            nn.Linear(obs_dim, hidden_dim),
             nn.ReLU(),
         )
 
@@ -171,7 +171,7 @@ class NoisyDulingNet(Model):
 
 class CategoryNetwork(Model):
 
-    def __init__(self, state_dim: int, hidden_dim: int, action_dim: int,
+    def __init__(self, obs_dim: int, hidden_dim: int, action_dim: int,
                  atom_size: int, support: torch.Tensor):
         """Initialization."""
         super(CategoryNetwork, self).__init__()
@@ -181,7 +181,7 @@ class CategoryNetwork(Model):
         self.atom_size = atom_size
 
         self.layers = nn.Sequential(
-            nn.Linear(state_dim, hidden_dim), nn.ReLU(),
+            nn.Linear(obs_dim, hidden_dim), nn.ReLU(),
             nn.Linear(hidden_dim, action_dim * atom_size))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

@@ -268,9 +268,9 @@ class TD3Agent(object):
         samples = self.memory.sample_batch()
         states = torch.FloatTensor(samples['obs']).to(device)
         next_obs = torch.FloatTensor(samples['next_obs']).to(device)
-        actions = torch.FloatTensor(samples['acts'].reshape(-1, 1)).to(device)
-        rewards = torch.FloatTensor(samples['rews'].reshape(-1, 1)).to(device)
-        dones = torch.FloatTensor(samples['done'].reshape(-1, 1)).to(device)
+        actions = torch.FloatTensor(samples['acts']).to(device)
+        rewards = torch.FloatTensor(samples['rews']).to(device)
+        dones = torch.FloatTensor(samples['done']).to(device)
         masks = 1 - dones
 
         # get actions with noise

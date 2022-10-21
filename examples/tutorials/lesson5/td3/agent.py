@@ -182,20 +182,14 @@ class Agent(object):
             param_target.data.copy_(param_target.data * (1.0 - self.tau) +
                                     param.data * self.tau)
 
-    def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
-              next_obs: np.ndarray,
-              terminal: np.ndarray) -> Tuple[float, float]:
+    def learn(self, obs: torch.Tensor, action: torch.Tensor,
+              reward: torch.Tensor, next_obs: torch.Tensor,
+              terminal: torch.Tensor) -> Tuple[float, float]:
         """Update the model by TD actor-critic."""
 
-        device = self.device  # for shortening the following lines
-        obs = torch.FloatTensor(obs).to(device)
-        next_obs = torch.FloatTensor(next_obs).to(device)
-        actions = torch.FloatTensor(action.reshape(-1, 1)).to(device)
-        rewards = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
-        terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
-
         # get actions with noise
-        noise = torch.FloatTensor(self.target_policy_noise.sample()).to(device)
+        noise = torch.FloatTensor(self.target_policy_noise.sample()).to(
+            self.device)
         clipped_noise = torch.clamp(noise, -self.target_policy_noise_clip,
                                     self.target_policy_noise_clip)
 
@@ -205,8 +199,8 @@ class Agent(object):
 
         # pred q value
         # Prediction Q1(s,𝜇(s)), Q1(s,a), Q2(s,a)
-        pred_values1 = self.critic1(obs, actions)
-        pred_values2 = self.critic2(obs, actions)
+        pred_values1 = self.critic1(obs, action)
+        pred_values2 = self.critic2(obs, action)
 
         # Min Double-Q: min(Q1‾(s',𝜇(s')), Q2‾(s',𝜇(s')))
         next_q1_pi_tgt = self.target_critic1(next_obs, next_pi_tgt)
@@ -216,7 +210,7 @@ class Agent(object):
         # 时序差分目标
         # G_t   = r + gamma * v(s_{t+1})  if state != Terminal
         #       = r                       otherwise
-        td_target = rewards + self.gamma * min_next_q_pi_tgt * (1 - terminal)
+        td_target = reward + self.gamma * min_next_q_pi_tgt * (1 - terminal)
 
         # 均方误差损失函数
         critic1_loss = F.mse_loss(pred_values1, td_target.detach())

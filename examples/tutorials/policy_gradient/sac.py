@@ -286,9 +286,9 @@ class SACAgent(object):
         samples = self.memory.sample_batch()
         state = torch.FloatTensor(samples['obs']).to(device)
         next_state = torch.FloatTensor(samples['next_obs']).to(device)
-        action = torch.FloatTensor(samples['acts'].reshape(-1, 1)).to(device)
-        reward = torch.FloatTensor(samples['rews'].reshape(-1, 1)).to(device)
-        done = torch.FloatTensor(samples['done'].reshape(-1, 1)).to(device)
+        action = torch.FloatTensor(samples['acts']).to(device)
+        reward = torch.FloatTensor(samples['rews']).to(device)
+        done = torch.FloatTensor(samples['done']).to(device)
         new_action, log_prob = self.actor(state)
 
         # train alpha (dual problem)

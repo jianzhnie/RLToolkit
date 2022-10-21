@@ -7,7 +7,7 @@ Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 
 import random
 from collections import deque
-from typing import Any, Deque, Dict, List, Tuple, Union
+from typing import Deque, Dict, List, Tuple, Union
 
 import numpy as np
 import torch
@@ -32,20 +32,26 @@ class ReplayBuffer(object):
         act_dim (int or tuple): action shape
     """
 
-    def __init__(self, obs_dim: Union[int, Tuple], max_size: int,
-                 batch_size: int):
+    def __init__(self,
+                 max_size: int,
+                 obs_dim: Union[int, Tuple],
+                 action_dim: Union[int, Tuple] = 1,
+                 batch_size: int = 32,
+                 device: str = 'cpu'):
         self.obs_buf = np.zeros(
             combined_shape(max_size, obs_dim), dtype=np.float32)
         self.next_obs_buf = np.zeros(
             combined_shape(max_size, obs_dim), dtype=np.float32)
-        self.action_buf = np.zeros(max_size, dtype=np.float32)
-        self.reward_buf = np.zeros(max_size, dtype=np.float32)
-        self.terminal_buf = np.zeros(max_size, dtype=np.float32)
+        self.action_buf = np.zeros(
+            combined_shape(max_size, action_dim), dtype=np.float32)
+        self.reward_buf = np.zeros((max_size, 1), dtype=np.float32)
+        self.terminal_buf = np.zeros((max_size, 1), dtype=np.float32)
 
         self._curr_ptr = 0
         self._curr_size = 0
         self.max_size = max_size
         self.batch_size = batch_size
+        self.device = device
 
     def append(self, obs: np.ndarray, act: np.ndarray, rew: float,
                next_obs: np.ndarray, terminal: bool) -> None:
@@ -87,6 +93,10 @@ class ReplayBuffer(object):
             terminal=self.terminal_buf[idxs],
             indices=idxs,  # for N -step Learning
         )
+        batch = {
+            key: torch.Tensor(val, device=self.device)
+            for (key, val) in batch.items()
+        }
 
         return batch
 
@@ -129,7 +139,10 @@ class ReplayBuffer(object):
 
 
 class TorchReplayBuffer(object):
-    """A simple FIFO experience replay buffer for off-policy RL or offline RL.
+    """Torch Version.
+
+    A simple FIFO experience replay buffer for off-policy RL or offline RL.
+
 
     Args:
         max_size (int): max size of replay memory
@@ -138,17 +151,29 @@ class TorchReplayBuffer(object):
     """
 
     def __init__(self,
-                 obs_dim: Union[int, Tuple],
                  max_size: int,
-                 batch_size: int,
-                 device: Any = None):
+                 obs_dim: Union[int, Tuple],
+                 action_dim: Union[int, Tuple] = 1,
+                 batch_size: int = 32,
+                 device: str = 'cpu'):
         self.obs_buf = torch.empty(
-            combined_shape(max_size, obs_dim), dtype=np.float32)
+            combined_shape(max_size, obs_dim),
+            dtype=torch.float32,
+            device=device)
         self.next_obs_buf = torch.empty(
-            combined_shape(max_size, obs_dim), dtype=np.float32)
-        self.action_buf = torch.empty(max_size, dtype=np.float32)
-        self.reward_buf = torch.empty(max_size, dtype=np.float32)
-        self.terminal_buf = torch.empty(max_size, dtype=np.float32)
+            combined_shape(max_size, obs_dim),
+            dtype=torch.float32,
+            device=device)
+        self.action_buf = torch.empty(
+            combined_shape(max_size, action_dim),
+            dtype=torch.float32,
+            device=device)
+        self.reward_buf = torch.empty((max_size, 1),
+                                      dtype=torch.float32,
+                                      device=device)
+        self.terminal_buf = torch.empty((max_size, 1),
+                                        dtype=torch.float32,
+                                        device=device)
         self.device = device
 
         self._curr_ptr = 0
@@ -169,9 +194,9 @@ class TorchReplayBuffer(object):
         """
         obs = torch.FloatTensor(obs).to(self.device)
         next_obs = torch.FloatTensor(next_obs).to(self.device)
-        action = torch.LongTensor([act]).to(self.device)
-        reward = torch.FloatTensor([reward]).to(self.device)
-        terminal = torch.BoolTensor([terminal]).to(self.device)
+        action = torch.FloatTensor(np.array([act])).to(self.device)
+        reward = torch.FloatTensor(np.array([reward])).to(self.device)
+        terminal = torch.BoolTensor(np.array([terminal])).to(self.device)
 
         self.obs_buf[self._curr_ptr] = obs
         self.next_obs_buf[self._curr_ptr] = next_obs
@@ -193,7 +218,7 @@ class TorchReplayBuffer(object):
         """
 
         idxs = torch.randint(
-            self._curr_size, size=self.batch_size, device=self.device)
+            self._curr_size, size=(self.batch_size, ), device=self.device)
 
         batch = dict(
             obs=self.obs_buf[idxs],
@@ -217,16 +242,16 @@ class TorchReplayBuffer(object):
 class MultiStepReplayBuffer(ReplayBuffer):
     """A simple numpy replay buffer."""
 
-    def __init__(
-        self,
-        obs_dim: int,
-        max_size: int,
-        batch_size: int = 32,
-        n_step: int = 3,
-        gamma: float = 0.99,
-    ):
-        super(MultiStepReplayBuffer, self).__init__(obs_dim, max_size,
-                                                    batch_size)
+    def __init__(self,
+                 max_size: int,
+                 obs_dim: Union[int, Tuple],
+                 action_dim: Union[int, Tuple] = 1,
+                 batch_size: int = 32,
+                 n_step: int = 3,
+                 gamma: float = 0.99,
+                 device: str = 'cpu'):
+        super(MultiStepReplayBuffer,
+              self).__init__(max_size, obs_dim, action_dim, batch_size, device)
 
         # for N-step Learning
         self.n_step_buffer = deque(maxlen=n_step)

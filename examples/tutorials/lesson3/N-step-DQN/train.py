@@ -131,8 +131,8 @@ def main():
     obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
     rpm = MultiStepReplayBuffer(
-        obs_dim=obs_dim,
         max_size=args.memory_size,
+        obs_dim=obs_dim,
         batch_size=args.batch_size,
         n_step=args.n_step,
         gamma=args.gamma)

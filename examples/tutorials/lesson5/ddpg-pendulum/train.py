@@ -16,17 +16,17 @@ config = {
     'test_seed': 42,
     'env': 'Pendulum-v1',
     'hidden_dim': 128,
-    'total_steps': 20000,  # max training steps
-    'memory_size': 10000,  # Replay buffer size
+    'total_steps': 10000,  # max training steps
+    'memory_size': 5000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'actor_lr': 3e-4,  # start learning rate
-    'critic_lr': 3e-4,  # end learning rate
-    'alpha_lr': 3e-4,  # end learning rate
-    'alpha': 0.2,
-    'automatic_entropy_tuning': True,
+    'critic_lr': 3e-3,  # end learning rate
     'initial_random_steps': 2000,
-    'gamma': 0.99,  # discounting factor
+    'ou_noise_theta': 1.0,
+    'ou_noise_sigma': 0.1,
+    'gamma': 0.98,  # discounting factor
     'tau': 0.005,  # 软更新参数,
+    'sigma': 0.01,
     'batch_size': 64,
     'eval_render': False,  # do eval render
     'test_every_steps': 1000,  # evaluation freq
@@ -38,18 +38,15 @@ config = {
 def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
                       memory_warmup_size: int):
     total_reward = 0
+    obs = env.reset()
     step = 0
     policy_loss_lst = []
     value_loss_lst = []
-    obs = env.reset()
-    done = False
-    while not done:
+    while True:
         step += 1
         action = agent.sample(obs)
         next_obs, reward, done, _ = env.step(action)
         rpm.append(obs, action, reward, next_obs, done)
-        total_reward += reward
-        obs = next_obs
         # train model
         if rpm.size() > memory_warmup_size:
             # s,a,r,s',done
@@ -67,6 +64,10 @@ def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
             policy_loss_lst.append(policy_loss)
             value_loss_lst.append(value_loss)
 
+        total_reward += reward
+        obs = next_obs
+        if done:
+            break
     return total_reward, step, np.mean(policy_loss_lst), np.mean(
         value_loss_lst)
 
@@ -100,10 +101,11 @@ def evaluate(agent: Agent,
 
 
 def main():
-    algo_name = 'sac'
+    algo_name = 'ddpg'
     args = argparse.Namespace(**config)
     env = gym.make(args.env)
     test_env = gym.make(args.env)
+
     # set seed
     torch.manual_seed(args.train_seed)
     torch.cuda.manual_seed_all(args.train_seed)
@@ -130,11 +132,10 @@ def main():
         hidden_dim=args.hidden_dim,
         actor_lr=args.actor_lr,
         critic_lr=args.critic_lr,
-        alpha_lr=args.alpha_lr,
-        alpha=args.alpha,
-        action_bound=action_bound,
-        automatic_entropy_tuning=args.automatic_entropy_tuning,
         initial_random_steps=args.initial_random_steps,
+        ou_noise_theta=args.ou_noise_theta,
+        ou_noise_sigma=args.ou_noise_sigma,
+        action_bound=action_bound,
         tau=args.tau,
         gamma=args.gamma,
         device=device)

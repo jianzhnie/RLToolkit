@@ -301,8 +301,8 @@ class DQNAgent(object):
         state = torch.FloatTensor(samples['obs']).to(device)
         next_state = torch.FloatTensor(samples['next_obs']).to(device)
         action = torch.LongTensor(samples['acts']).to(device)
-        reward = torch.FloatTensor(samples['rews'].reshape(-1, 1)).to(device)
-        done = torch.FloatTensor(samples['done'].reshape(-1, 1)).to(device)
+        reward = torch.FloatTensor(samples['rews']).to(device)
+        done = torch.FloatTensor(samples['done']).to(device)
 
         # Categorical DQN algorithm
         delta_z = float(self.v_max - self.v_min) / (self.atom_size - 1)

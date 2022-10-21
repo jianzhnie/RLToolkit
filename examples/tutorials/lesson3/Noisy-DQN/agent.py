@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 from rltoolkit.agent.base_agent import Agent
@@ -59,8 +58,9 @@ class Agent(Agent):
         selected_action = self.alg.predict(obs).argmax().item()
         return selected_action
 
-    def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
-              next_obs: np.ndarray, terminal: np.ndarray) -> float:
+    def learn(self, obs: torch.Tensor, action: torch.Tensor,
+              reward: torch.Tensor, next_obs: torch.Tensor,
+              terminal: torch.Tensor) -> float:
         """Update model with an episode data.
 
         Args:
@@ -76,12 +76,8 @@ class Agent(Agent):
         if self.global_update_step % self.update_target_step == 0:
             self.alg.sync_target()
 
-        device = self.device  # for shortening the following lines
-        obs = torch.FloatTensor(obs).to(device)
-        next_obs = torch.FloatTensor(next_obs).to(device)
-        action = torch.LongTensor(action.reshape(-1, 1)).to(device)
-        reward = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
-        terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
+        action = torch.tensor(action, dtype=torch.long).to(self.device)
+
         # calculate dqn loss
         loss = self.alg.learn(obs, action, reward, next_obs, terminal)
         self.global_update_step += 1

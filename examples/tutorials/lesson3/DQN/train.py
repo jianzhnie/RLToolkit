@@ -23,7 +23,7 @@ config = {
     'test_seed': 42,
     'env': 'CartPole-v0',
     'algo': 'dqn',
-    'use_wandb': True,
+    'use_wandb': False,
     'hidden_dim': 128,
     'total_steps': 12000,  # max training steps
     'memory_size': 10000,  # Replay buffer size
@@ -129,7 +129,10 @@ def main():
     obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
     rpm = ReplayBuffer(
-        obs_dim=obs_dim, max_size=args.memory_size, batch_size=args.batch_size)
+        max_size=args.memory_size,
+        obs_dim=obs_dim,
+        batch_size=args.batch_size,
+        device=device)
 
     # get agent
     agent = Agent(

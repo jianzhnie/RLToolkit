@@ -180,25 +180,18 @@ class Agent(object):
             param_target.data.copy_(param_target.data * (1.0 - self.tau) +
                                     param.data * self.tau)
 
-    def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
-              next_obs: np.ndarray,
-              terminal: np.ndarray) -> Tuple[float, float]:
+    def learn(self, obs: torch.Tensor, action: torch.Tensor,
+              reward: torch.Tensor, next_obs: torch.Tensor,
+              terminal: torch.Tensor) -> Tuple[float, float]:
         """Update the model by TD actor-critic."""
 
-        device = self.device  # for shortening the following lines
-        obs = torch.FloatTensor(obs).to(device)
-        next_obs = torch.FloatTensor(next_obs).to(device)
-        actions = torch.FloatTensor(action.reshape(-1, 1)).to(device)
-        rewards = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
-        terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
-
-        pred_q_values = self.critic(obs, actions)
+        pred_q_values = self.critic(obs, action)
         with torch.no_grad():
             next_actions = self.target_actor(next_obs)
             next_q_values = self.target_critic(next_obs, next_actions)
 
         # 时序差分目标
-        q_targets = rewards + self.gamma * next_q_values * (1 - terminal)
+        q_targets = reward + self.gamma * next_q_values * (1 - terminal)
         # 均方误差损失函数
         value_loss = F.mse_loss(pred_q_values, q_targets)
         # update value network

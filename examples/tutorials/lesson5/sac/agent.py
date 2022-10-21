@@ -143,23 +143,18 @@ class Agent(object):
             param_target.data.copy_(param_target.data * (1.0 - self.tau) +
                                     param.data * self.tau)
 
-    def learn(self, obs: np.ndarray, action: np.ndarray, reward: np.ndarray,
-              next_obs: np.ndarray,
-              terminal: np.ndarray) -> Tuple[float, float]:
+    def learn(self, obs: torch.Tensor, action: torch.Tensor,
+              reward: torch.Tensor, next_obs: torch.Tensor,
+              terminal: torch.Tensor) -> Tuple[float, float]:
         """Update the model by TD actor-critic."""
 
-        device = self.device  # for shortening the following lines
-        obs = torch.FloatTensor(obs).to(device)
-        next_obs = torch.FloatTensor(next_obs).to(device)
-        actions = torch.LongTensor(action.reshape(-1, 1)).to(device)
-        rewards = torch.FloatTensor(reward.reshape(-1, 1)).to(device)
-        terminal = torch.FloatTensor(terminal.reshape(-1, 1)).to(device)
+        action = torch.tensor(action, dtype=torch.long).to(self.device)
 
         # 更新两个Q网络
-        td_target = self.calc_target(rewards, next_obs, terminal)
-        critic1_q_values = self.critic1(obs).gather(1, actions)
+        td_target = self.calc_target(reward, next_obs, terminal)
+        critic1_q_values = self.critic1(obs).gather(1, action)
         critic1_loss = F.mse_loss(critic1_q_values, td_target.detach())
-        critic2_q_values = self.critic2(obs).gather(1, actions)
+        critic2_q_values = self.critic2(obs).gather(1, action)
         critic2_loss = F.mse_loss(critic2_q_values, td_target.detach())
 
         # critic1_loss backward
