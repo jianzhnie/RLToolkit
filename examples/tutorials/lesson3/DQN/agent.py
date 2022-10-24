@@ -13,7 +13,6 @@ class Agent(object):
     """Agent.
 
     Args:
-        algo (`Algorithm`): algorithm to be used in this agent.
         action_dim (int): action space dimension
         total_step (int): total epsilon decay steps
         learning_rate (float): initial learning rate

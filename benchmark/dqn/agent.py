@@ -9,7 +9,7 @@ class AtariAgent(Agent):
     """Agent of Atari env.
 
     Args:
-        algorithm (`parl.Algorithm`): algorithm to be used in this agent.
+
         act_dim (int): action space dimension
         total_step (int): total epsilon decay steps
         start_lr (float): initial learning rate
