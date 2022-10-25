@@ -135,7 +135,8 @@ def main():
         obs_dim=obs_dim,
         batch_size=args.batch_size,
         n_step=args.n_step,
-        gamma=args.gamma)
+        gamma=args.gamma,
+        device=device)
 
     # get agent
     agent = Agent(
@@ -164,6 +165,7 @@ def main():
     episode_cnt = 0
     while cum_steps < args.total_steps:
         # start epoch
+        episode_cnt += 1
         total_reward, steps = run_train_episode(
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
 
