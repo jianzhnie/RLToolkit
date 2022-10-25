@@ -24,9 +24,13 @@ class Agent(object):
                  action_dim: int,
                  algo: str = 'dqn',
                  gamma: float = 0.99,
+                 std_init: float = 0.1,
+                 v_min: float = 0.0,
+                 v_max: float = 200.0,
+                 atom_size: int = 51,
                  learning_rate: float = 0.001,
                  update_target_step: int = 100,
-                 device='cpu'):
+                 device: str = 'cpu'):
         super().__init__()
 
         self.algo = algo
@@ -34,19 +38,30 @@ class Agent(object):
         self.global_update_step = 0
         self.update_target_step = update_target_step
         self.action_dim = action_dim
+        # Categorical DQN parameters
+        self.v_min = v_min
+        self.v_max = v_max
+        self.atom_size = atom_size
+        self.support = torch.linspace(self.v_min, self.v_max,
+                                      self.atom_size).to(device)
 
         # Main network
         if 'duling' in algo:
-            self.qnet = NoisyDulingNet(obs_dim, hidden_dim,
-                                       action_dim).to(device)
+            self.qnet = NoisyDulingNet(
+                obs_dim=obs_dim,
+                action_dim=action_dim,
+                hidden_dim=hidden_dim,
+                atom_size=atom_size,
+                std_init=std_init,
+                support=self.support)
         else:
-            self.qnet = NoisyNet(obs_dim, hidden_dim, action_dim).to(device)
+            self.qnet = NoisyNet(
+                obs_dim, hidden_dim, action_dim, std_init=std_init).to(device)
 
         # Target network
         self.target_qnet = copy.deepcopy(self.qnet)
         # Create an optimizer
         self.optimizer = Adam(self.qnet.parameters(), lr=learning_rate)
-
         self.device = device
 
     def sample(self, obs) -> int:
@@ -100,10 +115,10 @@ class Agent(object):
         pred_value = self.qnet(obs).gather(1, action)
 
         # Target for Q regression
-        if self.algo in ['dqn', 'duling_dqn']:
+        if self.algo in ['noisy_dqn', 'noisy_duling_dqn']:
             next_q_value = self.target_qnet(next_obs).max(1, keepdim=True)[0]
 
-        elif self.algo in ['ddqn', 'duling_ddqn']:
+        elif self.algo in ['noisy_ddqn', 'noisy_duling_ddqn']:
             greedy_action = self.qnet(next_obs).max(dim=1, keepdim=True)[1]
             next_q_value = self.target_qnet(next_obs).gather(1, greedy_action)
         target = reward + (1 - terminal) * self.gamma * next_q_value

@@ -23,7 +23,7 @@ config = {
     'test_seed': 42,
     'env': 'CartPole-v0',
     'use_wandb': False,
-    'algo': 'dqn',
+    'algo': 'noisy_duling_dqn',
     'hidden_dim': 128,
     'total_steps': 10000,  # max training steps
     'memory_size': 10000,  # Replay buffer size
@@ -32,6 +32,10 @@ config = {
     'update_target_step': 100,  # target model update freq
     'learning_rate': 0.001,  # start learning rate
     'gamma': 0.99,  # discounting factor
+    'v_min': 0.0,
+    'v_max': 200.0,
+    'atom_size': 51,
+    'std_init': 0.5,
     'eval_render': True,  # do eval render
     'train_log_interval': 1,
     'test_log_interval': 5,  # evaluation freq
@@ -140,6 +144,10 @@ def main():
         action_dim=action_dim,
         algo=args.algo,
         gamma=args.gamma,
+        std_init=args.std_init,
+        v_min=args.v_min,
+        v_max=args.v_max,
+        atom_size=args.atom_size,
         learning_rate=args.learning_rate,
         update_target_step=args.update_target_step,
         device=device)
