@@ -212,11 +212,11 @@ We're actively working on refactoring and trying to make the codebase cleaner an
 11. SAC with automatic entropy adjustment (SAC-AEA) <sub><sup> ([T. Haarnoja et al. 2018](https://arxiv.org/abs/1812.05905)) </sup></sub>
 
 
-| Policy Optimization | Algorithms                                    | Paper                                                        | Link |
-| ------------------- | --------------------------------------------- | ------------------------------------------------------------ | ---- |
-| Policy Optimization | [A2C / A3C](https://arxiv.org/abs/1602.01783) | (Asynchronous Advantage Actor-Critic): Mnih et al, 2016      |      |
-| Policy Optimization | [PPO](https://arxiv.org/abs/1707.06347)       | (Proximal Policy Optimization): Schulman et al, 2017         |      |
-| Policy Optimization |                                               | [TRPO](https://arxiv.org/abs/1502.05477) (Trust Region Policy Optimization): Schulman et al, 2015 |      |
+| Policy Optimization | Algorithms Code         |Paper        |
+ ------------------- | --------------------------------------------- | ------------------------------------------------------------ |
+| Policy Optimization | [A2C/A3C]() | [Asynchronous Advantage Actor-Critic): Mnih et al, 2016 ](https://arxiv.org/abs/1602.01783)  | [paper]    |
+| Policy Optimization | [PPO]()       | [Proximal Policy Optimization): Schulman et al, 2017](https://arxiv.org/abs/1707.06347)         |      |
+| Policy Optimization |  [TRPO]       | (https://arxiv.org/abs/1502.05477) (Trust Region Policy Optimization): Schulman et al, 2015 |      |
 | Policy Optimization |                                               |                                                              |      |
 |                     |                                               |                                                              |      |
 |                     |                                               |                                                              |      |
