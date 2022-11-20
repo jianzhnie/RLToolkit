@@ -113,7 +113,9 @@ class Agent(object):
 
         reward = np.clip(reward, -1, 1)
 
-        action = torch.tensor(action, dtype=torch.long).to(self.device)
+        action = action.to(self.device, dtype=torch.long)
+        action = action.to(self.device, dtype=torch.long)
+
         # Prediction Q(s)
         pred_value = self.qnet(obs).gather(1, action)
 

@@ -33,7 +33,7 @@ def create_file_after_first_call(func_name):
     return call
 
 
-# export writter functions
+# export writer functions
 for func_name in _WRITTER_METHOD:
     locals()[func_name] = create_file_after_first_call(func_name)
     __all__.append(func_name)

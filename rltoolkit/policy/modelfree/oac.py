@@ -106,7 +106,7 @@ class OAC(rltoolkit.Algorithm):
         # Obtain Sigma_T (the covariance of the normal distribution)
         Sigma_T = torch.pow(act_std, 2)
 
-        # The dividor is (g^T Sigma g) ** 0.5
+        # The divider is (g^T Sigma g) ** 0.5
         # Sigma is diagonal, so this works out to be
         # ( sum_{i=1}^k (g^(i))^2 (sigma^(i))^2 ) ** 0.5
         denom = torch.sqrt(torch.sum(torch.mul(torch.pow(grad, 2),

@@ -191,7 +191,7 @@ class SACAgent(object):
         target_entropy (int): desired entropy used for the inequality constraint
         log_alpha (torch.Tensor): weight for entropy
         alpha_optimizer (Optimizer): optimizer for alpha
-        transition (list): temporory storage for the recent transition
+        transition (list): temporary storage for the recent transition
         total_step (int): total step numbers
         is_test (bool): flag to show the current mode (train / test)
     """

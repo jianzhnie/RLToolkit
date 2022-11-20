@@ -80,7 +80,7 @@ class Agent(object):
 
     The “Actor” updates the policy distribution in the direction suggested by the Critic (such as with policy gradients).
 
-    Atribute:
+    Attribute:
         gamma (float): discount factor
         lmbda: (float): GAE参数
         gamma: (float), 折扣回报系数

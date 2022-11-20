@@ -1,5 +1,6 @@
 import copy
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
@@ -87,6 +88,8 @@ class Agent(object):
         Returns:
             act(int): action
         """
+        if obs.ndim == 1:  # if obs is 1 dimensional, we need to expand it to have batch_size = 1
+            obs = np.expand_dims(obs, axis=0)
         obs = torch.tensor(obs, dtype=torch.float, device=self.device)
         action = self.qnet(obs).argmax().item()
         return action
@@ -109,7 +112,7 @@ class Agent(object):
         if self.global_update_step % self.update_target_step == 0:
             hard_target_update(self.qnet, self.target_qnet)
 
-        action = torch.tensor(action, dtype=torch.long).to(self.device)
+        action = action.to(self.device, dtype=torch.long)
 
         # Prediction Q(s)
         pred_value = self.qnet(obs).gather(1, action)

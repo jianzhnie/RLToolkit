@@ -26,14 +26,14 @@ class QMixAgent(Agent):
         qmixer_model_path = os.path.join(save_dir, agent_model_name)
         torch.save(self.alg.agent_model.state_dict(), agent_model_path)
         torch.save(self.alg.qmixer_model.state_dict(), qmixer_model_path)
-        print('save model sucessfully!')
+        print('save model successfully!')
 
     def restore(self, save_dir, agent_model_name, qmixer_model_name):
         agent_model_path = os.path.join(save_dir, agent_model_name)
         qmixer_model_path = os.path.join(save_dir, agent_model_name)
         self.alg.agent_model.load_state_dict(torch.load(agent_model_path))
         self.alg.qmixer_model.load_state_dict(torch.load(qmixer_model_path))
-        print('restore model sucessfully!')
+        print('restore model successfully!')
 
     def reset_agent(self, batch_size=1):
         self.alg._init_hidden_states(batch_size)

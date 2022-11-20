@@ -65,15 +65,15 @@ def main():
 
         agent = SimpleAgent(algorithm, device=device)
         # buffer
-        bu = SeparatedReplayBuffer(EPISODE_LENGTH, env_num, GAMMA, GAE_LAMBDA,
-                                   obs_dim, cent_obs_dim,
-                                   envs.action_space[agent_id],
-                                   args.use_popart)
+        buffer = SeparatedReplayBuffer(EPISODE_LENGTH, env_num, GAMMA,
+                                       GAE_LAMBDA, obs_dim, cent_obs_dim,
+                                       envs.action_space[agent_id],
+                                       args.use_popart)
         agents.append(agent)
-        buffers.append(bu)
+        buffers.append(buffer)
 
     if args.restore:
-        # restore modle
+        # restore model
         for i in range(len(agents)):
             model_file = args.model_dir + '/' + args.env_name + '/agent_' + str(
                 i)

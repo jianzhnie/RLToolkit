@@ -11,7 +11,25 @@ Copyright (c) 2022 by jianzhnie jianzhnie@126.com, All Rights Reserved.
 import glob
 import os
 
+import gym
+
 from rltoolkit.env.gym_envs import VecNormalize
+
+
+def make_env(env_id, seed, idx, capture_video, run_name):
+
+    def thunk():
+        env = gym.make(env_id)
+        env = gym.wrappers.RecordEpisodeStatistics(env)
+        if capture_video:
+            if idx == 0:
+                env = gym.wrappers.RecordVideo(env, f'videos/{run_name}')
+        env.seed(seed)
+        env.action_space.seed(seed)
+        env.observation_space.seed(seed)
+        return env
+
+    return thunk
 
 
 # Get a render function

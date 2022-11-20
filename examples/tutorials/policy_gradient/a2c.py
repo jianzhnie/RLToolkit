@@ -73,7 +73,7 @@ class Critic(nn.Module):
 class A2CAgent(object):
     """A2CAgent interacting with environment.
 
-    Atribute:
+    Attribute:
         env (gym.Env): openAI Gym environment
         gamma (float): discount factor
         entropy_weight (float): rate of weighting entropy into the loss function
@@ -82,7 +82,7 @@ class A2CAgent(object):
         critic (nn.Module): critic model to predict state values
         actor_optimizer (optim.Optimizer) : optimizer of actor
         critic_optimizer (optim.Optimizer) : optimizer of critic
-        transition (list): temporory storage for the recent transition
+        transition (list): temporary storage for the recent transition
         total_step (int): total step numbers
         is_test (bool): flag to show the current mode (train / test)
     """

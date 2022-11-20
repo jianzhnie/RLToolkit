@@ -1,5 +1,6 @@
 import copy
 
+import numpy as np
 import torch
 import torch.optim as optim
 
@@ -102,6 +103,8 @@ class Agent(object):
         Returns:
             act(int): action
         """
+        if obs.ndim == 1:  # if obs is 1 dimensional, we need to expand it to have batch_size = 1
+            obs = np.expand_dims(obs, axis=0)
         obs = torch.tensor(obs, dtype=torch.float, device=self.device)
         selected_action = self.model(obs).argmax().item()
         return selected_action
@@ -121,7 +124,7 @@ class Agent(object):
         Returns:
             loss (float)
         """
-        action = torch.tensor(action, dtype=torch.long).to(self.device)
+        action = action.to(self.device, dtype=torch.long)
 
         if self.global_update_step % self.update_target_step == 0:
             self.model.sync_weights_to(self.target_model)

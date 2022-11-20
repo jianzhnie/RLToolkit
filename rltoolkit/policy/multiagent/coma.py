@@ -258,7 +258,7 @@ class COMA(Algorithm):
 
         q_taken = torch.gather(q_values, dim=3, index=u).squeeze(3)  # Q(u_a)
         pi_taken = torch.gather(action_prob, dim=3, index=u).squeeze(3)
-        # prob of act that agent a choosen
+        # prob of act that agent a chosen
         pi_taken[mask == 0] = 1.0  # prevent log overflow
         log_pi_taken = torch.log(pi_taken)
 

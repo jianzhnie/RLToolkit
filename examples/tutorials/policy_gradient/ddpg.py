@@ -21,7 +21,7 @@ class ReplayBuffer:
     """A simple numpy replay buffer."""
 
     def __init__(self, obs_dim: int, size: int, batch_size: int = 32):
-        """Initializate."""
+        """Initialize."""
         self.obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
         self.next_obs_buf = np.zeros([size, obs_dim], dtype=np.float32)
         self.acts_buf = np.zeros([size], dtype=np.float32)
@@ -169,7 +169,7 @@ class DDPGAgent(object):
         initial_random_steps (int): initial random action steps
         noise (OUNoise): noise generator for exploration
         device (torch.device): cpu / gpu
-        transition (list): temporory storage for the recent transition
+        transition (list): temporary storage for the recent transition
         total_step (int): total step numbers
         is_test (bool): flag to show the current mode (train / test)
     """
