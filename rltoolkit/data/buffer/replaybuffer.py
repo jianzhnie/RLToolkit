@@ -94,7 +94,7 @@ class ReplayBuffer(object):
             indices=idxs,  # for N -step Learning
         )
         batch = {
-            key: torch.Tensor(val, device=self.device)
+            key: torch.tensor(val, device=self.device)
             for (key, val) in batch.items()
         }
 

@@ -1,6 +1,6 @@
 """
 QMixConfig:
-    'scenario': (str) The scenario in smac environments. All senarios: ['3m',
+    'scenario': (str) The scenario in smac environments. All scenarios: ['3m',
         '8m', '25m', '5m_vs_6m', '8m_vs_9m', '10m_vs_11m', '27m_vs_39m',
         'MMM', 'MMM2', '2s3z', '3s5z', '3s5z_vs_3s6z', '3s_vs_3z',
         '3s_vs_4z', '3s_vs_5z', '1c3s5z', '2m_vs_1z', 'corridor',
@@ -9,12 +9,12 @@ QMixConfig:
     'replay_buffer_size': (int) Max episode number to be stored in the replay buffer.
     'mixing_embed_dim': (int) Embed dim of the mixing network.
     'rnn_hidden_dim': (int) Dim of GRU's hidden state.
-    'memory_warmup_size': (int) The learning process will not start untill current
+    'memory_warmup_size': (int) The learning process will not start until current
         replay buffer size >= 'memory_warmup_size'.
     'gamma': (float) Discount factor in reinforcement learning.
     'exploration_start': (float) Initial 'epsilon' in epsilon-greedy based exploration.
     'min_exploration': (float) Min 'epsilon' in epsilon-greedy.
-    'update_target_interval': (int) Synchronize paramters to the target model after
+    'update_target_interval': (int) Synchronize parameters to the target model after
         the model has been learned 'update_target_interval' times.
     'batch_size': (int) Training batch_size.
     'training_steps': (int) Total steps for training.

@@ -155,7 +155,7 @@ class TD3Agent(object):
         target_policy_noise (GaussianNoise): gaussian noise for target policy
         target_policy_noise_clip (float): clip target gaussian noise
         device (torch.device): cpu / gpu
-        transition (list): temporory storage for the recent transition
+        transition (list): temporary storage for the recent transition
         policy_update_freq (int): update actor every time critic updates this times
         total_step (int): total step numbers
         is_test (bool): flag to show the current mode (train / test)

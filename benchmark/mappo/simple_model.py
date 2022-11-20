@@ -57,13 +57,13 @@ class Actor(Model):
         x = F.tanh(self.fc2(x))
 
         if self.multi_discrete:
-            policys = []
+            policies = []
             for action_out in self.action_outs:
                 policy = action_out(x)
-                policys.append(policy)
+                policies.append(policy)
         else:
-            policys = self.fc3(x)
-        return policys
+            policies = self.fc3(x)
+        return policies
 
 
 class Critic(Model):

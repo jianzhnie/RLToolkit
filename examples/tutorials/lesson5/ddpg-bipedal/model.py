@@ -42,11 +42,7 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     """Critic (Value) Model."""
 
-    def __init__(self,
-                 obs_dim,
-                 action_dim,
-                 fc1_units=256,
-                 fc2_units=128):
+    def __init__(self, obs_dim, action_dim, fc1_units=256, fc2_units=128):
         """Initialize parameters and build model.
 
         Params:
@@ -63,7 +59,6 @@ class Critic(nn.Module):
         self.fc1.weight.data.uniform_(*hidden_init(self.fc1))
         self.fc2.weight.data.uniform_(*hidden_init(self.fc2))
         self.fc3.weight.data.uniform_(-3e-3, 3e-3)
-
 
     def forward(self, obs, action):
         """Build a critic (value) network that maps (obs, action) pairs ->

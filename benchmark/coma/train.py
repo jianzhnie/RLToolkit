@@ -161,7 +161,7 @@ def test_by_sparse_reward(agents, config):
         difficulty=config['difficulty'],
         seed=config['env_seed'],
         replay_dir=config['replay_dir'],
-        reward_sparse=True,  # Receive 1/-1 reward for winning/loosing an episode
+        reward_sparse=True,  # Receive 1/-1 reward for winning/losing an episode
         reward_scale=False)
     win_number = 0
     for ep_id in range(config['test_episode_n']):

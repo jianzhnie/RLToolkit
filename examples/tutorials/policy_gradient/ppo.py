@@ -134,7 +134,7 @@ class PPOAgent(object):
         entropy_weight (float): rate of weighting entropy into the loss function
         actor (nn.Module): target actor model to select actions
         critic (nn.Module): critic model to predict state values
-        transition (list): temporory storage for the recent transition
+        transition (list): temporary storage for the recent transition
         device (torch.device): cpu / gpu
         total_step (int): total step numbers
         is_test (bool): flag to show the current mode (train / test)

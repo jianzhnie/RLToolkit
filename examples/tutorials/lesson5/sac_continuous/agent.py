@@ -163,7 +163,7 @@ class Agent(object):
 
     The “Actor” updates the policy distribution in the direction suggested by the Critic (such as with policy gradients).
 
-    Atribute:
+    Attribute:
         gamma (float): discount factor
         entropy_weight (float): rate of weighting entropy into the loss function
         actor (nn.Module): target actor model to select actions

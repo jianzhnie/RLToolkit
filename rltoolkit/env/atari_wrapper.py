@@ -273,7 +273,7 @@ def make_atari_env(task, seed, training_num, test_num, **kwargs):
                 'EnvPool does not include ScaledFloatFrame wrapper, '
                 "please set `x = x / 255.0` inside CNN network's forward function."
             )
-        # parameters convertion
+        # parameters conversion
         train_envs = env = envpool.make_gym(
             task.replace('NoFrameskip-v4', '-v5'),
             num_envs=training_num,

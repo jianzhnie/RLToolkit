@@ -49,7 +49,7 @@ class Agent(object):
 
     The “Actor” updates the policy distribution in the direction suggested by the Critic (such as with policy gradients).
 
-    Atribute:
+    Attribute:
         gamma (float): discount factor
         entropy_weight (float): rate of weighting entropy into the loss function
         actor (nn.Module): target actor model to select actions
@@ -148,7 +148,7 @@ class Agent(object):
               terminal: torch.Tensor) -> Tuple[float, float]:
         """Update the model by TD actor-critic."""
 
-        action = torch.tensor(action, dtype=torch.long).to(self.device)
+        action = action.to(self.device, dtype=torch.long)
 
         # 更新两个Q网络
         td_target = self.calc_target(reward, next_obs, terminal)
