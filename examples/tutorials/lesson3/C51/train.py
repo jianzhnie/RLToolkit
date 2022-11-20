@@ -1,5 +1,6 @@
 import argparse
 import sys
+import time
 
 import gym
 import numpy as np
@@ -19,9 +20,9 @@ except ImportError:
     has_wandb = False
 
 config = {
-    'train_seed': 42,
-    'test_seed': 42,
-    'env': 'CartPole-v1',
+    'seed': 42,
+    'seed': 42,
+    'env': 'CartPole-v0',
     'algo': 'dqn',
     'use_wandb': False,
     'n_atoms': 101,
@@ -33,9 +34,9 @@ config = {
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'batch_size': 32,  # repaly sample batch size
     'update_target_step': 100,  # target model update freq
-    'learning_rate': 0.001,  # start learning rate
+    'learning_rate': 1e-3,  # start learning rate
     'epsilon': 1,  # start greedy epsilon
-    'epsilon_decay': 0.95,  # epsilon decay rate
+    'epsilon_decay': 0.97,  # epsilon decay rate
     'min_epsilon': 0.1,
     'gamma': 0.99,  # discounting factor
     'eval_render': True,  # do eval render
@@ -108,18 +109,20 @@ def main():
     env = gym.make(args.env)
     test_env = gym.make(args.env)
     # set seed
-    torch.manual_seed(args.train_seed)
-    torch.cuda.manual_seed_all(args.train_seed)
-    env.seed(args.train_seed)
-    test_env.seed(args.test_seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+    env.seed(args.seed)
+    test_env.seed(args.seed)
 
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
+    run_name = f'{args.env}_{args.algo}_{args.seed}_{int(time.time())}'
     if args.use_wandb:
         if has_wandb:
             wandb.init(
-                project=args.env + '_' + args.algo,
+                project=args.env,
+                name=run_name,
                 config=args,
                 entity='jianzhnie',
                 sync_tensorboard=True,
