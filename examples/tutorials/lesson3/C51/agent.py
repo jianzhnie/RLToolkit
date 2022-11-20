@@ -36,7 +36,7 @@ class QNetwork(nn.Module):
         # logits: batch_size * (act_dim * n_atoms)
         logits = self.network(x)
         # logits: batch_size * act_dim * n_atoms
-        logits = logits.view(-1, self.act_dim, self.n_atoms)
+        logits = logits.view(len(x), self.act_dim, self.n_atoms)
         # probability mass function for each action
         # pmfs: batch_size * act_dim * n_atoms
         pmfs = torch.softmax(logits, dim=2)
@@ -128,7 +128,7 @@ class Agent(object):
         obs = np.expand_dims(obs, axis=0)
         obs = torch.tensor(obs, dtype=torch.float, device=self.device)
         action, pmf = self.qnet(obs)
-        action = action.cpu().numpy()
+        action = action.item()
         return action
 
     def learn(self, obs: torch.Tensor, action: torch.Tensor,
@@ -149,28 +149,29 @@ class Agent(object):
         if self.global_update_step % self.update_target_step == 0:
             hard_target_update(self.qnet, self.target_qnet)
 
-        _, next_pmfs = self.target_qnet(next_obs)
-        next_atoms = reward + self.gamma * self.target_qnet.atoms * (1 -
-                                                                     terminal)
-
-        # projection
-        delta_z = self.target_qnet.atoms[1] - self.target_qnet.atoms[0]
-        tz = next_atoms.clamp(self.v_min, self.v_max)
-
-        b = (tz - self.v_min) / delta_z
-        l = b.floor().clamp(0, self.n_atoms - 1)
-        u = b.ceil().clamp(0, self.n_atoms - 1)
-
-        # (l == u).float() handles the case where bj is exactly an integer
-        # example bj = 1, then the upper ceiling should be uj= 2, and lj= 1
-        d_m_l = (u + (l == u).float() - b) * next_pmfs
-        d_m_u = (b - l) * next_pmfs
-        target_pmfs = torch.zeros_like(next_pmfs)
-        for i in range(target_pmfs.size(0)):
-            target_pmfs[i].index_add_(0, l[i].long(), d_m_l[i])
-            target_pmfs[i].index_add_(0, u[i].long(), d_m_u[i])
-
         action = action.to(dtype=torch.long)
+        with torch.no_grad():
+            _, next_pmfs = self.target_qnet(next_obs)
+            next_atoms = reward + self.gamma * self.target_qnet.atoms * (
+                1 - terminal)
+
+            # projection
+            delta_z = self.target_qnet.atoms[1] - self.target_qnet.atoms[0]
+            tz = next_atoms.clamp(self.v_min, self.v_max)
+
+            b = (tz - self.v_min) / delta_z
+            l = b.floor().clamp(0, self.n_atoms - 1)
+            u = b.ceil().clamp(0, self.n_atoms - 1)
+
+            # (l == u).float() handles the case where bj is exactly an integer
+            # example bj = 1, then the upper ceiling should be uj= 2, and lj= 1
+            d_m_l = (u + (l == u).float() - b) * next_pmfs
+            d_m_u = (b - l) * next_pmfs
+            target_pmfs = torch.zeros_like(next_pmfs)
+            for i in range(target_pmfs.size(0)):
+                target_pmfs[i].index_add_(0, l[i].long(), d_m_l[i])
+                target_pmfs[i].index_add_(0, u[i].long(), d_m_u[i])
+
         _, old_pmfs = self.qnet(obs, action)
         loss = torch.mean(
             -(target_pmfs *
