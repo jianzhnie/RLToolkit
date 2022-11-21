@@ -1,0 +1,138 @@
+import copy
+
+import gym
+import numpy as np
+import torch
+import torch.nn.functional as F
+from network import DulingNet, QNet
+from torch.optim import Adam
+
+from rltoolkit.models.utils import hard_target_update
+
+
+class Agent(object):
+    """Agent.
+
+    Args:
+        action_dim (int): action space dimension
+        total_step (int): total epsilon decay steps
+        learning_rate (float): initial learning rate
+        update_target_step (int): target network update frequency
+    """
+
+    def __init__(self,
+                 env: gym.Env,
+                 hidden_dim: int,
+                 algo: str = 'dqn',
+                 gamma: float = 0.99,
+                 epsilon: float = 1.0,
+                 learning_rate: float = 0.001,
+                 update_target_step: int = 100,
+                 device='cpu'):
+        super().__init__()
+
+        self.env = env
+        self.algo = algo
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.global_update_step = 0
+        self.update_target_step = update_target_step
+        self.obs_dim = np.array(env.single_observation_space.shape).prod()
+        self.action_dim = env.single_action_space.n
+        self.hidden_dim = hidden_dim
+
+        # Main network
+        if 'duling' in algo:
+            self.qnet = DulingNet(self.obs_dim, self.hidden_dim,
+                                  self.action_dim).to(device)
+        else:
+            self.qnet = QNet(self.obs_dim, self.hidden_dim,
+                             self.action_dim).to(device)
+        # Target network
+        self.target_qnet = copy.deepcopy(self.qnet)
+        # Create an optimizer
+        self.optimizer = Adam(self.qnet.parameters(), lr=learning_rate)
+
+        self.device = device
+
+    def sample(self, obs) -> int:
+        """Sample an action when given an observation, base on the current
+        epsilon value, either a greedy action or a random action will be
+        returned.
+
+        Args:
+            obs: current observation
+
+        Returns:
+            act (int): action
+        """
+        # Choose a random action with probability epsilon
+        if np.random.rand() <= self.epsilon:
+            act = np.array([
+                self.env.single_action_space.sample()
+                for _ in range(self.env.num_envs)
+            ])
+        else:
+            # Choose the action with highest Q-value at the current state
+            act = self.predict(obs)
+
+        return act
+
+    def predict(self, obs) -> int:
+        """Predict an action when given an observation, a greedy action will be
+        returned.
+
+        Args:
+            obs (np.float32): shape of (batch_size, obs_dim) , current observation
+
+        Returns:
+            act(int): action
+        """
+        if obs.ndim == 1:  # if obs is 1 dimensional, we need to expand it to have batch_size = 1
+            obs = np.expand_dims(obs, axis=0)
+        obs = torch.tensor(obs, dtype=torch.float, device=self.device)
+        # action = self.qnet(obs).argmax().item()
+        q_values = self.target_qnet(obs)
+        actions = torch.argmax(q_values, dim=1).cpu().numpy()
+        return actions
+
+    def learn(self, obs: torch.Tensor, action: torch.Tensor,
+              reward: torch.Tensor, next_obs: torch.Tensor,
+              terminal: torch.Tensor) -> float:
+        """Update model with an episode data.
+
+        Args:
+            obs (np.float32): shape of (batch_size, obs_dim)
+            act (np.int32): shape of (batch_size)
+            reward (np.float32): shape of (batch_size)
+            next_obs (np.float32): shape of (batch_size, obs_dim)
+            terminal (np.float32): shape of (batch_size)
+
+        Returns:
+            loss (float)
+        """
+        if self.global_update_step % self.update_target_step == 0:
+            hard_target_update(self.qnet, self.target_qnet)
+
+        # Prediction Q(s)
+        pred_value = self.qnet(obs).gather(1, action)
+
+        # Target for Q regression
+        if self.algo in ['dqn', 'duling_dqn']:
+            next_q_value = self.target_qnet(next_obs).max(1, keepdim=True)[0]
+
+        elif self.algo in ['ddqn', 'duling_ddqn']:
+            greedy_action = self.qnet(next_obs).max(dim=1, keepdim=True)[1]
+            next_q_value = self.target_qnet(next_obs).gather(1, greedy_action)
+
+        target = reward + (1 - terminal) * self.gamma * next_q_value
+
+        # TD误差目标
+        loss = F.mse_loss(pred_value, target)
+        # PyTorch中默认梯度会累积,这里需要显式将梯度置为0
+        self.optimizer.zero_grad()
+        loss.backward()
+        # 反向传播更新参数
+        self.optimizer.step()
+        self.global_update_step += 1
+        return loss.item()
