@@ -6,6 +6,7 @@
  * @Description:
  * Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 -->
+
 ## Reproduce MAPPO with PARL
 
 Based on PARL, the MAPPO algorithm of deep reinforcement learning has been reproduced.
@@ -47,12 +48,12 @@ simple_spread<br>
 
 ### Dependencies:
 
-+ python>=3.6
-+ [parl>=2.0.4](https://github.com/PaddlePaddle/PARL)
-+ [mappo-mpe](https://github.com/benchmarking-rl/PARL-experiments/tree/master/MAPPO/env)
-+ numpy==1.18.5
-+ torch==1.5.1
-+ seaborn
+- python>=3.6
+- [parl>=2.0.4](https://github.com/PaddlePaddle/PARL)
+- [mappo-mpe](https://github.com/benchmarking-rl/PARL-experiments/tree/master/MAPPO/env)
+- numpy==1.18.5
+- torch==1.5.1
+- seaborn
 
 ### Start Training:
 

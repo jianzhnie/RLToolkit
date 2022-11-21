@@ -28,27 +28,27 @@ repos:
     rev: v2.2.1
     hooks:
       - id: codespell
-  # - repo: https://github.com/executablebooks/mdformat
-  #   rev: 0.7.9
-  #   hooks:
-  #     - id: mdformat
-  #       args: ["--number"]
-  #       additional_dependencies:
-  #         - mdformat-openmmlab
-  #         - mdformat_frontmatter
-  #         - linkify-it-py
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.9
+    hooks:
+      - id: mdformat
+        args: ["--number"]
+        additional_dependencies:
+          - mdformat-openmmlab
+          - mdformat_frontmatter
+          - linkify-it-py
   - repo: https://github.com/myint/docformatter
     rev: v1.3.1
     hooks:
       - id: docformatter
         args: ["--in-place", "--wrap-descriptions", "160"]
-  # - repo: https://github.com/pycqa/pydocstyle
-  #   rev: 6.1.1
-  #   hooks:
-  #     - id: pydocstyle
-  #       exclude: ^(test/)|(docs/)|(examples/)|(setup.py)
-  # - repo: https://github.com/asottile/pyupgrade
-  #   rev: v3.0.0
-  #   hooks:
-  #     - id: pyupgrade
-  #       args: ["--py36-plus"]
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.1.1
+    hooks:
+      - id: pydocstyle
+        exclude: ^(test/)|(docs/)|(examples/)|(setup.py)
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.0.0
+    hooks:
+      - id: pyupgrade
+        args: ["--py36-plus"]
