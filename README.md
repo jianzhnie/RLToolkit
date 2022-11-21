@@ -152,15 +152,22 @@ For the details of DRL algorithms, please check out the educational webpage [Ope
 <br>
 
 - [QuickStart](./benchmark/quickstart/train.py)
-- [DQN](./benchmark/dqn/train.py)
-- [DDPG](./benchmark/ddpg/train.py)
-- [A2C](./benchmark/a2c/train.py)
-- [TD3](./benchmark/a2c/train.py)
-- [SAC](./benchmark/sac/train.py)
-- [PPO](./benchmark/ppo/train.py)
-- [QMIX](./benchmark/qmix/train.py)
-- [MADDPG](./benchmark/mappo/train.py)
-- [MAPPO](./benchmark/mappo/train.py)
+- [DQN](./examples/tutorials/lesson3/DQN/train.py)
+- [N-step-DQN](./examples/tutorials/lesson3/N-step-DQN/train.py)
+- [Noisy-DQN](./examples/tutorials/lesson3/Noisy-DQN/train.py)
+- [Rainbow](./examples/tutorials/lesson3/Rainbow/train.py)
+- [PG](./examples/tutorials/lesson4/pg/train.py)
+- [TRPO](./examples/tutorials/lesson4/trpo/train.py)
+- [PPO](./examples/tutorials/lesson4/ppo/train.py)
+- [AC](./examples/tutorials/lesson4/ac&a2c/train.py)
+- [A2C](./examples/tutorials/lesson4/ac&a2c/train.py)
+- [DDPG](./examples/tutorials/lesson5/ddpg-pendulum)
+- [SAC](./examples/tutorials/lesson5/sac/train.py)
+- [TD3](./examples/tutorials/lesson5/td3/train.py)
+- [QMIX](./examples/tutorials/lesson6/qmix/train.py)
+- [IDQN](./examples/tutorials/lesson6/idqn/train.py)
+- [MADDPG](./examples/tutorials/lesson6/maddpg/train.py)
+- [vdn](./examples/tutorials/lesson6/vdn/train.py)
 
 
 ## Experimental Demos
@@ -173,13 +180,22 @@ cd  benchmark/quickstart/
 python train.py
 ```
 
-**DNQ for CartPole-v0**
+**DNQ  example**
 ```python
 # into demo dirs
 cd  examples/tutorials/lesson3/DQN/
 # train
 python train.py
 ```
+
+**PPO Example**
+```python
+# into demo dirs
+cd  examples/tutorials/lesson3/DQN/
+# train
+python train.py
+```
+
 **DDPG for Pendulum-v1**
 
 ```python
@@ -212,84 +228,6 @@ We're actively working on refactoring and trying to make the codebase cleaner an
 11. SAC with automatic entropy adjustment (SAC-AEA) <sub><sup> ([T. Haarnoja et al. 2018](https://arxiv.org/abs/1812.05905)) </sup></sub>
 
 
-| Policy Optimization | Algorithms Code         |Paper        |
- ------------------- | --------------------------------------------- | ------------------------------------------------------------ |
-| Policy Optimization | [A2C/A3C]() | [Asynchronous Advantage Actor-Critic): Mnih et al, 2016 ](https://arxiv.org/abs/1602.01783)  | [paper]    |
-| Policy Optimization | [PPO]()       | [Proximal Policy Optimization): Schulman et al, 2017](https://arxiv.org/abs/1707.06347)         |      |
-| Policy Optimization |  [TRPO]       | (https://arxiv.org/abs/1502.05477) (Trust Region Policy Optimization): Schulman et al, 2015 |      |
-| Policy Optimization |                                               |                                                              |      |
-|                     |                                               |                                                              |      |
-|                     |                                               |                                                              |      |
-|                     |                                               |                                                              |      |
-| Q-Learning          | DQN                                           | [DQN](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf) (Deep Q-Networks): Mnih et al, 2013 |      |
-| Q-Learning          | QR-DQN                                        | [QR-DQN](https://arxiv.org/abs/1710.10044) (Quantile Regression DQN): Dabney et al, 2017 |      |
-| Q-Learning          | C51                                           | [C51](https://arxiv.org/abs/1707.06887) (Categorical 51-Atom DQN): Bellemare et al, 2017 |      |
-| Q-Learning          | HER                                           | [HER](https://arxiv.org/abs/1707.01495) (Hindsight Experience Replay): Andrychowicz et al, 2017 |      |
-| Q-Learning          |                                               |                                                              |      |
-| Po & Q-Learning     |                                               | [DDPG](https://arxiv.org/abs/1509.02971) (Deep Deterministic Policy Gradient): Lillicrap et al, 2015 |      |
-| Po & Q-Learning     |                                               | [TD3](https://arxiv.org/abs/1802.09477) (Twin Delayed DDPG): Fujimoto et al, 2018 |      |
-| Po & Q-Learning     |                                               | [SAC](https://arxiv.org/abs/1801.01290) (Soft Actor-Critic): Haarnoja et al, 2018 |      |
-| Po & Q-Learning     |                                               |                                                              |      |
-|                     |                                               |                                                              |      |
-|                     |                                               |                                                              |      |
-|                     |                                               |                                                              |      |
-|                     |                                               |                                                              |      |
-
----
-
-[1] jeremykun.com [Markov Chain Monte Carlo Without all the Bullshit](https://jeremykun.com/2015/04/06/markov-chain-monte-carlo-without-all-the-bullshit/)
-
-[2] Richard S. Sutton and Andrew G. Barto. [Reinforcement Learning: An Introduction; 2nd Edition](http://incompleteideas.net/book/bookdraft2017nov5.pdf). 2017.
-
-[3] John Schulman, et al. [“High-dimensional continuous control using generalized advantage estimation."](https://arxiv.org/pdf/1506.02438.pdf) ICLR 2016.
-
-[4] Thomas Degris, Martha White, and Richard S. Sutton. [“Off-policy actor-critic."](https://arxiv.org/pdf/1205.4839.pdf) ICML 2012.
-
-[5] timvieira.github.io [Importance sampling](http://timvieira.github.io/blog/post/2014/12/21/importance-sampling/)
-
-[6] Mnih, Volodymyr, et al. [“Asynchronous methods for deep reinforcement learning."](https://arxiv.org/abs/1602.01783) ICML. 2016.
-
-[7] David Silver, et al. [“Deterministic policy gradient algorithms."](https://hal.inria.fr/file/index/docid/938992/filename/dpg-icml2014.pdf) ICML. 2014.
-
-[8] Timothy P. Lillicrap, et al. [“Continuous control with deep reinforcement learning."](https://arxiv.org/pdf/1509.02971.pdf) arXiv preprint arXiv:1509.02971 (2015).
-
-[9] Ryan Lowe, et al. [“Multi-agent actor-critic for mixed cooperative-competitive environments."](https://arxiv.org/pdf/1706.02275.pdf) NIPS. 2017.
-
-[10] John Schulman, et al. [“Trust region policy optimization."](https://arxiv.org/pdf/1502.05477.pdf) ICML. 2015.
-
-[11] Ziyu Wang, et al. [“Sample efficient actor-critic with experience replay."](https://arxiv.org/pdf/1611.01224.pdf) ICLR 2017.
-
-[12] Rémi Munos, Tom Stepleton, Anna Harutyunyan, and Marc Bellemare. [“Safe and efficient off-policy reinforcement learning”](http://papers.nips.cc/paper/6538-safe-and-efficient-off-policy-reinforcement-learning.pdf) NIPS. 2016.
-
-[13] Yuhuai Wu, et al. [“Scalable trust-region method for deep reinforcement learning using Kronecker-factored approximation."](https://arxiv.org/pdf/1708.05144.pdf) NIPS. 2017.
-
-[14] kvfrans.com [A intuitive explanation of natural gradient descent](http://kvfrans.com/a-intuitive-explanation-of-natural-gradient-descent/)
-
-[15] Sham Kakade. [“A Natural Policy Gradient."](https://papers.nips.cc/paper/2073-a-natural-policy-gradient.pdf). NIPS. 2002.
-
-[16] [“Going Deeper Into Reinforcement Learning: Fundamentals of Policy Gradients."](https://danieltakeshi.github.io/2017/03/28/going-deeper-into-reinforcement-learning-fundamentals-of-policy-gradients/) - Seita’s Place, Mar 2017.
-
-[17] [“Notes on the Generalized Advantage Estimation Paper."](https://danieltakeshi.github.io/2017/04/02/notes-on-the-generalized-advantage-estimation-paper/) - Seita’s Place, Apr, 2017.
-
-[18] Gabriel Barth-Maron, et al. [“Distributed Distributional Deterministic Policy Gradients."](https://arxiv.org/pdf/1804.08617.pdf) ICLR 2018 poster.
-
-[19] Tuomas Haarnoja, Aurick Zhou, Pieter Abbeel, and Sergey Levine. [“Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor."](https://arxiv.org/pdf/1801.01290.pdf) arXiv preprint arXiv:1801.01290 (2018).
-
-[20] Scott Fujimoto, Herke van Hoof, and Dave Meger. [“Addressing Function Approximation Error in Actor-Critic Methods."](https://arxiv.org/abs/1802.09477) arXiv preprint arXiv:1802.09477 (2018).
-
-[21] Tuomas Haarnoja, et al. [“Soft Actor-Critic Algorithms and Applications."](https://arxiv.org/abs/1812.05905) arXiv preprint arXiv:1812.05905 (2018).
-
-[22] David Knowles. [“Lagrangian Duality for Dummies”](https://cs.stanford.edu/people/davidknowles/lagrangian_duality.pdf) Nov 13, 2010.
-
-[23] Yang Liu, et al. [“Stein variational policy gradient."](https://arxiv.org/abs/1704.02399) arXiv preprint arXiv:1704.02399 (2017).
-
-[24] Qiang Liu and Dilin Wang. [“Stein variational gradient descent: A general purpose bayesian inference algorithm."](https://papers.nips.cc/paper/6338-stein-variational-gradient-descent-a-general-purpose-bayesian-inference-algorithm.pdf) NIPS. 2016.
-
-[25] Lasse Espeholt, et al. [“IMPALA: Scalable Distributed Deep-RL with Importance Weighted Actor-Learner Architectures”](https://arxiv.org/abs/1802.01561) arXiv preprint 1802.01561 (2018).
-
-[26] Karl Cobbe, et al. [“Phasic Policy Gradient."](https://arxiv.org/abs/2009.04416) arXiv preprint arXiv:2009.04416 (2020).
-
-[27] Chloe Ching-Yun Hsu, et al. [“Revisiting Design Choices in Proximal Policy Optimization."](https://arxiv.org/abs/2009.10897) arXiv preprint arXiv:2009.10897 (2020).
 
 ## Citation
 
