@@ -177,8 +177,8 @@ class ReplayBuffer(BaseBuffer):
         buffer_size: int,
         observation_space: spaces.Space,
         action_space: spaces.Space,
-        device: Union[torch.device, str] = 'cpu',
         n_envs: int = 1,
+        device: Union[torch.device, str] = 'cpu',
         optimize_memory_usage: bool = False,
         handle_timeout_termination: bool = True,
     ):
@@ -303,7 +303,11 @@ class ReplayBuffer(BaseBuffer):
             return super().sample(batch_size=batch_size, env=env)
         # Do not sample the element with index `self.pos` as the transitions is invalid
         # (we use only one array to store `obs` and `next_obs`)
-        batch_inds = np.random.randint(0, self.curr_size, size=batch_size)
+        if self.size == self.buffer_size:
+            batch_inds = np.random.randint(1, self.curr_size, size=batch_size)
+        else:
+            batch_inds = np.random.randint(0, self.curr_size, size=batch_size)
+
         return self._get_samples(batch_inds, env=env)
 
     def _get_samples(
@@ -388,6 +392,20 @@ class SimpleReplayBuffer(object):
 
         self._curr_ptr = (self._curr_ptr + 1) % self.max_size
         self._curr_size = min(self._curr_size + 1, self.max_size)
+
+    def to_torch(self, array: np.ndarray, copy: bool = True) -> torch.Tensor:
+        """
+        Convert a numpy array to a PyTorch tensor.
+        Note: it copies the data by default
+
+        :param array:
+        :param copy: Whether to copy or not the data
+            (may be useful to avoid changing things be reference)
+        :return:
+        """
+        if copy:
+            return torch.tensor(array).to(self.device)
+        return torch.as_tensor(array).to(self.device)
 
     def sample_batch(self) -> Dict[str, np.ndarray]:
         """sample a batch from replay memory.
