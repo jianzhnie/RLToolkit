@@ -1,4 +1,5 @@
 import copy
+import sys
 import time
 
 import gym
@@ -7,10 +8,12 @@ import torch
 import torch.nn.functional as F
 import wandb
 from network import DulingNet, QNet
-from stable_baselines3.common.buffers import ReplayBuffer
+
+sys.path.append('../../../../')
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
 
+from rltoolkit.data.buffer.replaybuffer import ReplayBuffer
 from rltoolkit.models.utils import hard_target_update
 from rltoolkit.utils.scheduler import LinearDecayScheduler
 
@@ -48,10 +51,11 @@ class Agent(object):
         self.obs_dim = np.array(envs.single_observation_space.shape).prod()
         self.action_dim = envs.single_action_space.n
         self.replaybuffer = ReplayBuffer(
-            args.buffer_size,
-            envs.single_observation_space,
-            envs.single_action_space,
-            device,
+            buffer_size=args.memory_size,
+            observation_space=envs.single_observation_space,
+            action_space=envs.single_action_space,
+            n_envs=envs.num_envs,
+            device=device,
             handle_timeout_termination=True,
         )
 
@@ -69,16 +73,17 @@ class Agent(object):
         self.eps_scheduler = LinearDecayScheduler(epsilon, total_steps)
         self.lr_scheduler = LinearDecayScheduler(learning_rate, total_steps)
 
-        run_name = f'{args.env_id}_{args.exp_name}_{args.seed}_{int(time.time())}'
-        wandb.init(
-            project=args.wandb_project_name,
-            entity=args.wandb_entity,
-            sync_tensorboard=True,
-            config=vars(args),
-            name=run_name,
-            monitor_gym=True,
-            save_code=True,
-        )
+        run_name = args.run_name
+        if self.args.use_wandb:
+            wandb.init(
+                project=args.wandb_project_name,
+                entity=args.wandb_entity,
+                sync_tensorboard=True,
+                config=vars(args),
+                name=run_name,
+                monitor_gym=True,
+                save_code=True,
+            )
         self.writer = SummaryWriter(f'runs/{run_name}')
         self.writer.add_text(
             'hyperparameters',
@@ -102,14 +107,14 @@ class Agent(object):
         # Choose a random action with probability epsilon
         if np.random.rand() <= self.epsilon:
             act = np.array([
-                self.env.single_action_space.sample()
-                for _ in range(self.env.num_envs)
+                self.envs.single_action_space.sample()
+                for _ in range(self.envs.num_envs)
             ])
         else:
             # Choose the action with highest Q-value at the current state
             act = self.predict(obs)
 
-        self.epsilon = max(self.eps_scheduler.step(1), self.args.eps_end)
+        self.epsilon = max(self.eps_scheduler.step(1), self.args.min_epsilon)
         return act
 
     def predict(self, obs) -> int:
@@ -219,15 +224,17 @@ class Agent(object):
                 loss = self.learn(batch_obs, batch_action, batch_reward,
                                   batch_next_obs, batch_terminal)
 
-            if self.global_update_step % 100 == 0:
-                self.writer.add_scalar('losses/td_loss', loss,
-                                       self.global_update_step)
-                print(
-                    'SPS:',
-                    int(self.global_update_step / (time.time() - start_time)))
-                self.writer.add_scalar(
-                    'charts/SPS',
-                    int(self.global_update_step / (time.time() - start_time)),
-                    self.global_update_step)
+                if self.global_update_step % 100 == 0:
+                    self.writer.add_scalar('losses/td_loss', loss,
+                                           self.global_update_step)
+                    print(
+                        'SPS:',
+                        int(self.global_update_step /
+                            (time.time() - start_time)))
+                    self.writer.add_scalar(
+                        'charts/SPS',
+                        int(self.global_update_step /
+                            (time.time() - start_time)),
+                        self.global_update_step)
 
         return 0
