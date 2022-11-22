@@ -1,13 +1,18 @@
 import copy
+import time
 
 import gym
 import numpy as np
 import torch
 import torch.nn.functional as F
+import wandb
 from network import DulingNet, QNet
+from stable_baselines3.common.buffers import ReplayBuffer
 from torch.optim import Adam
+from torch.utils.tensorboard import SummaryWriter
 
 from rltoolkit.models.utils import hard_target_update
+from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 
 class Agent(object):
@@ -21,9 +26,10 @@ class Agent(object):
     """
 
     def __init__(self,
-                 env: gym.Env,
-                 hidden_dim: int,
+                 args,
+                 envs: gym.Env,
                  algo: str = 'dqn',
+                 total_steps: int = 100000,
                  gamma: float = 0.99,
                  epsilon: float = 1.0,
                  learning_rate: float = 0.001,
@@ -31,31 +37,58 @@ class Agent(object):
                  device='cpu'):
         super().__init__()
 
-        self.env = env
+        self.args = args
+        self.envs = envs
         self.algo = algo
         self.gamma = gamma
         self.epsilon = epsilon
         self.global_update_step = 0
+        self.total_steps = total_steps
         self.update_target_step = update_target_step
-        self.obs_dim = np.array(env.single_observation_space.shape).prod()
-        self.action_dim = env.single_action_space.n
-        self.hidden_dim = hidden_dim
+        self.obs_dim = np.array(envs.single_observation_space.shape).prod()
+        self.action_dim = envs.single_action_space.n
+        self.replaybuffer = ReplayBuffer(
+            args.buffer_size,
+            envs.single_observation_space,
+            envs.single_action_space,
+            device,
+            handle_timeout_termination=True,
+        )
 
         # Main network
         if 'duling' in algo:
-            self.qnet = DulingNet(self.obs_dim, self.hidden_dim,
+            self.qnet = DulingNet(self.obs_dim, args.hidden_dim,
                                   self.action_dim).to(device)
         else:
-            self.qnet = QNet(self.obs_dim, self.hidden_dim,
+            self.qnet = QNet(self.obs_dim, args.hidden_dim,
                              self.action_dim).to(device)
         # Target network
         self.target_qnet = copy.deepcopy(self.qnet)
         # Create an optimizer
         self.optimizer = Adam(self.qnet.parameters(), lr=learning_rate)
+        self.eps_scheduler = LinearDecayScheduler(epsilon, total_steps)
+        self.lr_scheduler = LinearDecayScheduler(learning_rate, total_steps)
+
+        run_name = f'{args.env_id}_{args.exp_name}_{args.seed}_{int(time.time())}'
+        wandb.init(
+            project=args.wandb_project_name,
+            entity=args.wandb_entity,
+            sync_tensorboard=True,
+            config=vars(args),
+            name=run_name,
+            monitor_gym=True,
+            save_code=True,
+        )
+        self.writer = SummaryWriter(f'runs/{run_name}')
+        self.writer.add_text(
+            'hyperparameters',
+            '|param|value|\n|-|-|\n%s' % ('\n'.join(
+                [f'|{key}|{value}|' for key, value in vars(args).items()])),
+        )
 
         self.device = device
 
-    def sample(self, obs) -> int:
+    def select_action(self, obs) -> int:
         """Sample an action when given an observation, base on the current
         epsilon value, either a greedy action or a random action will be
         returned.
@@ -76,6 +109,7 @@ class Agent(object):
             # Choose the action with highest Q-value at the current state
             act = self.predict(obs)
 
+        self.epsilon = max(self.eps_scheduler.step(1), self.args.eps_end)
         return act
 
     def predict(self, obs) -> int:
@@ -134,5 +168,66 @@ class Agent(object):
         loss.backward()
         # 反向传播更新参数
         self.optimizer.step()
-        self.global_update_step += 1
         return loss.item()
+
+    def train(self):
+        start_time = time.time()
+        obs = self.envs.reset()
+        # Keep interacting until agent reaches a terminal state.
+        while self.global_update_step < self.total_steps:
+            self.global_update_step += 1
+            # Collect experience (s, a, r, s') using some policy
+            actions = self.select_action(obs)
+            next_obs, rewards, dones, infos = self.envs.step(actions)
+            # TRY NOT TO MODIFY: record rewards for plotting purposes
+            for info in infos:
+                if 'episode' in info.keys():
+                    print(
+                        f"global_step={ self.global_update_step}, episodic_return={info['episode']['r']}"
+                    )
+                    self.writer.add_scalar('charts/episodic_return',
+                                           info['episode']['r'],
+                                           self.global_update_step)
+                    self.writer.add_scalar('charts/episodic_length',
+                                           info['episode']['l'],
+                                           self.global_update_step)
+                    self.writer.add_scalar('charts/epsilon', self.epsilon,
+                                           self.global_update_step)
+                    break
+
+            # TRY NOT TO MODIFY: save data to reply buffer; handle `terminal_observation`
+            real_next_obs = next_obs.copy()
+            for idx, d in enumerate(dones):
+                if d:
+                    real_next_obs[idx] = infos[idx]['terminal_observation']
+
+            # Add experience to replay buffer
+            self.replaybuffer.add(obs, real_next_obs, actions, rewards, dones,
+                                  infos)
+            # TRY NOT TO MODIFY: CRUCIAL step easy to overlook
+            obs = next_obs
+
+            # Start training when the number of experience is greater than batch_size
+            if self.global_update_step > self.args.memory_warmup_size:
+                samples = self.replaybuffer.sample(self.args.batch_size)
+                batch_obs = samples.obs
+                batch_action = samples.actions
+                batch_reward = samples.rewards
+                batch_next_obs = samples.next_obs
+                batch_terminal = samples.dones
+
+                loss = self.learn(batch_obs, batch_action, batch_reward,
+                                  batch_next_obs, batch_terminal)
+
+            if self.global_update_step % 100 == 0:
+                self.writer.add_scalar('losses/td_loss', loss,
+                                       self.global_update_step)
+                print(
+                    'SPS:',
+                    int(self.global_update_step / (time.time() - start_time)))
+                self.writer.add_scalar(
+                    'charts/SPS',
+                    int(self.global_update_step / (time.time() - start_time)),
+                    self.global_update_step)
+
+        return 0
