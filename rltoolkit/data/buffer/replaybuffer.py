@@ -326,6 +326,13 @@ class ReplayBuffer(BaseBuffer):
             next_obs = self._normalize_obs(
                 self.next_observations[batch_inds, env_indices, :], env)
 
+        # x = np.array([[1, 2],
+        #                [3, 4],
+        #                [5, 6]])
+        # y = x[[0,1,2], [0,1,0]]
+        # 获取数组中(0,0)，(1,1)和(2,0)位置处的元素
+        # 这里采样是 选择 inds 对应的行，和 env_indices 对应的列
+        # 采样完，得到的数组维度为 （batch_size, obs_dim）
         data = (
             self._normalize_obs(self.observations[batch_inds, env_indices, :],
                                 env),
@@ -338,7 +345,6 @@ class ReplayBuffer(BaseBuffer):
             self._normalize_reward(
                 self.rewards[batch_inds, env_indices].reshape(-1, 1), env),
         )
-
         return ReplayBufferSamples(*tuple(map(self.to_torch, data)))
 
 
