@@ -187,9 +187,6 @@ class Agent(object):
             # TRY NOT TO MODIFY: record rewards for plotting purposes
             for info in infos:
                 if 'episode' in info.keys():
-                    print(
-                        f"global_step={ self.global_update_step}, episodic_return={info['episode']['r']}"
-                    )
                     self.writer.add_scalar('charts/episodic_return',
                                            info['episode']['r'],
                                            self.global_update_step)
@@ -220,6 +217,9 @@ class Agent(object):
                 batch_reward = samples.rewards
                 batch_next_obs = samples.next_obs
                 batch_terminal = samples.dones
+
+                print(batch_obs.shape)
+                break
 
                 loss = self.learn(batch_obs, batch_action, batch_reward,
                                   batch_next_obs, batch_terminal)
