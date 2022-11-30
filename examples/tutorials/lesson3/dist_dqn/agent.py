@@ -218,9 +218,6 @@ class Agent(object):
                 batch_next_obs = samples.next_obs
                 batch_terminal = samples.dones
 
-                print(batch_obs.shape)
-                break
-
                 loss = self.learn(batch_obs, batch_action, batch_reward,
                                   batch_next_obs, batch_terminal)
 
