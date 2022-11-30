@@ -1,4 +1,3 @@
-# docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/dqn/#dqnpy
 import argparse
 import sys
 import time
@@ -15,12 +14,12 @@ config = {
     'env': 'CartPole-v0',
     'num_processes': 50,
     'algo': 'dqn',
-    'use_wandb': False,
+    'use_wandb': True,
     'capture_video': False,
     'hidden_dim': 128,
     'total_steps': 5000,  # max training steps
-    'memory_size': 10000,  # Replay buffer size
-    'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
+    'memory_size': 50000,  # Replay buffer size
+    'memory_warmup_size': 100,  # Replay buffer memory_warmup_size
     'batch_size': 32,  # repaly sample batch size
     'update_target_step': 100,  # target model update freq
     'learning_rate': 0.001,  # start learning rate
