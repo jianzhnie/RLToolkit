@@ -29,8 +29,8 @@ config = {
     'capture_video': True,
     'hidden_dim': 128,
     'total_steps': 10000,  # max training steps
-    'memory_size': 10000,  # Replay buffer size
-    'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
+    'memory_size': 100000,  # Replay buffer size
+    'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
     'batch_size': 32,  # repaly sample batch size
     'update_target_step': 100,  # target model update freq
     'learning_rate': 0.001,  # start learning rate
