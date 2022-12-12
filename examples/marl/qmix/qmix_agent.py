@@ -13,6 +13,16 @@ from rltoolkit.utils.utils import check_model_method
 
 
 class QMixAgent(Agent):
+    """ QMIX algorithm
+    Args:
+        agent_model (rltoolkit.Model): agents' local q network for decision making.
+        qmixer_model (rltoolkit.Model): A mixing network which takes local q values as input
+            to construct a global Q network.
+        double_q (bool): Double-DQN.
+        gamma (float): discounted factor for reward computation.
+        lr (float): learning rate.
+        clip_grad_norm (None, or float): clipped value of gradients' global norm.
+    """
 
     def __init__(self,
                  agent_model: nn.Module = None,
@@ -63,31 +73,6 @@ class QMixAgent(Agent):
         self.params += self.qmixer_model.parameters()
         self.optimizer = torch.optim.RMSprop(
             params=self.params, lr=self.learning_rate, alpha=0.99, eps=0.00001)
-
-    def save(self, save_dir, agent_model_name, qmixer_model_name):
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
-        agent_model_path = os.path.join(save_dir, agent_model_name)
-        qmixer_model_path = os.path.join(save_dir, qmixer_model_name)
-        torch.save(self.agent_model.state_dict(), agent_model_path)
-        torch.save(self.qmixer_model.state_dict(), qmixer_model_path)
-        print('save model successfully!')
-
-    def restore(self, save_dir, agent_model_name, qmixer_model_name):
-        agent_model_path = os.path.join(save_dir, agent_model_name)
-        qmixer_model_path = os.path.join(save_dir, qmixer_model_name)
-        self.agent_model.load_state_dict(torch.load(agent_model_path))
-        self.qmixer_model.load_state_dict(torch.load(qmixer_model_path))
-        print('restore model successfully!')
-
-    def reset_agent(self, batch_size=1):
-        self._init_hidden_states(batch_size)
-
-    def _init_hidden_states(self, batch_size):
-        self.hidden_states = self.agent_model.init_hidden().unsqueeze(
-            0).expand(batch_size, self.n_agents, -1)
-        self.target_hidden_states = self.target_agent_model.init_hidden(
-        ).unsqueeze(0).expand(batch_size, self.n_agents, -1)
 
     def sample(self, obs, available_actions):
         ''' sample actions via epsilon-greedy
@@ -236,3 +221,28 @@ class QMixAgent(Agent):
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
         return loss.item(), mean_td_error.item()
+
+    def save(self, save_dir, agent_model_name, qmixer_model_name):
+        if not os.path.exists(save_dir):
+            os.mkdir(save_dir)
+        agent_model_path = os.path.join(save_dir, agent_model_name)
+        qmixer_model_path = os.path.join(save_dir, qmixer_model_name)
+        torch.save(self.agent_model.state_dict(), agent_model_path)
+        torch.save(self.qmixer_model.state_dict(), qmixer_model_path)
+        print('save model successfully!')
+
+    def restore(self, save_dir, agent_model_name, qmixer_model_name):
+        agent_model_path = os.path.join(save_dir, agent_model_name)
+        qmixer_model_path = os.path.join(save_dir, qmixer_model_name)
+        self.agent_model.load_state_dict(torch.load(agent_model_path))
+        self.qmixer_model.load_state_dict(torch.load(qmixer_model_path))
+        print('restore model successfully!')
+
+    def reset_agent(self, batch_size=1):
+        self._init_hidden_states(batch_size)
+
+    def _init_hidden_states(self, batch_size):
+        self.hidden_states = self.agent_model.init_hidden().unsqueeze(
+            0).expand(batch_size, self.n_agents, -1)
+        self.target_hidden_states = self.target_agent_model.init_hidden(
+        ).unsqueeze(0).expand(batch_size, self.n_agents, -1)
