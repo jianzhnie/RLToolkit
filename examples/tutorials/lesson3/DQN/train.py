@@ -9,8 +9,7 @@ from tqdm import tqdm
 sys.path.append('../../../../')
 from agent import Agent
 
-from rltoolkit.data.buffer.replaybuffer import \
-    SimpleReplayBuffer as ReplayBuffer
+from rltoolkit.data.buffer.replaybuffer import SimpleReplayBuffer as ReplayBuffer
 from rltoolkit.utils import logger, tensorboard
 
 try:
@@ -23,7 +22,7 @@ config = {
     'train_seed': 42,
     'test_seed': 42,
     'env': 'CartPole-v0',
-    'algo': 'dqn',
+    'algo': 'ddqn',
     'use_wandb': False,
     'hidden_dim': 128,
     'total_steps': 12000,  # max training steps
@@ -204,7 +203,7 @@ def main():
         agent,
         test_env,
         n_eval_episodes=1,
-        render=True,
+        render=False,
         video_folder=args.video_folder)
 
 

@@ -28,7 +28,7 @@ config = {
     'total_steps': 10000000,  # max training steps
     'memory_size': 1000000,  # Replay buffer size
     'memory_warmup_size': 10000,  # Replay buffer memory_warmup_size
-    'batch_size': 32,  # repaly sample batch size
+    'batch_size': 128,  # repaly sample batch size
     'update_target_step': 2500,  # target model update freq
     'learning_rate': 0.0003,  # start learning rate
     'epsilon': 1,  # start greedy epsilon
