@@ -13,7 +13,6 @@ from smac.env import StarCraft2Env
 
 sys.path.append('../../')
 
-from rltoolkit.policy.multiagent.qmix import QMIX
 from rltoolkit.utils import logger, tensorboard
 
 logger.set_dir('./log_path')
@@ -113,28 +112,31 @@ def main():
                                config['hypernet_layers'],
                                config['hypernet_embed_dim'])
 
-    algorithm = QMIX(agent_model, qmixer_model, config['double_q'],
-                     config['gamma'], config['lr'], config['clip_grad_norm'])
-
     qmix_agent = QMixAgent(
-        algorithm,
-        config['exploration_start'],
-        config['min_exploration'],
-        config['exploration_decay'],
-        config['update_target_interval'],
+        agent_model=agent_model,
+        qmixer_model=qmixer_model,
+        n_agent=config['state_shape'],
+        double_q=config['double_q'],
+        gamma=config['gamma'],
+        learning_rate=config['lr'],
+        exploration_start=config['exploration_start'],
+        min_exploration=config['min_exploration'],
+        exploration_decay=config['exploration_decay'],
+        update_target_interval=config['update_target_interval'],
+        clip_grad_norm=config['clip_grad_norm'],
         device=device)
 
     while rpm.count < config['memory_warmup_size']:
         print('episode warmup')
-        train_reward, train_step, train_is_win, train_loss, train_td_error\
-                = run_train_episode(env, qmix_agent, rpm, config)
+        train_reward, train_step, train_is_win, train_loss, train_td_error = run_train_episode(
+            env, qmix_agent, rpm, config)
 
     total_steps = 0
     last_test_step = -1e10
     while total_steps < config['training_steps']:
         print('episode training')
-        train_reward, train_step, train_is_win, train_loss, train_td_error\
-                = run_train_episode(env, qmix_agent, rpm, config)
+        train_reward, train_step, train_is_win, train_loss, train_td_error = run_train_episode(
+            env, qmix_agent, rpm, config)
         total_steps += train_step
 
         if total_steps - last_test_step >= config['test_steps']:
