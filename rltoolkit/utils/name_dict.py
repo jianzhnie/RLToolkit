@@ -30,7 +30,7 @@ Schedule = Callable[[float], float]
 
 
 class RolloutBufferSamples(NamedTuple):
-    observations: torch.Tensor
+    obs: torch.Tensor
     actions: torch.Tensor
     old_values: torch.Tensor
     old_log_prob: torch.Tensor

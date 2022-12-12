@@ -35,13 +35,6 @@ RLToolkit is a flexible and high-efficient reinforcement learning framework. RLT
   - [Algorithm](#algorithm)
   - [Agent](#agent)
 - [Supported Algorithms](#supported-algorithms)
-  - [Value Optimization Agents](#value-optimization-agents)
-  - [Policy Optimization Agents](#policy-optimization-agents)
-  - [General Agents](#general-agents)
-  - [Imitation Learning Agents](#imitation-learning-agents)
-  - [Hierarchical Reinforcement Learning Agents](#hierarchical-reinforcement-learning-agents)
-  - [Memory Types](#memory-types)
-  - [Exploration Techniques](#exploration-techniques)
 - [Supported Envs](#supported-envs)
 - [Examples](#examples)
 - [Experimental Demos](#experimental-demos)
@@ -76,58 +69,7 @@ RLToolkit implements the following model-free deep reinforcement learning (DRL) 
 
 A non-exhaustive, but useful taxonomy of algorithms in modern RL.
 
-
-
 <img src="docs/images/algorithms.png" alt="Coach Design" style="width: 800px;"/>
-
-### Value Optimization Agents
-
-* [Deep Q Network (DQN)](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)  ([code]())
-* [Double Deep Q Network (DDQN)](https://arxiv.org/pdf/1509.06461.pdf)  ([code]())
-* [Dueling Q Network](https://arxiv.org/abs/1511.06581) ([code]())
-* [Mixed Monte Carlo (MMC)](https://arxiv.org/abs/1703.01310)  ([code]())
-* [Persistent Advantage Learning (PAL)](https://arxiv.org/abs/1512.04860)  ([code]())
-* [Categorical Deep Q Network (C51)](https://arxiv.org/abs/1707.06887)  ([code]())
-* [Quantile Regression Deep Q Network (QR-DQN)](https://arxiv.org/pdf/1710.10044v1.pdf)  ([code]())
-* [N-Step Q Learning](https://arxiv.org/abs/1602.01783)  ([code]())
-* [Neural Episodic Control (NEC)](https://arxiv.org/abs/1703.01988)  ([code]())
-* [Normalized Advantage Functions (NAF)](https://arxiv.org/abs/1603.00748.pdf)  ([code]())
-* [Rainbow](https://arxiv.org/abs/1710.02298)  ([code]())
-
-### Policy Optimization Agents
-* [Policy Gradients (PG)](http://www-anw.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf)  ([code]())
-* [Asynchronous Advantage Actor-Critic (A3C)](https://arxiv.org/abs/1602.01783)  ([code]())
-* [Deep Deterministic Policy Gradients (DDPG)](https://arxiv.org/abs/1509.02971)  ([code]())
-* [Proximal Policy Optimization (PPO)](https://arxiv.org/pdf/1707.06347.pdf)  ([code]())
-* [Clipped Proximal Policy Optimization (CPPO)](https://arxiv.org/pdf/1707.06347.pdf)  ([code]())
-* [Generalized Advantage Estimation (GAE)](https://arxiv.org/abs/1506.02438) ([code]())
-* [Sample Efficient Actor-Critic with Experience Replay (ACER)](https://arxiv.org/abs/1611.01224)  ([code]())
-* [Soft Actor-Critic (SAC)](https://arxiv.org/abs/1801.01290) ([code]())
-* [Twin Delayed Deep Deterministic Policy Gradient (TD3)](https://arxiv.org/pdf/1802.09477.pdf) ([code]())
-
-### General Agents
-
-* [Direct Future Prediction (DFP)](https://arxiv.org/abs/1611.01779)  ([code]())
-
-### Imitation Learning Agents
-* Behavioral Cloning (BC)  ([code]())
-* [Conditional Imitation Learning](https://arxiv.org/abs/1710.02410) ([code]())
-### Hierarchical Reinforcement Learning Agents
-* [Hierarchical Actor Critic (HAC)](https://arxiv.org/abs/1712.00948.pdf) ([code]())
-
-### Memory Types
-* [Hindsight Experience Replay (HER)](https://arxiv.org/abs/1707.01495.pdf) ([code]())
-* [Prioritized Experience Replay (PER)](https://arxiv.org/abs/1511.05952) ([code]())
-
-### Exploration Techniques
-* E-Greedy ([code]())
-* Boltzmann ([code]())
-* Ornstein–Uhlenbeck process ([code]())
-* Normal Noise ([code]())
-* Truncated Normal Noise ([code]())
-* [Bootstrapped Deep Q Network](https://arxiv.org/abs/1602.04621)  ([code]())
-* [UCB Exploration via Q-Ensembles (UCB)](https://arxiv.org/abs/1706.01502) ([code]())
-* [Noisy Networks for Exploration](https://arxiv.org/abs/1706.10295) ([code]())
 
 ##  Supported Envs
 
@@ -139,6 +81,9 @@ A non-exhaustive, but useful taxonomy of algorithms in modern RL.
 For the details of DRL algorithms, please check out the educational webpage [OpenAI Spinning Up](https://spinningup.openai.com/en/latest/).
 
 ## Examples
+If you want to learn more about deep reinforcemnet learning, please read the [deep-rl-class](https://jianzhnie.github.io/machine-learning-wiki/#/deep-rl/) and run the [examples](https://github.com/jianzhnie/deep-rl-toolkit/blob/main/examples/tutorials).
+
+
 
 [//]: # (Image References)
 <p align="center">
