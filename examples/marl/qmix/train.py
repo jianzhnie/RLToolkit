@@ -1,6 +1,8 @@
+import sys
 from copy import deepcopy
 
 import numpy as np
+import torch
 from env_wrapper import SC2EnvWrapper
 from qmix_agent import QMixAgent
 from qmix_config import QMixConfig
@@ -9,6 +11,8 @@ from replay_buffer import EpisodeExperience, EpisodeReplayBuffer
 from rnn_model import RNNModel
 from smac.env import StarCraft2Env
 
+sys.path.append('../../')
+
 from rltoolkit.policy.multiagent.qmix import QMIX
 from rltoolkit.utils import logger, tensorboard
 
@@ -16,6 +20,7 @@ logger.set_dir('./log_path')
 
 
 def run_train_episode(env, agent, rpm, config):
+
     episode_limit = config['episode_limit']
     agent.reset_agent()
     episode_reward = 0.0
@@ -87,6 +92,9 @@ def run_evaluate_episode(env, agent):
 
 
 def main():
+    device = torch.device(
+        'cuda') if torch.cuda.is_available() else torch.device('cpu')
+
     config = deepcopy(QMixConfig)
     env = StarCraft2Env(
         map_name=config['scenario'], difficulty=config['difficulty'])
@@ -108,18 +116,23 @@ def main():
     algorithm = QMIX(agent_model, qmixer_model, config['double_q'],
                      config['gamma'], config['lr'], config['clip_grad_norm'])
 
-    qmix_agent = QMixAgent(algorithm, config['exploration_start'],
-                           config['min_exploration'],
-                           config['exploration_decay'],
-                           config['update_target_interval'])
+    qmix_agent = QMixAgent(
+        algorithm,
+        config['exploration_start'],
+        config['min_exploration'],
+        config['exploration_decay'],
+        config['update_target_interval'],
+        device=device)
 
     while rpm.count < config['memory_warmup_size']:
+        print('episode warmup')
         train_reward, train_step, train_is_win, train_loss, train_td_error\
                 = run_train_episode(env, qmix_agent, rpm, config)
 
     total_steps = 0
     last_test_step = -1e10
     while total_steps < config['training_steps']:
+        print('episode training')
         train_reward, train_step, train_is_win, train_loss, train_td_error\
                 = run_train_episode(env, qmix_agent, rpm, config)
         total_steps += train_step

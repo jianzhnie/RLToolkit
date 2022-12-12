@@ -1,8 +1,10 @@
 import os
+import sys
 
 import numpy as np
 import torch
 
+sys.path.append('../../../')
 from rltoolkit.agent.base_agent import Agent
 
 
@@ -100,6 +102,13 @@ class QMixAgent(Agent):
             self.target_update_count += 1
 
         self.global_step += 1
+
+        state_batch = np.array(state_batch)
+        actions_batch = np.array(actions_batch)
+        reward_batch = np.array(reward_batch)
+        terminated_batch = np.array(terminated_batch)
+        obs_batch = np.array(obs_batch)
+        available_actions_batch = np.array(available_actions_batch)
 
         state_batch = torch.tensor(
             state_batch, dtype=torch.float32, device=self.device)

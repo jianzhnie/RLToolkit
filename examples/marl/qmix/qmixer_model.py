@@ -4,10 +4,13 @@ LastEditors: jianzhnie
 Description: RLToolKit is a flexible and high-efficient reinforcement learning framework.
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
+import sys
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+sys.path.append('../../')
 from rltoolkit.models import Model
 
 
