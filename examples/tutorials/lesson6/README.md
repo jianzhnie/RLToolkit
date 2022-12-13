@@ -19,8 +19,7 @@ python train.py # such as `vdn.py`
 
 ## Algorithms
 
-- [ ] IDQN \[DQN version of [IQL](https://web.media.mit.edu/~cynthiab/Readings/tan-MAS-reinfLearn.pdf)\]
+- [ ] [IDQN](https://web.media.mit.edu/~cynthiab/Readings/tan-MAS-reinfLearn.pdf) (DQN version of IQL)
 - [ ] [VDN](https://arxiv.org/abs/1706.05296) (Value Decomposition Network)
 - [ ] [QMIX](https://arxiv.org/pdf/1803.11485.pdf)
 - [ ] [MADDPG](https://arxiv.org/abs/1706.02275) (Multi Agent Deep Deterministic Policy Gradient)
-  - `Status: Not converging at the moment`
