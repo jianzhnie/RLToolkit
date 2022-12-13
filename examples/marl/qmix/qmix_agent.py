@@ -7,12 +7,13 @@ import torch
 import torch.nn as nn
 
 sys.path.append('../../../')
-from rltoolkit.agent.base_agent import Agent
+from torch.distributions import Categorical
+
 from rltoolkit.models.utils import hard_target_update
 from rltoolkit.utils.utils import check_model_method
 
 
-class QMixAgent(Agent):
+class QMixAgent(nn.Module):
     """ QMIX algorithm
     Args:
         agent_model (rltoolkit.Model): agents' local q network for decision making.
@@ -74,6 +75,15 @@ class QMixAgent(Agent):
         self.optimizer = torch.optim.RMSprop(
             params=self.params, lr=self.learning_rate, alpha=0.99, eps=0.00001)
 
+    def reset_agent(self, batch_size=1):
+        self._init_hidden_states(batch_size)
+
+    def _init_hidden_states(self, batch_size):
+        self.hidden_states = self.agent_model.init_hidden().unsqueeze(
+            0).expand(batch_size, self.n_agents, -1)
+        self.target_hidden_states = self.target_agent_model.init_hidden(
+        ).unsqueeze(0).expand(batch_size, self.n_agents, -1)
+
     def sample(self, obs, available_actions):
         ''' sample actions via epsilon-greedy
         Args:
@@ -88,8 +98,8 @@ class QMixAgent(Agent):
         else:
             available_actions = torch.tensor(
                 available_actions, dtype=torch.float32)
-            actions = torch.distributions.Categorical(
-                available_actions).sample().long().cpu().detach().numpy()
+            actions_dist = Categorical(available_actions)
+            actions = actions_dist.sample().long().cpu().detach().numpy()
         self.exploration = max(self.min_exploration,
                                self.exploration - self.exploration_decay)
         return actions
@@ -237,12 +247,3 @@ class QMixAgent(Agent):
         self.agent_model.load_state_dict(torch.load(agent_model_path))
         self.qmixer_model.load_state_dict(torch.load(qmixer_model_path))
         print('restore model successfully!')
-
-    def reset_agent(self, batch_size=1):
-        self._init_hidden_states(batch_size)
-
-    def _init_hidden_states(self, batch_size):
-        self.hidden_states = self.agent_model.init_hidden().unsqueeze(
-            0).expand(batch_size, self.n_agents, -1)
-        self.target_hidden_states = self.target_agent_model.init_hidden(
-        ).unsqueeze(0).expand(batch_size, self.n_agents, -1)
