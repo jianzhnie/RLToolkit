@@ -13,7 +13,7 @@ from rltoolkit.models.utils import hard_target_update
 from rltoolkit.utils.utils import check_model_method
 
 
-class QMixAgent(nn.Module):
+class QMixAgent(object):
     """ QMIX algorithm
     Args:
         agent_model (rltoolkit.Model): agents' local q network for decision making.
@@ -28,7 +28,7 @@ class QMixAgent(nn.Module):
     def __init__(self,
                  agent_model: nn.Module = None,
                  qmixer_model: nn.Module = None,
-                 n_agent: int = None,
+                 n_agents: int = None,
                  double_q: bool = True,
                  gamma: float = 0.99,
                  learning_rate: float = 0.0005,
@@ -48,7 +48,7 @@ class QMixAgent(nn.Module):
         assert isinstance(gamma, float)
         assert isinstance(learning_rate, float)
 
-        self.n_agent = n_agent
+        self.n_agents = n_agents
         self.double_q = double_q
         self.gamma = gamma
         self.learning_rate = learning_rate

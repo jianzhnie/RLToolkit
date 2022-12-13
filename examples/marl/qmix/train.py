@@ -115,7 +115,7 @@ def main():
     qmix_agent = QMixAgent(
         agent_model=agent_model,
         qmixer_model=qmixer_model,
-        n_agent=config['state_shape'],
+        n_agents=config['n_agents'],
         double_q=config['double_q'],
         gamma=config['gamma'],
         learning_rate=config['lr'],
