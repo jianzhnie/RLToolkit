@@ -4,15 +4,18 @@ LastEditors: jianzhnie
 Description: RLToolKit is a flexible and high-efficient reinforcement learning framework.
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from typing import Tuple
 
-from rltoolkit.models import Model
 
+class RNNModel(nn.Module):
 
-class RNNModel(Model):
-
-    def __init__(self, input_shape, n_actions, rnn_hidden_dim=64):
+    def __init__(self,
+                 input_shape: int = None,
+                 n_actions: int = None,
+                 rnn_hidden_dim: int = 64):
         super(RNNModel, self).__init__()
         self.rnn_hidden_dim = rnn_hidden_dim
 
@@ -24,9 +27,13 @@ class RNNModel(Model):
         # make hidden states on same device as model
         return self.fc1.weight.new(1, self.rnn_hidden_dim).zero_()
 
-    def forward(self, inputs, hidden_state):
-        x = F.relu(self.fc1(inputs))
-        h_in = hidden_state.reshape(-1, self.rnn_hidden_dim)
+    def forward(self,
+                inputs: torch.Tensor = None,
+                hidden_state: torch.Tensor = None
+                ) -> Tuple(torch.Tensor, torch.Tensor):
+        x = F.relu(self.fc1(inputs), inplace=True)
+        if hidden_state is not None:
+            h_in = hidden_state.reshape(-1, self.rnn_hidden_dim)
 
         h = self.rnn(x, h_in)
         q = self.fc2(h)  # (batch_size, n_actions)

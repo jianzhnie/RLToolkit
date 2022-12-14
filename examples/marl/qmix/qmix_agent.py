@@ -36,7 +36,7 @@ class QMixAgent(object):
                  min_exploration: float = 0.01,
                  exploration_decay: float = 0.98,
                  update_target_interval: int = 1000,
-                 clip_grad_norm: bool = True,
+                 clip_grad_norm: float = None,
                  device: str = 'cpu'):
 
         check_model_method(agent_model, 'init_hidden', self.__class__.__name__)
@@ -79,10 +79,15 @@ class QMixAgent(object):
         self._init_hidden_states(batch_size)
 
     def _init_hidden_states(self, batch_size):
-        self.hidden_states = self.agent_model.init_hidden().unsqueeze(
-            0).expand(batch_size, self.n_agents, -1)
-        self.target_hidden_states = self.target_agent_model.init_hidden(
-        ).unsqueeze(0).expand(batch_size, self.n_agents, -1)
+        self.hidden_states = self.agent_model.init_hidden()
+        if self.hidden_states is not None:
+            self.hidden_states = self.hidden_states.unsqueeze(0).expand(
+                batch_size, self.n_agents, -1)
+
+        self.target_hidden_states = self.target_agent_model.init_hidden()
+        if self.target_hidden_states is not None:
+            self.target_hidden_states = self.target_hidden_states.unsqueeze(
+                0).expand(batch_size, self.n_agents, -1)
 
     def sample(self, obs, available_actions):
         ''' sample actions via epsilon-greedy
@@ -185,24 +190,32 @@ class QMixAgent(object):
         for t in range(episode_len):
             obs = obs_batch[:, t, :, :]
             obs = obs.reshape(-1, obs_batch.shape[-1])
+            # Calculate estimated Q-Values
             local_q, self.hidden_states = self.agent_model(
                 obs, self.hidden_states)
             local_q = local_q.reshape(batch_size, self.n_agents, -1)
             local_qs.append(local_q)
 
+            # Calculate the Q-Values necessary for the target
             target_local_q, self.target_hidden_states = self.target_agent_model(
                 obs, self.target_hidden_states)
             target_local_q = target_local_q.view(batch_size, self.n_agents, -1)
             target_local_qs.append(target_local_q)
 
         local_qs = torch.stack(local_qs, dim=1)
+        # We don't need the first timesteps Q-Value estimate for calculating targets
         target_local_qs = torch.stack(target_local_qs[1:], dim=1)
 
+        # Pick the Q-Values for the actions taken by each agent
         chosen_action_local_qs = torch.gather(
             local_qs[:, :-1, :, :], dim=3, index=actions_batch).squeeze(3)
+
         # mask unavailable actions
         target_local_qs[available_actions_batch[:, 1:, :] == 0] = -1e10
+
+        # Max over target Q-Values
         if self.double_q:
+            # Get actions that maximise live Q (for double q-learning)
             local_qs_detach = local_qs.clone().detach()
             local_qs_detach[available_actions_batch == 0] = -1e10
             cur_max_actions = local_qs_detach[:, 1:].max(
@@ -210,21 +223,28 @@ class QMixAgent(object):
             target_local_max_qs = torch.gather(target_local_qs, 3,
                                                cur_max_actions).squeeze(3)
         else:
-            target_local_max_qs = target_local_qs.max(
-                dim=3)[0]  # idx0: value, idx1: index
+            # idx0: value, idx1: index
+            target_local_max_qs = target_local_qs.max(dim=3)[0]
 
-        chosen_action_global_qs = self.qmixer_model(chosen_action_local_qs,
-                                                    state_batch[:, :-1, :])
-        target_global_max_qs = self.target_qmixer_model(
-            target_local_max_qs, state_batch[:, 1:, :])
+        # Mix
+        if self.qmixer_model is not None:
+            chosen_action_global_qs = self.qmixer_model(
+                chosen_action_local_qs, state_batch[:, :-1, :])
+            target_global_max_qs = self.target_qmixer_model(
+                target_local_max_qs, state_batch[:, 1:, :])
 
+        # Calculate 1-step Q-Learning targets
         target = reward_batch + self.gamma * (
             1 - terminated_batch) * target_global_max_qs
+        #  Td-error
         td_error = target.detach() - chosen_action_global_qs
+        #  0-out the targets that came from padded data
         masked_td_error = td_error * mask
         mean_td_error = masked_td_error.sum() / mask.sum()
+        # Normal L2 loss, take mean over actual data
         loss = (masked_td_error**2).sum() / mask.sum()
 
+        # Optimise
         self.optimizer.zero_grad()
         loss.backward()
         if self.clip_grad_norm:
@@ -232,18 +252,31 @@ class QMixAgent(object):
         self.optimizer.step()
         return loss.item(), mean_td_error.item()
 
-    def save(self, save_dir, agent_model_name, qmixer_model_name):
+    def save(self,
+             save_dir: str = None,
+             agent_model_name: str = "agent_model.th",
+             qmixer_model_name: str = "qmixer.th",
+             opt_name: str = "opt.th"):
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
         agent_model_path = os.path.join(save_dir, agent_model_name)
         qmixer_model_path = os.path.join(save_dir, qmixer_model_name)
+        optimizer_path = os.path.join(save_dir, opt_name)
         torch.save(self.agent_model.state_dict(), agent_model_path)
         torch.save(self.qmixer_model.state_dict(), qmixer_model_path)
+        torch.save(self.optimizer.state_dict(), optimizer_path)
+
         print('save model successfully!')
 
-    def restore(self, save_dir, agent_model_name, qmixer_model_name):
+    def restore(self,
+                save_dir: str = None,
+                agent_model_name: str = "agent_model.th",
+                qmixer_model_name: str = "qmixer.th",
+                opt_name: str = "opt.th"):
         agent_model_path = os.path.join(save_dir, agent_model_name)
         qmixer_model_path = os.path.join(save_dir, qmixer_model_name)
+        optimizer_path = os.path.join(save_dir, opt_name)
         self.agent_model.load_state_dict(torch.load(agent_model_path))
         self.qmixer_model.load_state_dict(torch.load(qmixer_model_path))
+        self.optimizer.load_state_dict(torch.load(optimizer_path))
         print('restore model successfully!')
