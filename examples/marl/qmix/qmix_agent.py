@@ -254,9 +254,9 @@ class QMixAgent(object):
 
     def save(self,
              save_dir: str = None,
-             agent_model_name: str = "agent_model.th",
-             qmixer_model_name: str = "qmixer.th",
-             opt_name: str = "opt.th"):
+             agent_model_name: str = 'agent_model.th',
+             qmixer_model_name: str = 'qmixer.th',
+             opt_name: str = 'opt.th'):
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
         agent_model_path = os.path.join(save_dir, agent_model_name)
@@ -270,9 +270,9 @@ class QMixAgent(object):
 
     def restore(self,
                 save_dir: str = None,
-                agent_model_name: str = "agent_model.th",
-                qmixer_model_name: str = "qmixer.th",
-                opt_name: str = "opt.th"):
+                agent_model_name: str = 'agent_model.th',
+                qmixer_model_name: str = 'qmixer.th',
+                opt_name: str = 'opt.th'):
         agent_model_path = os.path.join(save_dir, agent_model_name)
         qmixer_model_path = os.path.join(save_dir, qmixer_model_name)
         optimizer_path = os.path.join(save_dir, opt_name)
