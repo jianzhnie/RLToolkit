@@ -9,7 +9,8 @@ from tqdm import tqdm
 sys.path.append('../../../../')
 from agent import Agent
 
-from rltoolkit.data.buffer.replaybuffer import SimpleReplayBuffer as ReplayBuffer
+from rltoolkit.data.buffer.replaybuffer import \
+    SimpleReplayBuffer as ReplayBuffer
 from rltoolkit.utils import logger, tensorboard
 
 try:

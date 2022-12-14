@@ -1,6 +1,8 @@
+import sys
 from copy import deepcopy
 
 import numpy as np
+import torch
 from env_wrapper import SC2EnvWrapper
 from qmix_agent import QMixAgent
 from qmix_config import QMixConfig
@@ -9,13 +11,15 @@ from replay_buffer import EpisodeExperience, EpisodeReplayBuffer
 from rnn_model import RNNModel
 from smac.env import StarCraft2Env
 
-from rltoolkit.policy.multiagent.qmix import QMIX
+sys.path.append('../../')
+
 from rltoolkit.utils import logger, tensorboard
 
 logger.set_dir('./log_path')
 
 
 def run_train_episode(env, agent, rpm, config):
+
     episode_limit = config['episode_limit']
     agent.reset_agent()
     episode_reward = 0.0
@@ -87,6 +91,9 @@ def run_evaluate_episode(env, agent):
 
 
 def main():
+    device = torch.device(
+        'cuda') if torch.cuda.is_available() else torch.device('cpu')
+
     config = deepcopy(QMixConfig)
     env = StarCraft2Env(
         map_name=config['scenario'], difficulty=config['difficulty'])
@@ -105,23 +112,31 @@ def main():
                                config['hypernet_layers'],
                                config['hypernet_embed_dim'])
 
-    algorithm = QMIX(agent_model, qmixer_model, config['double_q'],
-                     config['gamma'], config['lr'], config['clip_grad_norm'])
-
-    qmix_agent = QMixAgent(algorithm, config['exploration_start'],
-                           config['min_exploration'],
-                           config['exploration_decay'],
-                           config['update_target_interval'])
+    qmix_agent = QMixAgent(
+        agent_model=agent_model,
+        qmixer_model=qmixer_model,
+        n_agents=config['n_agents'],
+        double_q=config['double_q'],
+        gamma=config['gamma'],
+        learning_rate=config['lr'],
+        exploration_start=config['exploration_start'],
+        min_exploration=config['min_exploration'],
+        exploration_decay=config['exploration_decay'],
+        update_target_interval=config['update_target_interval'],
+        clip_grad_norm=config['clip_grad_norm'],
+        device=device)
 
     while rpm.count < config['memory_warmup_size']:
-        train_reward, train_step, train_is_win, train_loss, train_td_error\
-                = run_train_episode(env, qmix_agent, rpm, config)
+        print('episode warmup')
+        train_reward, train_step, train_is_win, train_loss, train_td_error = run_train_episode(
+            env, qmix_agent, rpm, config)
 
     total_steps = 0
     last_test_step = -1e10
     while total_steps < config['training_steps']:
-        train_reward, train_step, train_is_win, train_loss, train_td_error\
-                = run_train_episode(env, qmix_agent, rpm, config)
+        print('episode training')
+        train_reward, train_step, train_is_win, train_loss, train_td_error = run_train_episode(
+            env, qmix_agent, rpm, config)
         total_steps += train_step
 
         if total_steps - last_test_step >= config['test_steps']:
