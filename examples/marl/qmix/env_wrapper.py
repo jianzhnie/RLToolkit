@@ -30,7 +30,7 @@ class SC2EnvWrapper(object):
 
     def _init_agents_id_one_hot(self, n_agents):
         agents_id_one_hot = []
-        for agent_id in range(self.n_agents):
+        for agent_id in range(n_agents):
             one_hot = self.agent_id_one_hot_transform(agent_id)
             agents_id_one_hot.append(one_hot)
         self.agents_id_one_hot = np.array(agents_id_one_hot)
@@ -39,6 +39,7 @@ class SC2EnvWrapper(object):
         return deepcopy(self.agents_id_one_hot)
 
     def _get_actions_one_hot(self, actions):
+        # (n_agents，n_actions)
         actions_one_hot = []
         for action in actions:
             one_hot = self.actions_one_hot_transform(action)
@@ -46,6 +47,7 @@ class SC2EnvWrapper(object):
         return np.array(actions_one_hot)
 
     def get_available_actions(self):
+        # (n_agents，n_actions)
         available_actions = []
         for agent_id in range(self.n_agents):
             available_actions.append(
@@ -55,13 +57,17 @@ class SC2EnvWrapper(object):
     def reset(self):
         self.env.reset()
         # action at last timestep
+        # last_actions_one_hot shape: (self.n_agents, self.n_actions)
         last_actions_one_hot = np.zeros((self.n_agents, self.n_actions),
                                         dtype='float32')
 
+        # obs shape: (self.n_agents, obs_dim)
         obs = np.array(self.env.get_obs())
+        # agents_id_one_hot shape: (self.n_agents, self.n_agents)
         agents_id_one_hot = self._get_agents_id_one_hot()
         obs = np.concatenate([obs, last_actions_one_hot, agents_id_one_hot],
                              axis=-1)
+        # obs shape: (self.n_agents, (obs_dim + self.n_actions + self.n_agents ))
         state = np.array(self.env.get_state())
         return state, obs
 
@@ -71,6 +77,7 @@ class SC2EnvWrapper(object):
         next_state = np.array(self.env.get_state())
         last_actions_one_hot = self._get_actions_one_hot(actions)
         next_obs = np.array(self.env.get_obs())
+        # obs shape: (self.n_agents, (obs_dim + self.n_actions + self.n_agents ))
         next_obs = np.concatenate(
             [next_obs, last_actions_one_hot, self.agents_id_one_hot], axis=-1)
         return next_state, next_obs, reward, terminated

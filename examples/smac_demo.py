@@ -19,18 +19,20 @@ def main():
         episode_reward = 0
 
         while not terminated:
-            # obs: list, length = 8, for 8 agents
+            # obs: list, length = 8, for 8 agents， shape: [(80, ), (80, ), ...]
             obs = env.get_obs()
             # state: shape (168, )
             state = env.get_state()
-            env.render()  # Uncomment for rendering
+            # env.render()  # Uncomment for rendering
             actions = []
             for agent_id in range(n_agents):  # 对于每个智能体遍历循环
+                # avail_actions, list (14, )
                 avail_actions = env.get_avail_agent_actions(agent_id)
                 avail_actions_ind = np.nonzero(avail_actions)[0]
                 action = np.random.choice(avail_actions_ind)
                 actions.append(action)
 
+            # actions, list (8, )
             reward, terminated, _ = env.step(actions)
             episode_reward += reward
 
