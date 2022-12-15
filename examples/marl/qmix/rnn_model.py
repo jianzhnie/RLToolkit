@@ -4,7 +4,6 @@ LastEditors: jianzhnie
 Description: RLToolKit is a flexible and high-efficient reinforcement learning framework.
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
-from typing import Tuple
 
 import torch
 import torch.nn as nn
@@ -30,8 +29,7 @@ class RNNModel(nn.Module):
 
     def forward(self,
                 inputs: torch.Tensor = None,
-                hidden_state: torch.Tensor = None
-                ) -> Tuple(torch.Tensor, torch.Tensor):
+                hidden_state: torch.Tensor = None):
         x = F.relu(self.fc1(inputs), inplace=True)
         if hidden_state is not None:
             h_in = hidden_state.reshape(-1, self.rnn_hidden_dim)

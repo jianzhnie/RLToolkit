@@ -152,27 +152,7 @@ class QMixAgent(object):
 
         self.global_step += 1
 
-        state_batch = np.array(state_batch)
-        actions_batch = np.array(actions_batch)
-        reward_batch = np.array(reward_batch)
-        terminated_batch = np.array(terminated_batch)
-        obs_batch = np.array(obs_batch)
-        available_actions_batch = np.array(available_actions_batch)
-
-        state_batch = torch.tensor(
-            state_batch, dtype=torch.float32, device=self.device)
-        actions_batch = torch.tensor(
-            actions_batch, dtype=torch.long, device=self.device)
-        reward_batch = torch.tensor(
-            reward_batch, dtype=torch.float32, device=self.device)
-        terminated_batch = torch.tensor(
-            terminated_batch, dtype=torch.float32, device=self.device)
-        obs_batch = torch.tensor(
-            obs_batch, dtype=torch.float32, device=self.device)
-        available_actions_batch = torch.tensor(
-            available_actions_batch, dtype=torch.float32, device=self.device)
-        filled_batch = torch.tensor(
-            filled_batch, dtype=torch.float32, device=self.device)
+        actions_batch = actions_batch.to(self.device, dtype=torch.long)
 
         batch_size = state_batch.shape[0]
         episode_len = state_batch.shape[1]
@@ -226,7 +206,8 @@ class QMixAgent(object):
             # idx0: value, idx1: index
             target_local_max_qs = target_local_qs.max(dim=3)[0]
 
-        # Mix
+        # Mixing network
+        # mix_net, input: ([Q1, Q2, ...], state), output: Q_total
         if self.qmixer_model is not None:
             chosen_action_global_qs = self.qmixer_model(
                 chosen_action_local_qs, state_batch[:, :-1, :])
@@ -255,8 +236,8 @@ class QMixAgent(object):
     def save(self,
              save_dir: str = None,
              agent_model_name: str = 'agent_model.th',
-             qmixer_model_name: str = 'qmixer.th',
-             opt_name: str = 'opt.th'):
+             qmixer_model_name: str = 'qmixer_model.th',
+             opt_name: str = 'optimizer.th'):
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
         agent_model_path = os.path.join(save_dir, agent_model_name)
@@ -265,14 +246,13 @@ class QMixAgent(object):
         torch.save(self.agent_model.state_dict(), agent_model_path)
         torch.save(self.qmixer_model.state_dict(), qmixer_model_path)
         torch.save(self.optimizer.state_dict(), optimizer_path)
-
         print('save model successfully!')
 
     def restore(self,
                 save_dir: str = None,
                 agent_model_name: str = 'agent_model.th',
-                qmixer_model_name: str = 'qmixer.th',
-                opt_name: str = 'opt.th'):
+                qmixer_model_name: str = 'qmixer_model.th',
+                opt_name: str = 'optimizer.th'):
         agent_model_path = os.path.join(save_dir, agent_model_name)
         qmixer_model_path = os.path.join(save_dir, qmixer_model_name)
         optimizer_path = os.path.join(save_dir, opt_name)
