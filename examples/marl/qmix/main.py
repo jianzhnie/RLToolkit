@@ -1,5 +1,7 @@
 import argparse
+import os.path as osp
 import sys
+import time
 from copy import deepcopy
 
 import mmcv
@@ -15,9 +17,8 @@ from smac.env import StarCraft2Env
 sys.path.append('../../')
 
 from rltoolkit.data.buffer.ma_replaybuffer import EpisodeData, ReplayBuffer
-from rltoolkit.utils import logger, tensorboard
-
-logger.set_dir('./log_path')
+from rltoolkit.utils import tensorboard
+from rltoolkit.utils.log import get_root_logger
 
 try:
     import wandb
@@ -124,6 +125,11 @@ def main():
     config['n_actions'] = env.n_actions
     args = argparse.Namespace(**config)
 
+    # init the logger before other steps
+    timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
+    log_file = osp.join(args.work_dir, f'{timestamp}.log')
+    logger = get_root_logger(log_file=log_file, log_level='INFO')
+
     if args.use_wandb:
         if has_wandb:
             wandb.init(
@@ -186,7 +192,7 @@ def main():
         total_steps += train_step
 
         tensorboard.add_scalar('train_rewards', train_reward, total_steps)
-        tensorboard.add_scalar('episode_steps', train_step, total_steps)
+        tensorboard.add_scalar('train_episode_len', train_step, total_steps)
         tensorboard.add_scalar('train_win_rate', train_is_win, total_steps)
         tensorboard.add_scalar('train_loss', train_loss, total_steps)
         tensorboard.add_scalar('exploration', qmix_agent.exploration,
@@ -198,7 +204,7 @@ def main():
 
         if episode_cnt % config['train_log_interval'] == 0:
             logger.info(
-                '[Train], total-steps: {}, episode-length: {}, win_rate: {:.2f}, reward: {:.2f}, train_loss: {:.2f}.'
+                '[Train], total_steps: {}, episode_length: {}, train_win_rate: {:.2f}, train_reward: {:.2f}, train_loss: {:.2f}.'
                 .format(total_steps, train_step, train_is_win, train_reward,
                         train_loss))
 
@@ -206,8 +212,8 @@ def main():
             eval_reward, eval_step, eval_is_win = run_evaluate_episode(
                 env, qmix_agent)
             logger.info(
-                '[Eval], eval-step: {}, win_rate: {:.2f}, reward: {:.2f}'.
-                format(eval_step, eval_is_win, eval_reward))
+                '[Eval], eval_step: {}, eval_win_rate: {:.2f}, eval_reward: {:.2f}'
+                .format(eval_step, eval_is_win, eval_reward))
 
             tensorboard.add_scalar('eval_reward', eval_reward, total_steps)
             tensorboard.add_scalar('eval_steps', eval_step, total_steps)
