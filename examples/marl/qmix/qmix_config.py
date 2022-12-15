@@ -49,5 +49,6 @@ QMixConfig = {
     'double_q': True,
     'difficulty': '7',
     'algo': 'qmix',
+    'work_dir': './work_dirs/qmix',
     'use_wandb': True
 }
