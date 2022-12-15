@@ -1,6 +1,8 @@
+import argparse
 import sys
 from copy import deepcopy
 
+import mmcv
 import numpy as np
 import torch
 from env_wrapper import SC2EnvWrapper
@@ -16,6 +18,12 @@ from rltoolkit.data.buffer.ma_replaybuffer import EpisodeData, ReplayBuffer
 from rltoolkit.utils import logger, tensorboard
 
 logger.set_dir('./log_path')
+
+try:
+    import wandb
+    has_wandb = True
+except ImportError:
+    has_wandb = False
 
 
 def run_train_episode(env: StarCraft2Env,
@@ -60,7 +68,7 @@ def run_train_episode(env: StarCraft2Env,
     mean_loss = []
     mean_td_error = []
     if rpm.size() > config['memory_warmup_size']:
-        for _ in range(2):
+        for _ in range(5):
             batch = rpm.sample_batch(config['batch_size'])
             loss, td_error = agent.learn(**batch)
             mean_loss.append(loss)
@@ -71,22 +79,33 @@ def run_train_episode(env: StarCraft2Env,
     return episode_reward, episode_step, is_win, mean_loss, mean_td_error
 
 
-def run_evaluate_episode(env, agent):
-    agent.reset_agent()
-    episode_reward = 0.0
-    episode_step = 0
-    terminated = False
-    state, obs = env.reset()
+def run_evaluate_episode(env, agent, num_episodes=5):
+    eval_is_win_buffer = []
+    eval_reward_buffer = []
+    eval_steps_buffer = []
+    for _ in range(num_episodes):
+        agent.reset_agent()
+        episode_reward = 0.0
+        episode_step = 0
+        terminated = False
+        state, obs = env.reset()
+        while not terminated:
+            available_actions = env.get_available_actions()
+            actions = agent.predict(obs, available_actions)
+            state, obs, reward, terminated = env.step(actions)
+            episode_step += 1
+            episode_reward += reward
 
-    while not terminated:
-        available_actions = env.get_available_actions()
-        actions = agent.predict(obs, available_actions)
-        state, obs, reward, terminated = env.step(actions)
-        episode_step += 1
-        episode_reward += reward
+        is_win = env.win_counted
 
-    is_win = env.win_counted
-    return episode_reward, episode_step, is_win
+        eval_reward_buffer.append(episode_reward)
+        eval_steps_buffer.append(episode_step)
+        eval_is_win_buffer.append(is_win)
+
+    eval_reward = np.mean(eval_reward_buffer)
+    eval_steps = np.mean(eval_steps_buffer)
+    eval_win_rate = np.mean(eval_is_win_buffer)
+    return eval_reward, eval_steps, eval_win_rate
 
 
 def main():
@@ -96,29 +115,47 @@ def main():
     config = deepcopy(QMixConfig)
     env = StarCraft2Env(
         map_name=config['scenario'], difficulty=config['difficulty'])
+
     env = SC2EnvWrapper(env)
     config['episode_limit'] = env.episode_limit
     config['obs_shape'] = env.obs_shape
     config['state_shape'] = env.state_shape
     config['n_agents'] = env.n_agents
     config['n_actions'] = env.n_actions
+    args = argparse.Namespace(**config)
+
+    if args.use_wandb:
+        if has_wandb:
+            wandb.init(
+                project=args.scenario + '_' + args.algo,
+                config=args,
+                entity='jianzhnie',
+                sync_tensorboard=True)
+        else:
+            logger.warning(
+                "You've requested to log metrics to wandb but package not found. "
+                'Metrics not being logged to wandb, try `pip install wandb`')
 
     rpm = ReplayBuffer(
         max_size=config['replay_buffer_size'],
         episode_limit=config['episode_limit'],
         state_shape=config['state_shape'],
         obs_shape=config['obs_shape'],
-        num_actions=config['n_actions'],
         num_agents=config['n_agents'],
+        num_actions=config['n_actions'],
         batch_size=config['batch_size'],
         device=device)
 
-    agent_model = RNNModel(config['obs_shape'], config['n_actions'],
-                           config['rnn_hidden_dim'])
-    qmixer_model = QMixerModel(config['n_agents'], config['state_shape'],
-                               config['mixing_embed_dim'],
-                               config['hypernet_layers'],
-                               config['hypernet_embed_dim'])
+    agent_model = RNNModel(
+        input_shape=config['obs_shape'],
+        n_actions=config['n_actions'],
+        rnn_hidden_dim=config['rnn_hidden_dim'])
+    qmixer_model = QMixerModel(
+        n_agents=config['n_agents'],
+        state_shape=config['state_shape'],
+        mixing_embed_dim=config['mixing_embed_dim'],
+        hypernet_layers=config['hypernet_layers'],
+        hypernet_embed_dim=config['hypernet_embed_dim'])
 
     qmix_agent = QMixAgent(
         agent_model=agent_model,
@@ -140,40 +177,50 @@ def main():
             env, qmix_agent, rpm, config)
 
     total_steps = 0
-    last_test_step = -1e10
+    episode_cnt = 0
+    progress_bar = mmcv.ProgressBar(config['training_steps'])
     while total_steps < config['training_steps']:
-        print('episode training')
+        episode_cnt += 1
         train_reward, train_step, train_is_win, train_loss, train_td_error = run_train_episode(
             env, qmix_agent, rpm, config)
         total_steps += train_step
 
-        if total_steps - last_test_step >= config['test_steps']:
-            last_test_step = total_steps
-            eval_is_win_buffer = []
-            eval_reward_buffer = []
-            eval_steps_buffer = []
-            for _ in range(3):
-                eval_reward, eval_step, eval_is_win = run_evaluate_episode(
-                    env, qmix_agent)
-                eval_reward_buffer.append(eval_reward)
-                eval_steps_buffer.append(eval_step)
-                eval_is_win_buffer.append(eval_is_win)
+        tensorboard.add_scalar('train_rewards', train_reward, total_steps)
+        tensorboard.add_scalar('episode_steps', train_step, total_steps)
+        tensorboard.add_scalar('train_win_rate', train_is_win, total_steps)
+        tensorboard.add_scalar('train_loss', train_loss, total_steps)
+        tensorboard.add_scalar('exploration', qmix_agent.exploration,
+                               total_steps)
+        tensorboard.add_scalar('replay_buffer_size', rpm.size(), total_steps)
+        tensorboard.add_scalar('target_update_count',
+                               qmix_agent.target_update_count, total_steps)
+        tensorboard.add_scalar('train_td_error:', train_td_error, total_steps)
 
-            tensorboard.add_scalar('train_loss', train_loss, total_steps)
-            tensorboard.add_scalar('eval_reward', np.mean(eval_reward_buffer),
-                                   total_steps)
-            tensorboard.add_scalar('eval_steps', np.mean(eval_steps_buffer),
-                                   total_steps)
-            tensorboard.add_scalar('eval_win_rate',
-                                   np.mean(eval_is_win_buffer), total_steps)
-            tensorboard.add_scalar('exploration', qmix_agent.exploration,
-                                   total_steps)
-            tensorboard.add_scalar('replay_buffer_size', rpm.size(),
-                                   total_steps)
-            tensorboard.add_scalar('target_update_count',
-                                   qmix_agent.target_update_count, total_steps)
-            tensorboard.add_scalar('train_td_error:', train_td_error,
-                                   total_steps)
+        if episode_cnt % config['train_log_interval'] == 0:
+            logger.info(
+                '[Train], total-steps: {}, episode-length: {}, win_rate: {:.2f}, reward: {:.2f}, train_loss: {:.2f}.'
+                .format(total_steps, train_step, train_is_win, train_reward,
+                        train_loss))
+
+        if episode_cnt % config['test_interval'] == 0:
+            eval_reward, eval_step, eval_is_win = run_evaluate_episode(
+                env, qmix_agent)
+            logger.info(
+                '[Eval], eval-step: {}, win_rate: {:.2f}, reward: {:.2f}'.
+                format(eval_step, eval_is_win, eval_reward))
+
+            tensorboard.add_scalar('eval_reward', eval_reward, total_steps)
+            tensorboard.add_scalar('eval_steps', eval_step, total_steps)
+            tensorboard.add_scalar('eval_win_rate', eval_is_win, total_steps)
+
+            if args.use_wandb:
+                wandb.log({
+                    'eval_reward': eval_reward,
+                    'eval_steps': eval_step,
+                    'eval_win_rate': eval_is_win
+                })
+
+        progress_bar.update()
 
 
 if __name__ == '__main__':
