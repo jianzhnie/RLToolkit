@@ -152,8 +152,7 @@ class QMixAgent(object):
 
         self.global_step += 1
 
-        actions_batch = torch.tensor(
-            actions_batch, dtype=torch.long, device=self.device)
+        actions_batch = actions_batch.to(self.device, dtype=torch.long)
 
         batch_size = state_batch.shape[0]
         episode_len = state_batch.shape[1]

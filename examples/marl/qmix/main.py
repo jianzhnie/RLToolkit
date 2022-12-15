@@ -12,8 +12,7 @@ from smac.env import StarCraft2Env
 
 sys.path.append('../../')
 
-from rltoolkit.data.buffer.ma_replaybuffer import (EpisodeExperience,
-                                                   ReplayBuffer)
+from rltoolkit.data.buffer.ma_replaybuffer import EpisodeData, ReplayBuffer
 from rltoolkit.utils import logger, tensorboard
 
 logger.set_dir('./log_path')
@@ -30,7 +29,13 @@ def run_train_episode(env: StarCraft2Env,
     episode_step = 0
     terminated = False
     state, obs = env.reset()
-    episode_experience = EpisodeExperience(episode_limit)
+    episode_experience = EpisodeData(
+        episode_limit=episode_limit,
+        state_shape=config['state_shape'],
+        obs_shape=config['obs_shape'],
+        num_actions=config['n_actions'],
+        num_agents=config['n_agents'],
+    )
 
     while not terminated:
         available_actions = env.get_available_actions()
@@ -38,27 +43,18 @@ def run_train_episode(env: StarCraft2Env,
         next_state, next_obs, reward, terminated = env.step(actions)
         episode_reward += reward
         episode_step += 1
-        episode_experience.add(state, actions, [reward], [terminated], obs,
-                               available_actions, [0])
+        episode_experience.add(state, obs, actions, available_actions, reward,
+                               terminated, 0)
         state = next_state
         obs = next_obs
 
     # fill the episode
-    state_zero = np.zeros_like(state, dtype=state.dtype)
-    actions_zero = np.zeros_like(actions, dtype=actions.dtype)
-    obs_zero = np.zeros_like(obs, dtype=obs.dtype)
-    available_actions_zero = np.zeros_like(
-        available_actions, dtype=available_actions.dtype)
-    reward_zero = 0
-    terminated_zero = True
     for _ in range(episode_step, episode_limit):
-        episode_experience.add(state_zero, actions_zero, [reward_zero],
-                               [terminated_zero], obs_zero,
-                               available_actions_zero, [1])
+        episode_experience.fill_mask()
 
-    eposide_data = episode_experience.get_data()
+    episode_data = episode_experience.get_data()
 
-    rpm.store(**eposide_data)
+    rpm.store(**episode_data)
     is_win = env.win_counted
 
     mean_loss = []

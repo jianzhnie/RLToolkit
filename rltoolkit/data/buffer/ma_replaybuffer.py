@@ -4,6 +4,69 @@ import numpy as np
 import torch
 
 
+class EpisodeData(object):
+
+    def __init__(self, episode_limit: int, state_shape: Union[int, Tuple],
+                 obs_shape: Union[int,
+                                  Tuple], num_actions: int, num_agents: int):
+
+        self.obs_buf = np.zeros((episode_limit, num_agents, obs_shape))
+        self.state_buf = np.zeros((episode_limit, state_shape))
+        self.action_buf = np.zeros((episode_limit, num_agents))
+        self.available_action_buf = np.zeros(
+            (episode_limit, num_agents, num_actions))
+        self.reward_buf = np.zeros((episode_limit, 1))
+        self.terminal_buf = np.zeros((episode_limit, 1))
+        self.filled_buf = np.zeros((episode_limit, 1))
+
+        # memory management
+        self._curr_ptr = 0
+        self._curr_size = 0
+        self.episode_limit = episode_limit
+
+    def add(self, state, obs, actions, available_actions, rewards, terminated,
+            filled):
+
+        assert self.size() < self.episode_limit
+        self.obs_buf[self._curr_ptr] = obs
+        self.state_buf[self._curr_ptr] = state
+        self.action_buf[self._curr_ptr] = actions
+        self.available_action_buf[self._curr_ptr] = available_actions
+
+        self.reward_buf[self._curr_ptr] = rewards
+        self.terminal_buf[self._curr_ptr] = terminated
+        self.filled_buf[self._curr_ptr] = filled
+        self._curr_ptr += 1
+        self._curr_size = min(self._curr_size + 1, self.episode_limit)
+
+    def fill_mask(self):
+        assert self.size() < self.episode_limit
+        self.terminal_buf[self._curr_ptr] = True
+        self.filled_buf[self._curr_ptr] = 1.0
+        self._curr_ptr += 1
+        self._curr_size = min(self._curr_size + 1, self.episode_limit)
+
+    def get_data(self):
+        """Get all the data in an episode."""
+        assert self.size() == self.episode_limit
+        episode_data = dict(
+            state=self.state_buf,
+            obs=self.obs_buf,
+            actions=self.action_buf,
+            rewards=self.reward_buf,
+            terminated=self.terminal_buf,
+            available_actions=self.available_action_buf,
+            filled=self.filled_buf)
+        return episode_data
+
+    def size(self) -> int:
+        """get current size of replay memory."""
+        return self._curr_size
+
+    def __len__(self):
+        return self._curr_size
+
+
 class EpisodeExperience(object):
 
     def __init__(self, episode_limit):
@@ -21,19 +84,19 @@ class EpisodeExperience(object):
     def count(self):
         return len(self.episode_state)
 
-    def add(self, state, actions, reward, terminated, obs, available_actions,
+    def add(self, state, obs, actions, available_actions, reward, terminated,
             filled):
         assert self.count < self.episode_limit
         self.episode_state.append(state)
+        self.episode_obs.append(obs)
         self.episode_actions.append(actions)
+        self.episode_available_actions.append(available_actions)
         self.episode_reward.append(reward)
         self.episode_terminated.append(terminated)
-        self.episode_obs.append(obs)
-        self.episode_available_actions.append(available_actions)
         self.episode_filled.append(filled)
 
     def get_data(self):
-        """Get all the data in an Eposide."""
+        """Get all the data in an episode."""
         assert self.count == self.episode_limit
         episode_data = dict(
             state=np.array(self.episode_state),
@@ -51,10 +114,10 @@ class ReplayBuffer(object):
     def __init__(self,
                  max_size: int,
                  episode_limit: int,
-                 obs_shape: Union[int, Tuple],
                  state_shape: Union[int, Tuple],
-                 num_actions: int,
+                 obs_shape: Union[int, Tuple],
                  num_agents: int,
+                 num_actions: int,
                  batch_size: int,
                  dtype: torch.dtype = torch.float32,
                  device: str = 'cpu'):
