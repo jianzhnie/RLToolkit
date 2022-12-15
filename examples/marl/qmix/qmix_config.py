@@ -32,18 +32,22 @@ QMixConfig = {
     'mixing_embed_dim': 32,
     'rnn_hidden_dim': 64,
     'lr': 0.0005,
-    'memory_warmup_size': 16,
+    'memory_warmup_size': 1,
     'gamma': 0.99,
     'exploration_start': 1.0,
     'min_exploration': 0.1,
     'exploration_decay': 2e-6,
     'update_target_interval': 2000,
-    'batch_size': 16,
+    'batch_size': 1,
     'training_steps': 1000000,
+    'train_log_interval': 10,  # log every 10 epsode
+    'test_interval': 10,  # log every 10 epsode
     'test_steps': 1000,
     'clip_grad_norm': 10,
     'hypernet_layers': 2,
     'hypernet_embed_dim': 64,
     'double_q': True,
-    'difficulty': '7'
+    'difficulty': '7',
+    'algo': 'qmix',
+    'use_wandb': True
 }
