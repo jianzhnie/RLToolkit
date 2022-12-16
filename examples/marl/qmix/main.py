@@ -126,9 +126,9 @@ def main():
     timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     # log
     log_name = os.path.join(args.project, args.algo, timestamp)
-    log_path = os.path.join(args.log_dir, args.project, args.algo)
-    log_path = get_outdir(log_path)
-    log_file = os.path.join(log_path, f'{timestamp}.log')
+    text_log_path = os.path.join(args.log_dir, args.project, args.algo)
+    tensorboard_log_path = get_outdir(text_log_path, 'log_dir')
+    log_file = os.path.join(text_log_path, f'{timestamp}.log')
     text_logger = get_root_logger(log_file=log_file, log_level='INFO')
 
     if args.logger == 'wandb':
@@ -141,7 +141,7 @@ def main():
             save_interval=1,
             config=args,
             entity='jianzhnie')
-    writer = SummaryWriter(log_path)
+    writer = SummaryWriter(tensorboard_log_path)
     writer.add_text('args', str(args))
     if args.logger == 'tensorboard':
         logger = TensorboardLogger(writer)
