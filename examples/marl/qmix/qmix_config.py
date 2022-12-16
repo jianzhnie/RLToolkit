@@ -49,5 +49,5 @@ QMixConfig = {
     'difficulty': '7',
     'algo': 'qmix',
     'log_dir': 'work_dirs/',
-    'use_wandb': True
+    'logger': 'wandb'
 }
