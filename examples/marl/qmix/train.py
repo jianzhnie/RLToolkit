@@ -133,7 +133,7 @@ def main():
 
     total_steps = 0
     last_test_step = -1e10
-    while total_steps < config['training_steps']:
+    while total_steps < config['total_steps']:
         print('episode training')
         train_reward, train_step, train_is_win, train_loss, train_td_error = run_train_episode(
             env, qmix_agent, rpm, config)
