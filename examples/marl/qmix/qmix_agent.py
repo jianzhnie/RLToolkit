@@ -10,6 +10,7 @@ sys.path.append('../../../')
 from torch.distributions import Categorical
 
 from rltoolkit.models.utils import hard_target_update
+from rltoolkit.utils.scheduler import LinearDecayScheduler
 from rltoolkit.utils.utils import check_model_method
 
 
@@ -30,11 +31,11 @@ class QMixAgent(object):
                  qmixer_model: nn.Module = None,
                  n_agents: int = None,
                  double_q: bool = True,
+                 total_steps: int = 1e6,
                  gamma: float = 0.99,
                  learning_rate: float = 0.0005,
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
-                 exploration_decay: float = 0.98,
                  update_target_interval: int = 1000,
                  clip_grad_norm: float = None,
                  device: str = 'cpu'):
@@ -56,11 +57,10 @@ class QMixAgent(object):
         self.global_step = 0
         self.exploration = exploration_start
         self.min_exploration = min_exploration
-        self.exploration_decay = exploration_decay
-        self.device = device
         self.target_update_count = 0
         self.update_target_interval = update_target_interval
 
+        self.device = device
         self.agent_model = agent_model
         self.qmixer_model = qmixer_model
         self.target_agent_model = deepcopy(self.agent_model)
@@ -74,6 +74,9 @@ class QMixAgent(object):
         self.params += self.qmixer_model.parameters()
         self.optimizer = torch.optim.RMSprop(
             params=self.params, lr=self.learning_rate, alpha=0.99, eps=0.00001)
+
+        self.ep_scheduler = LinearDecayScheduler(exploration_start,
+                                                 total_steps)
 
     def reset_agent(self, batch_size=1):
         self._init_hidden_states(batch_size)
@@ -105,8 +108,11 @@ class QMixAgent(object):
                 available_actions, dtype=torch.float32)
             actions_dist = Categorical(available_actions)
             actions = actions_dist.sample().long().cpu().detach().numpy()
-        self.exploration = max(self.min_exploration,
-                               self.exploration - self.exploration_decay)
+
+        self.exploration = max(
+            self.ep_scheduler.step(1),
+            self.min_exploration,
+        )
         return actions
 
     def predict(self, obs, available_actions):
