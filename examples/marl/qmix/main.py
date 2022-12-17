@@ -13,18 +13,13 @@ from qmix_config import QMixConfig
 from qmixer_model import QMixerModel
 from rnn_model import RNNModel
 from smac.env import StarCraft2Env
+from torch.utils.tensorboard import SummaryWriter
 
 sys.path.append('../../')
 
 from rltoolkit.data.buffer.ma_replaybuffer import EpisodeData, ReplayBuffer
-from rltoolkit.utils import tensorboard
-from rltoolkit.utils.log_utils import get_outdir, get_root_logger
-
-try:
-    import wandb
-    has_wandb = True
-except ImportError:
-    has_wandb = False
+from rltoolkit.utils import TensorboardLogger, WandbLogger
+from rltoolkit.utils.logger.logs import get_outdir, get_root_logger
 
 
 def run_train_episode(env: StarCraft2Env,
@@ -77,6 +72,7 @@ def run_train_episode(env: StarCraft2Env,
 
     mean_loss = np.mean(mean_loss) if mean_loss else None
     mean_td_error = np.mean(mean_td_error) if mean_td_error else None
+
     return episode_reward, episode_step, is_win, mean_loss, mean_td_error
 
 
@@ -103,10 +99,11 @@ def run_evaluate_episode(env, agent, num_eval_episodes=5):
         eval_steps_buffer.append(episode_step)
         eval_is_win_buffer.append(is_win)
 
-    eval_reward = np.mean(eval_reward_buffer)
+    eval_rewards = np.mean(eval_reward_buffer)
     eval_steps = np.mean(eval_steps_buffer)
     eval_win_rate = np.mean(eval_is_win_buffer)
-    return eval_reward, eval_steps, eval_win_rate
+
+    return eval_rewards, eval_steps, eval_win_rate
 
 
 def main():
@@ -129,23 +126,27 @@ def main():
     timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     # log
     log_name = os.path.join(args.project, args.algo, timestamp)
-    log_path = os.path.join(args.log_dir, args.project, args.algo)
-    log_path = get_outdir(log_path)
-    log_file = os.path.join(log_path, f'{timestamp}.log')
-    logger = get_root_logger(log_file=log_file, log_level='INFO')
+    text_log_path = os.path.join(args.log_dir, args.project, args.algo)
+    tensorboard_log_path = get_outdir(text_log_path, 'log_dir')
+    log_file = os.path.join(text_log_path, f'{timestamp}.log')
+    text_logger = get_root_logger(log_file=log_file, log_level='INFO')
 
-    if args.use_wandb:
-        if has_wandb:
-            wandb.init(
-                project=args.project,
-                name=log_name.replace(os.path.sep, '__'),
-                entity='jianzhnie',
-                sync_tensorboard=True,
-                config=args)
-        else:
-            logger.warning(
-                "You've requested to log metrics to wandb but package not found. "
-                'Metrics not being logged to wandb, try `pip install wandb`')
+    if args.logger == 'wandb':
+        logger = WandbLogger(
+            train_interval=args.train_log_interval,
+            test_interval=args.test_log_interval,
+            update_interval=args.train_log_interval,
+            project=args.project,
+            name=log_name.replace(os.path.sep, '_'),
+            save_interval=1,
+            config=args,
+            entity='jianzhnie')
+    writer = SummaryWriter(tensorboard_log_path)
+    writer.add_text('args', str(args))
+    if args.logger == 'tensorboard':
+        logger = TensorboardLogger(writer)
+    else:  # wandb
+        logger.load(writer)
 
     rpm = ReplayBuffer(
         max_size=config['replay_buffer_size'],
@@ -196,41 +197,36 @@ def main():
         train_reward, train_step, train_is_win, train_loss, train_td_error = run_train_episode(
             env, qmix_agent, rpm, config)
         current_steps += train_step
-
-        tensorboard.add_scalar('train_rewards', train_reward, current_steps)
-        tensorboard.add_scalar('train_episode_len', train_step, current_steps)
-        tensorboard.add_scalar('train_win_rate', train_is_win, current_steps)
-        tensorboard.add_scalar('train_loss', train_loss, current_steps)
-        tensorboard.add_scalar('exploration', qmix_agent.exploration,
-                               current_steps)
-        tensorboard.add_scalar('replay_buffer_size', rpm.size(), current_steps)
-        tensorboard.add_scalar('target_update_count',
-                               qmix_agent.target_update_count, current_steps)
-        tensorboard.add_scalar('train_td_error:', train_td_error,
-                               current_steps)
+        train_results = {
+            'env_step': train_step,
+            'rewards': train_reward,
+            'win_rate': train_is_win,
+            'mean_loss': train_loss,
+            'mean_td_error': train_td_error,
+            'exploration': qmix_agent.exploration,
+            'replay_buffer_size': rpm.size(),
+            'target_update_count': qmix_agent.target_update_count,
+        }
+        logger.log_train_data(train_results, current_steps)
 
         if episode_cnt % config['train_log_interval'] == 0:
-            logger.info(
+            text_logger.info(
                 '[Train], current_steps: {}, train_win_rate: {:.2f}, train_reward: {:.2f}'
                 .format(current_steps, train_is_win, train_reward))
 
         if episode_cnt % config['test_log_interval'] == 0:
-            eval_reward, eval_step, eval_is_win = run_evaluate_episode(
+            eval_rewards, eval_steps, eval_win_rate = run_evaluate_episode(
                 env, qmix_agent, num_eval_episodes=5)
-            logger.info(
-                '[Eval], eval_step: {}, eval_win_rate: {:.2f}, eval_reward: {:.2f}'
-                .format(eval_step, eval_is_win, eval_reward))
+            text_logger.info(
+                '[Eval], eval_steps: {}, eval_win_rate: {:.2f}, eval_rewards: {:.2f}'
+                .format(eval_steps, eval_win_rate, eval_rewards))
 
-            tensorboard.add_scalar('eval_reward', eval_reward, current_steps)
-            tensorboard.add_scalar('eval_steps', eval_step, current_steps)
-            tensorboard.add_scalar('eval_win_rate', eval_is_win, current_steps)
-
-            if args.use_wandb:
-                wandb.log({
-                    'eval_reward': eval_reward,
-                    'eval_steps': eval_step,
-                    'eval_win_rate': eval_is_win
-                })
+            test_results = {
+                'env_step': eval_steps,
+                'rewards': eval_rewards,
+                'win_rate': eval_win_rate
+            }
+            logger.log_test_data(test_results, current_steps)
 
         progress_bar.update()
 
