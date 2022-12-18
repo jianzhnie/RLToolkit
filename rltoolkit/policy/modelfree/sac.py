@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.distributions import Normal
 
 import rltoolkit
-from rltoolkit.utils.utils import check_model_method
+from rltoolkit.models.utils import check_model_method
 
 __all__ = ['SAC']
 
