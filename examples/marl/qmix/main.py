@@ -76,7 +76,9 @@ def run_train_episode(env: StarCraft2Env,
     return episode_reward, episode_step, is_win, mean_loss, mean_td_error
 
 
-def run_evaluate_episode(env, agent, num_eval_episodes=5):
+def run_evaluate_episode(env: StarCraft2Env,
+                         agent: QMixAgent,
+                         num_eval_episodes=5):
     eval_is_win_buffer = []
     eval_reward_buffer = []
     eval_steps_buffer = []

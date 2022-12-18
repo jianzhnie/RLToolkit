@@ -1,12 +1,12 @@
 """Code Reference Tianshou https://github.com/thu-
 ml/tianshou/tree/master/tianshou/utils/logger."""
 
-from typing import Any, Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 from tensorboard.backend.event_processing import event_accumulator
-from tianshou.utils.logger.base import LOG_DATA_TYPE, BaseLogger
-from tianshou.utils.warning import deprecation
 from torch.utils.tensorboard import SummaryWriter
+
+from .base import LOG_DATA_TYPE, BaseLogger
 
 
 class TensorboardLogger(BaseLogger):
@@ -77,16 +77,3 @@ class TensorboardLogger(BaseLogger):
             env_step = 0
 
         return epoch, env_step, gradient_step
-
-
-class BasicLogger(TensorboardLogger):
-    """BasicLogger has changed its name to TensorboardLogger in #427.
-
-    This class is for compatibility.
-    """
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        deprecation(
-            'Class BasicLogger is marked as deprecated and will be removed soon. '
-            'Please use TensorboardLogger instead.')
-        super().__init__(*args, **kwargs)
