@@ -73,32 +73,3 @@ def cleanup_log_dir(log_dir):
         files = glob.glob(os.path.join(log_dir, '*.monitor.csv'))
         for f in files:
             os.remove(f)
-
-
-def check_model_method(model, method, algo):
-    """check method existence for input model to algo.
-
-    Args:
-        model(rltoolkit.Model): model for checking
-        method(str): method name
-        algo(str): algorithm name
-
-    Raises:
-        AssertionError: if method is not implemented in model
-    """
-    if method == 'forward':
-        # check if forward is overridden by the subclass
-        assert callable(
-            getattr(model, 'forward',
-                    None)), 'forward should be a function in model class'
-        assert model.forward.__func__ is not super(
-            model.__class__, model
-        ).forward.__func__, "{}'s model needs to implement forward method. \n".format(
-            algo)
-    else:
-        # check if the specified method is implemented
-        assert hasattr(model, method) and callable(
-            getattr(
-                model, method,
-                None)), "{}'s model needs to implement {} method. \n".format(
-                    algo, method)
