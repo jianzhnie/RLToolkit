@@ -9,9 +9,8 @@ import torch.nn as nn
 sys.path.append('../../../')
 from torch.distributions import Categorical
 
-from rltoolkit.models.utils import hard_target_update
+from rltoolkit.models.utils import check_model_method, hard_target_update
 from rltoolkit.utils.scheduler import LinearDecayScheduler
-from rltoolkit.utils.utils import check_model_method
 
 
 class QMixAgent(object):
