@@ -5,8 +5,8 @@ import torch
 import torch.optim as optim
 
 from rltoolkit.models.noisynet import NoisyDulingNet, NoisyNet
+from rltoolkit.models.utils import check_model_method
 from rltoolkit.utils.scheduler import LinearDecayScheduler
-from rltoolkit.utils.utils import check_model_method
 
 
 class Agent(object):

@@ -10,8 +10,8 @@ from copy import deepcopy
 import torch
 import torch.nn.functional as F
 
+from rltoolkit.models.utils import check_model_method
 from rltoolkit.policy.base_policy import Algorithm
-from rltoolkit.utils.utils import check_model_method
 
 __all__ = ['TD3']
 
