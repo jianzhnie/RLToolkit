@@ -28,7 +28,7 @@ QMixConfig:
 
 QMixConfig = {
     'project': 'StarCraft-II',
-    'scenario': '3m',
+    'scenario': '25m',
     'replay_buffer_size': 5000,
     'mixing_embed_dim': 32,
     'rnn_hidden_dim': 64,
@@ -39,12 +39,13 @@ QMixConfig = {
     'min_exploration': 0.01,
     'update_target_interval': 2000,
     'batch_size': 32,
-    'total_steps': 500000,
-    'train_log_interval': 50,  # log every 10 epsode
+    'total_steps': 1000000,
+    'train_log_interval': 10,  # log every 10 epsode
     'test_log_interval': 100,  # log every 50 epsode
     'clip_grad_norm': 10,
     'hypernet_layers': 2,
     'hypernet_embed_dim': 64,
+    'update_learner_freq': 2,
     'double_q': True,
     'difficulty': '7',
     'algo': 'qmix',

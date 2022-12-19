@@ -36,6 +36,7 @@ class QMixAgent(object):
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
                  update_target_interval: int = 1000,
+                 update_learner_freq: int = 5,
                  clip_grad_norm: float = None,
                  device: str = 'cpu'):
 
@@ -58,6 +59,7 @@ class QMixAgent(object):
         self.min_exploration = min_exploration
         self.target_update_count = 0
         self.update_target_interval = update_target_interval
+        self.update_learner_freq = update_learner_freq
 
         self.device = device
         self.agent_model = agent_model
@@ -109,7 +111,7 @@ class QMixAgent(object):
             actions = actions_dist.sample().long().cpu().detach().numpy()
 
         self.exploration = max(
-            self.ep_scheduler.step(1),
+            self.ep_scheduler.step(self.update_learner_freq),
             self.min_exploration,
         )
         return actions

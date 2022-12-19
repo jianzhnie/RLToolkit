@@ -64,7 +64,7 @@ def run_train_episode(env: StarCraft2Env,
     mean_loss = []
     mean_td_error = []
     if rpm.size() > config['memory_warmup_size']:
-        for _ in range(2):
+        for _ in range(config['update_learner_freq']):
             batch = rpm.sample_batch(config['batch_size'])
             loss, td_error = agent.learn(**batch)
             mean_loss.append(loss)
@@ -127,8 +127,9 @@ def main():
     # init the logger before other steps
     timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     # log
-    log_name = os.path.join(args.project, args.algo, timestamp)
-    text_log_path = os.path.join(args.log_dir, args.project, args.algo)
+    log_name = os.path.join(args.project, args.scenario, args.algo, timestamp)
+    text_log_path = os.path.join(args.log_dir, args.project, args.scenario,
+                                 args.algo)
     tensorboard_log_path = get_outdir(text_log_path, 'log_dir')
     log_file = os.path.join(text_log_path, f'{timestamp}.log')
     text_logger = get_root_logger(log_file=log_file, log_level='INFO')
@@ -182,7 +183,7 @@ def main():
         exploration_start=config['exploration_start'],
         min_exploration=config['min_exploration'],
         update_target_interval=config['update_target_interval'],
-        clip_grad_norm=config['clip_grad_norm'],
+        update_learner_freq=config['update_learner_freq'],
         device=device)
 
     progress_bar = mmcv.ProgressBar(config['memory_warmup_size'])
