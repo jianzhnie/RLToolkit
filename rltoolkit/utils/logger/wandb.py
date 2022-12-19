@@ -5,9 +5,10 @@ import argparse
 import os
 from typing import Callable, Optional, Tuple
 
-from tianshou.utils import BaseLogger, TensorboardLogger
-from tianshou.utils.logger.base import LOG_DATA_TYPE
 from torch.utils.tensorboard import SummaryWriter
+
+from .base import LOG_DATA_TYPE, BaseLogger
+from .tensorboard import TensorboardLogger
 
 try:
     import wandb
