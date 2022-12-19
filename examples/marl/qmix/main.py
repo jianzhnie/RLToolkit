@@ -76,7 +76,9 @@ def run_train_episode(env: StarCraft2Env,
     return episode_reward, episode_step, is_win, mean_loss, mean_td_error
 
 
-def run_evaluate_episode(env, agent, num_eval_episodes=5):
+def run_evaluate_episode(env: StarCraft2Env,
+                         agent: QMixAgent,
+                         num_eval_episodes=5):
     eval_is_win_buffer = []
     eval_reward_buffer = []
     eval_steps_buffer = []
@@ -133,9 +135,9 @@ def main():
 
     if args.logger == 'wandb':
         logger = WandbLogger(
-            train_interval=1,
-            test_interval=1,
-            update_interval=1,
+            train_interval=args.train_log_interval,
+            test_interval=args.test_log_interval,
+            update_interval=args.train_log_interval,
             project=args.project,
             name=log_name.replace(os.path.sep, '_'),
             save_interval=1,
@@ -194,15 +196,15 @@ def main():
     progress_bar = mmcv.ProgressBar(config['total_steps'])
     while current_steps < config['total_steps']:
         episode_cnt += 1
-        episode_reward, episode_step, is_win, mean_loss, mean_td_error = run_train_episode(
+        train_reward, train_step, train_is_win, train_loss, train_td_error = run_train_episode(
             env, qmix_agent, rpm, config)
         current_steps += train_step
         train_results = {
-            'env_step': episode_step,
-            'rewards': episode_reward,
-            'win_rate': is_win,
-            'mean_loss': mean_loss,
-            'mean_td_error': mean_td_error,
+            'env_step': train_step,
+            'rewards': train_reward,
+            'win_rate': train_is_win,
+            'mean_loss': train_loss,
+            'mean_td_error': train_td_error,
             'exploration': qmix_agent.exploration,
             'replay_buffer_size': rpm.size(),
             'target_update_count': qmix_agent.target_update_count,

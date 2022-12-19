@@ -3,8 +3,8 @@ import copy
 import torch
 import torch.nn.functional as F
 
+from rltoolkit.models.utils import check_model_method
 from rltoolkit.policy.base_policy import Algorithm
-from rltoolkit.utils.utils import check_model_method
 
 EXP_ADV_MAX = 100.
 

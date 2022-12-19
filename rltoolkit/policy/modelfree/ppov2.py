@@ -13,8 +13,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.distributions import Categorical, Normal
 
+from rltoolkit.models.utils import check_model_method
 from rltoolkit.policy.base_policy import Algorithm
-from rltoolkit.utils.utils import check_model_method
 
 __all__ = ['PPO']
 

@@ -11,8 +11,8 @@ import torch
 import torch.optim as optim
 from torch.distributions import Categorical
 
+from rltoolkit.models.utils import check_model_method
 from rltoolkit.policy.base_policy import Algorithm
-from rltoolkit.utils.utils import check_model_method
 
 __all__ = ['PolicyGradient']
 
