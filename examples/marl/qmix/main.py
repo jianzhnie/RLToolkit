@@ -180,6 +180,7 @@ def main():
         total_steps=config['total_steps'],
         gamma=config['gamma'],
         learning_rate=config['learning_rate'],
+        min_learning_rate=config['min_learning_rate'],
         exploration_start=config['exploration_start'],
         min_exploration=config['min_exploration'],
         update_target_interval=config['update_target_interval'],
@@ -207,6 +208,7 @@ def main():
             'mean_loss': train_loss,
             'mean_td_error': train_td_error,
             'exploration': qmix_agent.exploration,
+            'learning_rate': qmix_agent.learning_rate,
             'replay_buffer_size': rpm.size(),
             'target_update_count': qmix_agent.target_update_count,
         }

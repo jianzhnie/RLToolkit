@@ -32,7 +32,8 @@ class QMixAgent(object):
                  double_q: bool = True,
                  total_steps: int = 1e6,
                  gamma: float = 0.99,
-                 learning_rate: float = 0.0005,
+                 learning_rate: float = 0.001,
+                 min_learning_rate: float = 0.00001,
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
                  update_target_interval: int = 1000,
@@ -53,6 +54,7 @@ class QMixAgent(object):
         self.double_q = double_q
         self.gamma = gamma
         self.learning_rate = learning_rate
+        self.min_learning_rate = min_learning_rate
         self.clip_grad_norm = clip_grad_norm
         self.global_step = 0
         self.exploration = exploration_start
@@ -78,6 +80,8 @@ class QMixAgent(object):
 
         self.ep_scheduler = LinearDecayScheduler(exploration_start,
                                                  total_steps)
+
+        self.lr_scheduler = LinearDecayScheduler(learning_rate, total_steps)
 
     def reset_agent(self, batch_size=1):
         self._init_hidden_states(batch_size)
@@ -238,6 +242,13 @@ class QMixAgent(object):
         if self.clip_grad_norm:
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
+
+        # learning rate decay
+        self.learning_rate = max(
+            self.lr_scheduler.step(1), self.min_learning_rate)
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = self.learning_rate
+
         return loss.item(), mean_td_error.item()
 
     def save(self,
