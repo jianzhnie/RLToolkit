@@ -64,7 +64,7 @@ def run_train_episode(env: StarCraft2Env,
     mean_loss = []
     mean_td_error = []
     if rpm.size() > config['memory_warmup_size']:
-        for _ in range(2):
+        for _ in range(config['update_learner_freq']):
             batch = rpm.sample_batch(config['batch_size'])
             loss, td_error = agent.learn(**batch)
             mean_loss.append(loss)
@@ -127,8 +127,9 @@ def main():
     # init the logger before other steps
     timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     # log
-    log_name = os.path.join(args.project, args.algo, timestamp)
-    text_log_path = os.path.join(args.log_dir, args.project, args.algo)
+    log_name = os.path.join(args.project, args.scenario, args.algo, timestamp)
+    text_log_path = os.path.join(args.log_dir, args.project, args.scenario,
+                                 args.algo)
     tensorboard_log_path = get_outdir(text_log_path, 'log_dir')
     log_file = os.path.join(text_log_path, f'{timestamp}.log')
     text_logger = get_root_logger(log_file=log_file, log_level='INFO')
@@ -179,10 +180,11 @@ def main():
         total_steps=config['total_steps'],
         gamma=config['gamma'],
         learning_rate=config['learning_rate'],
+        min_learning_rate=config['min_learning_rate'],
         exploration_start=config['exploration_start'],
         min_exploration=config['min_exploration'],
         update_target_interval=config['update_target_interval'],
-        clip_grad_norm=config['clip_grad_norm'],
+        update_learner_freq=config['update_learner_freq'],
         device=device)
 
     progress_bar = mmcv.ProgressBar(config['memory_warmup_size'])
@@ -206,6 +208,7 @@ def main():
             'mean_loss': train_loss,
             'mean_td_error': train_td_error,
             'exploration': qmix_agent.exploration,
+            'learning_rate': qmix_agent.learning_rate,
             'replay_buffer_size': rpm.size(),
             'target_update_count': qmix_agent.target_update_count,
         }
@@ -230,7 +233,7 @@ def main():
             }
             logger.log_test_data(test_results, current_steps)
 
-        progress_bar.update()
+        progress_bar.update(train_step)
 
 
 if __name__ == '__main__':

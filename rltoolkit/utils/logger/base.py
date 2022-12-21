@@ -51,9 +51,7 @@ class BaseLogger(ABC):
         :param int step: stands for the timestep the collect_result being logged.
         """
         if step - self.last_log_train_step >= self.train_interval:
-            prefix = 'train/'
-            log_data = {(prefix + key): val
-                        for key, val in collect_result.items()}
+            log_data = {f'train/{k}': v for k, v in collect_result.items()}
             self.write('train/env_step', step, log_data)
             self.last_log_train_step = step
 
@@ -65,9 +63,7 @@ class BaseLogger(ABC):
         :param int step: stands for the timestep the collect_result being logged.
         """
         if step - self.last_log_test_step >= self.test_interval:
-            prefix = 'test/'
-            log_data = {(prefix + key): val
-                        for key, val in collect_result.items()}
+            log_data = {f'test/{k}': v for k, v in collect_result.items()}
             self.write('test/env_step', step, log_data)
             self.last_log_test_step = step
 
