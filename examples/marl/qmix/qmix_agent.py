@@ -17,7 +17,7 @@ class QMixAgent(object):
     """ QMIX algorithm
     Args:
         agent_model (rltoolkit.Model): agents' local q network for decision making.
-        qmixer_model (rltoolkit.Model): A mixing network which takes local q values as input
+        mixer_model (rltoolkit.Model): A mixing network which takes local q values as input
             to construct a global Q network.
         double_q (bool): Double-DQN.
         gamma (float): discounted factor for reward computation.
@@ -27,7 +27,7 @@ class QMixAgent(object):
 
     def __init__(self,
                  agent_model: nn.Module = None,
-                 qmixer_model: nn.Module = None,
+                 mixer_model: nn.Module = None,
                  n_agents: int = None,
                  double_q: bool = True,
                  total_steps: int = 1e6,
@@ -36,15 +36,17 @@ class QMixAgent(object):
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
                  update_target_interval: int = 1000,
-                 clip_grad_norm: float = None,
+                 clip_grad_norm: float = 10,
+                 optim_alpha: float = 0.99,
+                 optim_eps: float = 0.00001,
                  device: str = 'cpu'):
 
         check_model_method(agent_model, 'init_hidden', self.__class__.__name__)
         check_model_method(agent_model, 'forward', self.__class__.__name__)
-        check_model_method(qmixer_model, 'forward', self.__class__.__name__)
-        assert hasattr(qmixer_model, 'n_agents') and not callable(
-            getattr(qmixer_model, 'n_agents',
-                    None)), 'qmixer_model needs to have attribute n_agents'
+        check_model_method(mixer_model, 'forward', self.__class__.__name__)
+        assert hasattr(mixer_model, 'n_agents') and not callable(
+            getattr(mixer_model, 'n_agents',
+                    None)), 'mixer_model needs to have attribute n_agents'
         assert isinstance(gamma, float)
         assert isinstance(learning_rate, float)
 
@@ -61,18 +63,21 @@ class QMixAgent(object):
 
         self.device = device
         self.agent_model = agent_model
-        self.qmixer_model = qmixer_model
+        self.mixer_model = mixer_model
         self.target_agent_model = deepcopy(self.agent_model)
-        self.target_qmixer_model = deepcopy(self.qmixer_model)
+        self.target_mixer_model = deepcopy(self.mixer_model)
         self.agent_model.to(device)
         self.target_agent_model.to(device)
-        self.qmixer_model.to(device)
-        self.target_qmixer_model.to(device)
+        self.mixer_model.to(device)
+        self.target_mixer_model.to(device)
 
         self.params = list(self.agent_model.parameters())
-        self.params += self.qmixer_model.parameters()
+        self.params += list(self.mixer_model.parameters())
         self.optimizer = torch.optim.RMSprop(
-            params=self.params, lr=self.learning_rate, alpha=0.99, eps=0.00001)
+            params=self.params,
+            lr=self.learning_rate,
+            alpha=optim_alpha,
+            eps=optim_eps)
 
         self.ep_scheduler = LinearDecayScheduler(exploration_start,
                                                  total_steps)
@@ -134,7 +139,7 @@ class QMixAgent(object):
 
     def update_target(self):
         hard_target_update(self.agent_model, self.target_agent_model)
-        hard_target_update(self.qmixer_model, self.target_qmixer_model)
+        hard_target_update(self.mixer_model, self.target_mixer_model)
 
     def learn(self, state_batch, actions_batch, reward_batch, terminated_batch,
               obs_batch, available_actions_batch, filled_batch):
@@ -157,11 +162,11 @@ class QMixAgent(object):
 
         self.global_step += 1
 
+        # set the actions to torch.Long
         actions_batch = actions_batch.to(self.device, dtype=torch.long)
-
+        # get the batch_size and episode_length
         batch_size = state_batch.shape[0]
         episode_len = state_batch.shape[1]
-        self._init_hidden_states(batch_size)
 
         reward_batch = reward_batch[:, :-1, :]
         actions_batch = actions_batch[:, :-1, :].unsqueeze(-1)
@@ -170,23 +175,29 @@ class QMixAgent(object):
 
         mask = (1 - filled_batch) * (1 - terminated_batch)
 
+        # Calculate estimated Q-Values
         local_qs = []
         target_local_qs = []
+        self._init_hidden_states(batch_size)
         for t in range(episode_len):
             obs = obs_batch[:, t, :, :]
+            # obs: (batch_size * n_agents, obs_shape)
             obs = obs.reshape(-1, obs_batch.shape[-1])
             # Calculate estimated Q-Values
             local_q, self.hidden_states = self.agent_model(
                 obs, self.hidden_states)
+            #  local_q: (batch_size * n_agents, n_actions) -->  (batch_size, n_agents, n_actions)
             local_q = local_q.reshape(batch_size, self.n_agents, -1)
             local_qs.append(local_q)
 
             # Calculate the Q-Values necessary for the target
             target_local_q, self.target_hidden_states = self.target_agent_model(
                 obs, self.target_hidden_states)
+            # target_local_q: (batch_size * n_agents, n_actions) -->  (batch_size, n_agents, n_actions)
             target_local_q = target_local_q.view(batch_size, self.n_agents, -1)
             target_local_qs.append(target_local_q)
 
+        # Concat over time
         local_qs = torch.stack(local_qs, dim=1)
         # We don't need the first timesteps Q-Value estimate for calculating targets
         target_local_qs = torch.stack(target_local_qs[1:], dim=1)
@@ -205,18 +216,18 @@ class QMixAgent(object):
             local_qs_detach[available_actions_batch == 0] = -1e10
             cur_max_actions = local_qs_detach[:, 1:].max(
                 dim=3, keepdim=True)[1]
-            target_local_max_qs = torch.gather(target_local_qs, 3,
-                                               cur_max_actions).squeeze(3)
+            target_local_max_qs = torch.gather(
+                target_local_qs, dim=3, index=cur_max_actions).squeeze(3)
         else:
             # idx0: value, idx1: index
             target_local_max_qs = target_local_qs.max(dim=3)[0]
 
         # Mixing network
         # mix_net, input: ([Q1, Q2, ...], state), output: Q_total
-        if self.qmixer_model is not None:
-            chosen_action_global_qs = self.qmixer_model(
-                chosen_action_local_qs, state_batch[:, :-1, :])
-            target_global_max_qs = self.target_qmixer_model(
+        if self.mixer_model is not None:
+            chosen_action_global_qs = self.mixer_model(chosen_action_local_qs,
+                                                       state_batch[:, :-1, :])
+            target_global_max_qs = self.target_mixer_model(
                 target_local_max_qs, state_batch[:, 1:, :])
 
         # Calculate 1-step Q-Learning targets
@@ -241,27 +252,27 @@ class QMixAgent(object):
     def save(self,
              save_dir: str = None,
              agent_model_name: str = 'agent_model.th',
-             qmixer_model_name: str = 'qmixer_model.th',
+             mixer_model_name: str = 'mixer_model.th',
              opt_name: str = 'optimizer.th'):
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
         agent_model_path = os.path.join(save_dir, agent_model_name)
-        qmixer_model_path = os.path.join(save_dir, qmixer_model_name)
+        mixer_model_path = os.path.join(save_dir, mixer_model_name)
         optimizer_path = os.path.join(save_dir, opt_name)
         torch.save(self.agent_model.state_dict(), agent_model_path)
-        torch.save(self.qmixer_model.state_dict(), qmixer_model_path)
+        torch.save(self.mixer_model.state_dict(), mixer_model_path)
         torch.save(self.optimizer.state_dict(), optimizer_path)
         print('save model successfully!')
 
     def restore(self,
                 save_dir: str = None,
                 agent_model_name: str = 'agent_model.th',
-                qmixer_model_name: str = 'qmixer_model.th',
+                mixer_model_name: str = 'mixer_model.th',
                 opt_name: str = 'optimizer.th'):
         agent_model_path = os.path.join(save_dir, agent_model_name)
-        qmixer_model_path = os.path.join(save_dir, qmixer_model_name)
+        mixer_model_path = os.path.join(save_dir, mixer_model_name)
         optimizer_path = os.path.join(save_dir, opt_name)
         self.agent_model.load_state_dict(torch.load(agent_model_path))
-        self.qmixer_model.load_state_dict(torch.load(qmixer_model_path))
+        self.mixer_model.load_state_dict(torch.load(mixer_model_path))
         self.optimizer.load_state_dict(torch.load(optimizer_path))
         print('restore model successfully!')
