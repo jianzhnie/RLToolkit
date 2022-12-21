@@ -13,7 +13,7 @@ from rltoolkit.models.utils import check_model_method, hard_target_update
 from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 
-class QMixAgent(object):
+class VDNAgent(object):
     """ QMIX algorithm
     Args:
         agent_model (rltoolkit.Model): agents' local q network for decision making.
@@ -32,12 +32,10 @@ class QMixAgent(object):
                  double_q: bool = True,
                  total_steps: int = 1e6,
                  gamma: float = 0.99,
-                 learning_rate: float = 0.001,
-                 min_learning_rate: float = 0.00001,
+                 learning_rate: float = 0.0005,
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
                  update_target_interval: int = 1000,
-                 update_learner_freq: int = 5,
                  clip_grad_norm: float = 10,
                  optim_alpha: float = 0.99,
                  optim_eps: float = 0.00001,
@@ -56,14 +54,12 @@ class QMixAgent(object):
         self.double_q = double_q
         self.gamma = gamma
         self.learning_rate = learning_rate
-        self.min_learning_rate = min_learning_rate
         self.clip_grad_norm = clip_grad_norm
         self.global_step = 0
         self.exploration = exploration_start
         self.min_exploration = min_exploration
         self.target_update_count = 0
         self.update_target_interval = update_target_interval
-        self.update_learner_freq = update_learner_freq
 
         self.device = device
         self.agent_model = agent_model
@@ -85,8 +81,6 @@ class QMixAgent(object):
 
         self.ep_scheduler = LinearDecayScheduler(exploration_start,
                                                  total_steps)
-
-        self.lr_scheduler = LinearDecayScheduler(learning_rate, total_steps)
 
     def reset_agent(self, batch_size=1):
         self._init_hidden_states(batch_size)
@@ -120,7 +114,7 @@ class QMixAgent(object):
             actions = actions_dist.sample().long().cpu().detach().numpy()
 
         self.exploration = max(
-            self.ep_scheduler.step(self.update_learner_freq),
+            self.ep_scheduler.step(1),
             self.min_exploration,
         )
         return actions
@@ -212,7 +206,7 @@ class QMixAgent(object):
         chosen_action_local_qs = torch.gather(
             local_qs[:, :-1, :, :], dim=3, index=actions_batch).squeeze(3)
 
-        # mask unavailable actions
+        # mask out unavailable actions
         target_local_qs[available_actions_batch[:, 1:, :] == 0] = -1e10
 
         # Max over target Q-Values
@@ -253,13 +247,6 @@ class QMixAgent(object):
         if self.clip_grad_norm:
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
-
-        # learning rate decay
-        self.learning_rate = max(
-            self.lr_scheduler.step(1), self.min_learning_rate)
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.learning_rate
-
         return loss.item(), mean_td_error.item()
 
     def save(self,

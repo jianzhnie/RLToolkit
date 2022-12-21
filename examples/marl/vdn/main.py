@@ -8,12 +8,11 @@ import mmcv
 import numpy as np
 import torch
 from env_wrapper import SC2EnvWrapper
-from qmix_agent import QMixAgent
-from qmix_config import QMixConfig
-from qmixer_model import QMixerModel
-from rnn_model import RNNModel
 from smac.env import StarCraft2Env
 from torch.utils.tensorboard import SummaryWriter
+from vdn_agent import VDNAgent
+from vdn_config import VDNConfig
+from vdn_net import RNNModel, VDNMixer
 
 sys.path.append('../../')
 
@@ -23,7 +22,7 @@ from rltoolkit.utils.logger.logs import get_outdir, get_root_logger
 
 
 def run_train_episode(env: StarCraft2Env,
-                      agent: QMixAgent,
+                      agent: VDNAgent,
                       rpm: ReplayBuffer,
                       config: dict = None):
 
@@ -64,7 +63,7 @@ def run_train_episode(env: StarCraft2Env,
     mean_loss = []
     mean_td_error = []
     if rpm.size() > config['memory_warmup_size']:
-        for _ in range(config['update_learner_freq']):
+        for _ in range(2):
             batch = rpm.sample_batch(config['batch_size'])
             loss, td_error = agent.learn(**batch)
             mean_loss.append(loss)
@@ -77,7 +76,7 @@ def run_train_episode(env: StarCraft2Env,
 
 
 def run_evaluate_episode(env: StarCraft2Env,
-                         agent: QMixAgent,
+                         agent: VDNAgent,
                          num_eval_episodes=5):
     eval_is_win_buffer = []
     eval_reward_buffer = []
@@ -112,7 +111,7 @@ def main():
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    config = deepcopy(QMixConfig)
+    config = deepcopy(VDNConfig)
     env = StarCraft2Env(
         map_name=config['scenario'], difficulty=config['difficulty'])
 
@@ -127,9 +126,8 @@ def main():
     # init the logger before other steps
     timestamp = time.strftime('%Y%m%d_%H%M%S', time.localtime())
     # log
-    log_name = os.path.join(args.project, args.scenario, args.algo, timestamp)
-    text_log_path = os.path.join(args.log_dir, args.project, args.scenario,
-                                 args.algo)
+    log_name = os.path.join(args.project, args.algo, timestamp)
+    text_log_path = os.path.join(args.log_dir, args.project, args.algo)
     tensorboard_log_path = get_outdir(text_log_path, 'log_dir')
     log_file = os.path.join(text_log_path, f'{timestamp}.log')
     text_logger = get_root_logger(log_file=log_file, log_level='INFO')
@@ -165,14 +163,9 @@ def main():
         input_shape=config['obs_shape'],
         n_actions=config['n_actions'],
         rnn_hidden_dim=config['rnn_hidden_dim'])
-    qmixer_model = QMixerModel(
-        n_agents=config['n_agents'],
-        state_shape=config['state_shape'],
-        mixing_embed_dim=config['mixing_embed_dim'],
-        hypernet_layers=config['hypernet_layers'],
-        hypernet_embed_dim=config['hypernet_embed_dim'])
+    qmixer_model = VDNMixer()
 
-    qmix_agent = QMixAgent(
+    qmix_agent = VDNAgent(
         agent_model=agent_model,
         qmixer_model=qmixer_model,
         n_agents=config['n_agents'],
@@ -180,11 +173,10 @@ def main():
         total_steps=config['total_steps'],
         gamma=config['gamma'],
         learning_rate=config['learning_rate'],
-        min_learning_rate=config['min_learning_rate'],
         exploration_start=config['exploration_start'],
         min_exploration=config['min_exploration'],
         update_target_interval=config['update_target_interval'],
-        update_learner_freq=config['update_learner_freq'],
+        clip_grad_norm=config['clip_grad_norm'],
         device=device)
 
     progress_bar = mmcv.ProgressBar(config['memory_warmup_size'])
@@ -208,7 +200,6 @@ def main():
             'mean_loss': train_loss,
             'mean_td_error': train_td_error,
             'exploration': qmix_agent.exploration,
-            'learning_rate': qmix_agent.learning_rate,
             'replay_buffer_size': rpm.size(),
             'target_update_count': qmix_agent.target_update_count,
         }
@@ -233,7 +224,7 @@ def main():
             }
             logger.log_test_data(test_results, current_steps)
 
-        progress_bar.update(train_step)
+        progress_bar.update()
 
 
 if __name__ == '__main__':
