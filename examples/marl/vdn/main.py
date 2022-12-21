@@ -171,7 +171,7 @@ def main():
         mixer_model=mixer_model,
         n_agents=config['n_agents'],
         double_q=config['double_q'],
-        total_steps=config['total_steps'],
+        total_episode=config['total_episode'],
         gamma=config['gamma'],
         learning_rate=config['learning_rate'],
         min_learning_rate=config['min_learning_rate'],
@@ -184,51 +184,50 @@ def main():
 
     progress_bar = mmcv.ProgressBar(config['memory_warmup_size'])
     while rpm.size() < config['memory_warmup_size']:
-        train_reward, train_step, train_is_win, train_loss, train_td_error = run_train_episode(
+        episode_reward, episode_step, is_win, mean_loss, mean_td_error = run_train_episode(
             env, qmix_agent, rpm, config)
         progress_bar.update()
 
-    current_steps = 0
     episode_cnt = 0
-    progress_bar = mmcv.ProgressBar(config['total_steps'])
-    while current_steps < config['total_steps']:
+    progress_bar = mmcv.ProgressBar(config['total_episode'])
+    while episode_cnt < config['total_episode']:
         episode_cnt += 1
-        train_reward, train_step, train_is_win, train_loss, train_td_error = run_train_episode(
+        episode_reward, episode_step, is_win, mean_loss, mean_td_error = run_train_episode(
             env, qmix_agent, rpm, config)
-        current_steps += train_step
+        qmix_agent.global_episode += 1
         train_results = {
-            'env_step': train_step,
-            'rewards': train_reward,
-            'win_rate': train_is_win,
-            'mean_loss': train_loss,
-            'mean_td_error': train_td_error,
+            'env_step': episode_step,
+            'rewards': episode_reward,
+            'win_rate': is_win,
+            'mean_loss': mean_loss,
+            'mean_td_error': mean_td_error,
             'exploration': qmix_agent.exploration,
             'learning_rate': qmix_agent.learning_rate,
             'replay_buffer_size': rpm.size(),
             'target_update_count': qmix_agent.target_update_count,
         }
-        logger.log_train_data(train_results, current_steps)
+        logger.log_train_data(train_results, episode_cnt)
 
         if episode_cnt % config['train_log_interval'] == 0:
             text_logger.info(
-                '[Train], current_steps: {}, train_win_rate: {:.2f}, train_reward: {:.2f}'
-                .format(current_steps, train_is_win, train_reward))
+                '[Train], episode: {}, train_win_rate: {:.2f}, train_reward: {:.2f}'
+                .format(episode_cnt, is_win, episode_reward))
 
         if episode_cnt % config['test_log_interval'] == 0:
             eval_rewards, eval_steps, eval_win_rate = run_evaluate_episode(
                 env, qmix_agent, num_eval_episodes=5)
             text_logger.info(
-                '[Eval], eval_steps: {}, eval_win_rate: {:.2f}, eval_rewards: {:.2f}'
-                .format(eval_steps, eval_win_rate, eval_rewards))
+                '[Eval], episode: {}, eval_win_rate: {:.2f}, eval_rewards: {:.2f}'
+                .format(episode_cnt, eval_win_rate, eval_rewards))
 
             test_results = {
                 'env_step': eval_steps,
                 'rewards': eval_rewards,
                 'win_rate': eval_win_rate
             }
-            logger.log_test_data(test_results, current_steps)
+            logger.log_test_data(test_results, episode_cnt)
 
-        progress_bar.update(train_step)
+        progress_bar.update()
 
 
 if __name__ == '__main__':
