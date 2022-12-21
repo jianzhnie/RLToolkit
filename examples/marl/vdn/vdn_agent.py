@@ -32,10 +32,12 @@ class VDNAgent(object):
                  double_q: bool = True,
                  total_steps: int = 1e6,
                  gamma: float = 0.99,
-                 learning_rate: float = 0.0005,
+                 learning_rate: float = 0.001,
+                 min_learning_rate: float = 0.00001,
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
                  update_target_interval: int = 1000,
+                 update_learner_freq: int = 1,
                  clip_grad_norm: float = 10,
                  optim_alpha: float = 0.99,
                  optim_eps: float = 0.00001,
@@ -44,9 +46,6 @@ class VDNAgent(object):
         check_model_method(agent_model, 'init_hidden', self.__class__.__name__)
         check_model_method(agent_model, 'forward', self.__class__.__name__)
         check_model_method(mixer_model, 'forward', self.__class__.__name__)
-        assert hasattr(mixer_model, 'n_agents') and not callable(
-            getattr(mixer_model, 'n_agents',
-                    None)), 'mixer_model needs to have attribute n_agents'
         assert isinstance(gamma, float)
         assert isinstance(learning_rate, float)
 
@@ -54,12 +53,14 @@ class VDNAgent(object):
         self.double_q = double_q
         self.gamma = gamma
         self.learning_rate = learning_rate
+        self.min_learning_rate = min_learning_rate
         self.clip_grad_norm = clip_grad_norm
         self.global_step = 0
         self.exploration = exploration_start
         self.min_exploration = min_exploration
         self.target_update_count = 0
         self.update_target_interval = update_target_interval
+        self.update_learner_freq = update_learner_freq
 
         self.device = device
         self.agent_model = agent_model
@@ -81,6 +82,8 @@ class VDNAgent(object):
 
         self.ep_scheduler = LinearDecayScheduler(exploration_start,
                                                  total_steps)
+
+        self.lr_scheduler = LinearDecayScheduler(learning_rate, total_steps)
 
     def reset_agent(self, batch_size=1):
         self._init_hidden_states(batch_size)
@@ -114,7 +117,7 @@ class VDNAgent(object):
             actions = actions_dist.sample().long().cpu().detach().numpy()
 
         self.exploration = max(
-            self.ep_scheduler.step(1),
+            self.ep_scheduler.step(self.update_learner_freq),
             self.min_exploration,
         )
         return actions
@@ -247,6 +250,13 @@ class VDNAgent(object):
         if self.clip_grad_norm:
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
+
+        # learning rate decay
+        self.learning_rate = max(
+            self.lr_scheduler.step(1), self.min_learning_rate)
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = self.learning_rate
+
         return loss.item(), mean_td_error.item()
 
     def save(self,
