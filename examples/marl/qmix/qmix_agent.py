@@ -30,7 +30,7 @@ class QMixAgent(object):
                  mixer_model: nn.Module = None,
                  n_agents: int = None,
                  double_q: bool = True,
-                 total_steps: int = 1e6,
+                 total_episode: int = 1e5,
                  gamma: float = 0.99,
                  learning_rate: float = 0.001,
                  min_learning_rate: float = 0.00001,
@@ -58,7 +58,7 @@ class QMixAgent(object):
         self.learning_rate = learning_rate
         self.min_learning_rate = min_learning_rate
         self.clip_grad_norm = clip_grad_norm
-        self.global_step = 0
+        self.global_episode = 0
         self.exploration = exploration_start
         self.min_exploration = min_exploration
         self.target_update_count = 0
@@ -84,9 +84,9 @@ class QMixAgent(object):
             eps=optim_eps)
 
         self.ep_scheduler = LinearDecayScheduler(exploration_start,
-                                                 total_steps)
+                                                 total_episode)
 
-        self.lr_scheduler = LinearDecayScheduler(learning_rate, total_steps)
+        self.lr_scheduler = LinearDecayScheduler(learning_rate, total_episode)
 
     def reset_agent(self, batch_size=1):
         self._init_hidden_states(batch_size)
@@ -120,7 +120,7 @@ class QMixAgent(object):
             actions = actions_dist.sample().long().cpu().detach().numpy()
 
         self.exploration = max(
-            self.ep_scheduler.step(self.update_learner_freq),
+            self.ep_scheduler.step(),
             self.min_exploration,
         )
         return actions
@@ -162,7 +162,7 @@ class QMixAgent(object):
             mean_loss (float): train loss
             mean_td_error (float): train TD error
         '''
-        if self.global_step % self.update_target_interval == 0:
+        if self.global_episode % self.update_target_interval == 0:
             self.update_target()
             self.target_update_count += 1
 
