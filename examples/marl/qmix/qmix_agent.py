@@ -37,7 +37,7 @@ class QMixAgent(object):
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
                  update_target_interval: int = 1000,
-                 update_learner_freq: int = 5,
+                 update_learner_freq: int = 1,
                  clip_grad_norm: float = 10,
                  optim_alpha: float = 0.99,
                  optim_eps: float = 0.00001,

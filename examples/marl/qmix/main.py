@@ -165,7 +165,7 @@ def main():
         input_shape=config['obs_shape'],
         n_actions=config['n_actions'],
         rnn_hidden_dim=config['rnn_hidden_dim'])
-    qmixer_model = QMixerModel(
+    mixer_model = QMixerModel(
         n_agents=config['n_agents'],
         state_shape=config['state_shape'],
         mixing_embed_dim=config['mixing_embed_dim'],
@@ -174,7 +174,7 @@ def main():
 
     qmix_agent = QMixAgent(
         agent_model=agent_model,
-        qmixer_model=qmixer_model,
+        mixer_model=mixer_model,
         n_agents=config['n_agents'],
         double_q=config['double_q'],
         total_steps=config['total_steps'],
@@ -185,6 +185,7 @@ def main():
         min_exploration=config['min_exploration'],
         update_target_interval=config['update_target_interval'],
         update_learner_freq=config['update_learner_freq'],
+        clip_grad_norm=config['clip_grad_norm'],
         device=device)
 
     progress_bar = mmcv.ProgressBar(config['memory_warmup_size'])
