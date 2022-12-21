@@ -197,7 +197,6 @@ def main():
     episode_cnt = 0
     progress_bar = mmcv.ProgressBar(config['total_episode'])
     while episode_cnt < config['total_episode']:
-        episode_cnt += 1
         episode_reward, episode_step, is_win, mean_loss, mean_td_error = run_train_episode(
             env, qmix_agent, rpm, config)
         qmix_agent.global_episode += 1
@@ -233,6 +232,7 @@ def main():
             }
             logger.log_test_data(test_results, episode_cnt)
 
+        episode_cnt += 1
         progress_bar.update()
 
 
