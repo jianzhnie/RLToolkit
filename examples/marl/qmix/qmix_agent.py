@@ -166,8 +166,6 @@ class QMixAgent(object):
             self.update_target()
             self.target_update_count += 1
 
-        self.global_step += 1
-
         # set the actions to torch.Long
         actions_batch = actions_batch.to(self.device, dtype=torch.long)
         # get the batch_size and episode_length
@@ -254,9 +252,6 @@ class QMixAgent(object):
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
 
-        # learning rate decay
-        self.learning_rate = max(
-            self.lr_scheduler.step(1), self.min_learning_rate)
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.learning_rate
 

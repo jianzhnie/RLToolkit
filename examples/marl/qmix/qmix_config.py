@@ -28,10 +28,10 @@ QMixConfig:
 
 QMixConfig = {
     'project': 'StarCraft-II',
-    'scenario': 'corridor',
-    'replay_buffer_size': 10000,
-    'mixing_embed_dim': 64,
-    'rnn_hidden_dim': 128,
+    'scenario': '3s_vs_3z',
+    'replay_buffer_size': 5000,
+    'mixing_embed_dim': 32,
+    'rnn_hidden_dim': 64,
     'learning_rate': 0.001,
     'min_learning_rate': 0.00001,
     'memory_warmup_size': 64,
