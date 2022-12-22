@@ -116,10 +116,6 @@ class VDNAgent(object):
             actions_dist = Categorical(available_actions)
             actions = actions_dist.sample().long().cpu().detach().numpy()
 
-        self.exploration = max(
-            self.ep_scheduler.step(),
-            self.min_exploration,
-        )
         return actions
 
     def predict(self, obs, available_actions):
@@ -249,9 +245,6 @@ class VDNAgent(object):
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
 
-        # learning rate decay
-        self.learning_rate = max(
-            self.lr_scheduler.step(1), self.min_learning_rate)
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.learning_rate
 

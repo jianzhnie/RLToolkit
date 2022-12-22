@@ -1,6 +1,6 @@
 VDNConfig = {
     'project': 'StarCraft-II',
-    'scenario': '3m',
+    'scenario': '3s_vs_3z',
     'replay_buffer_size': 5000,
     'mixing_embed_dim': 32,
     'rnn_hidden_dim': 64,
