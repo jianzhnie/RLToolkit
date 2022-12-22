@@ -119,10 +119,6 @@ class QMixAgent(object):
             actions_dist = Categorical(available_actions)
             actions = actions_dist.sample().long().cpu().detach().numpy()
 
-        self.exploration = max(
-            self.ep_scheduler.step(),
-            self.min_exploration,
-        )
         return actions
 
     def predict(self, obs, available_actions):
