@@ -155,9 +155,6 @@ class VDNAgent(object):
             mean_loss (float): train loss
             mean_td_error (float): train TD error
         '''
-        if self.global_episode % self.update_target_interval == 0:
-            self.update_target()
-            self.target_update_count += 1
 
         # set the actions to torch.Long
         actions_batch = actions_batch.to(self.device, dtype=torch.long)
