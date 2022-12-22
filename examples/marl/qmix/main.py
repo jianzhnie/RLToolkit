@@ -206,6 +206,10 @@ def main():
             env, qmix_agent, rpm, config)
         # update episode
         qmix_agent.global_episode += 1
+        # update target model
+        if qmix_agent.global_episode % qmix_agent.update_target_interval == 0:
+            qmix_agent.update_target()
+            qmix_agent.target_update_count += 1
         # update exploration
         qmix_agent.exploration = max(
             qmix_agent.ep_scheduler.step(),
