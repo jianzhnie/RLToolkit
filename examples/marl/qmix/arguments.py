@@ -10,7 +10,7 @@ def get_common_args():
     parser.add_argument(
         '--algo',
         type=str,
-        default='vdn',
+        default='qmix',
         help='the algorithm to train the agent')
     parser.add_argument(
         '--total_episode', type=int, default=10000, help='total episode')
