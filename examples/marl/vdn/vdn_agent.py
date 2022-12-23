@@ -10,7 +10,7 @@ sys.path.append('../../../')
 from torch.distributions import Categorical
 
 from rltoolkit.models.utils import check_model_method, hard_target_update
-from rltoolkit.utils.scheduler import LinearDecayScheduler
+from rltoolkit.utils.scheduler import LinearDecayScheduler, MultiStepScheduler
 
 
 class VDNAgent(object):
@@ -36,7 +36,7 @@ class VDNAgent(object):
                  min_learning_rate: float = 0.00001,
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
-                 update_target_interval: int = 1000,
+                 update_target_interval: int = 100,
                  update_learner_freq: int = 1,
                  clip_grad_norm: float = 10,
                  optim_alpha: float = 0.99,
@@ -81,9 +81,14 @@ class VDNAgent(object):
             eps=optim_eps)
 
         self.ep_scheduler = LinearDecayScheduler(exploration_start,
-                                                 total_episode)
+                                                 total_episode * 0.8)
 
-        self.lr_scheduler = LinearDecayScheduler(learning_rate, total_episode)
+        lr_steps = [total_episode * 0.5, total_episode * 0.8]
+        self.lr_scheduler = MultiStepScheduler(
+            start_value=learning_rate,
+            max_steps=total_episode,
+            milestones=lr_steps,
+            decay_factor=0.5)
 
     def reset_agent(self, batch_size=1):
         self._init_hidden_states(batch_size)
