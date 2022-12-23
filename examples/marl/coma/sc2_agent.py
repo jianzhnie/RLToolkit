@@ -6,34 +6,87 @@ LastEditTime: 2022-09-03 11:05:51
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
+from copy import deepcopy
+
 import numpy as np
 import torch
 from torch.distributions import Categorical
+from torch.optim import RMSprop
 
-from rltoolkit.agent.base_agent import Agent
+from rltoolkit.models.utils import check_model_method
 
 
-class Agents(Agent):
+class Agents(object):
 
-    def __init__(self, algorithm, config, device):
-        super(Agents, self).__init__(algorithm)
-        self.n_actions = config['n_actions']
-        self.n_agents = config['n_agents']
-        self.state_shape = config['state_shape']
-        self.obs_shape = config['obs_shape']
+    def __init__(self,
+                 model,
+                 n_actions,
+                 n_agents,
+                 actor_lr=None,
+                 critic_lr=None,
+                 gamma=None,
+                 td_lambda=None,
+                 grad_norm_clip=None,
+                 device='cpu'):
+        """COMA Agent.
 
-        self.config = config
-        self.device = device
+        Args:
+            model: forward network of actor and critic.
+            n_actions (int): action dim for each agent
+            n_agents (int): agents number
+            grad_norm_clip (int or float): gradient clip, prevent gradient explosion
+            actor_lr (float): actor network learning rate
+            critic_lr (float): critic network learning rate
+            gamma (float):  discounted factor for reward computation
+            td_lambda (float): lambda of td-lambda return
+        """
+        # checks
+        check_model_method(model, 'value', self.__class__.__name__)
+        check_model_method(model, 'policy', self.__class__.__name__)
+        check_model_method(model, 'get_actor_params', self.__class__.__name__)
+        check_model_method(model, 'get_critic_params', self.__class__.__name__)
+        assert isinstance(n_actions, int)
+        assert isinstance(n_agents, int)
+        assert isinstance(actor_lr, float)
+        assert isinstance(critic_lr, float)
+        assert isinstance(gamma, float)
+        assert isinstance(td_lambda, float)
+        assert isinstance(grad_norm_clip, int) or isinstance(
+            grad_norm_clip, float)
+
+        self.n_actions = n_actions
+        self.n_agents = n_agents
+        self.actor_lr = actor_lr
+        self.critic_lr = critic_lr
+        self.gamma = gamma
+        self.td_lambda = td_lambda
+        self.grad_norm_clip = grad_norm_clip
         self.train_steps = 0
         self.rnn_h = None
+        self.device = device
 
-        print('Init all agents')
+        self.model = model.to(self.device)
+        self.target_model = deepcopy(model).to(self.device)
 
-    def init_hidden(self):
-        """ function: init a hidden tensor for every agent at the begging of every episode
-            self.rnn_h: rnn hidden state, shape (n_agents, hidden_size)
+        self.actor_parameters = list(self.model.get_actor_params())
+        self.critic_parameters = list(self.model.get_critic_params())
+
+        self.critic_optimizer = RMSprop(
+            self.critic_parameters, lr=self.critic_lr)
+        self.actor_optimizer = RMSprop(self.actor_parameters, lr=self.actor_lr)
+
+    def init_hidden(self, ep_num=1):
+        """ function: init a hidden tensor for every agent
+            input:
+                ep_num: How many episodes are included in a batch of data
+            output:
+                rnn_h: rnn hidden state, shape (ep_num, n_agents, hidden_size)
         """
-        self.rnn_h = self.alg.init_hidden(1)[0]
+        assert hasattr(self.model.actor_model, 'init_hidden'), \
+            "actor must have rnn structure and has method 'init_hidden' to make hidden states"
+        rnn_h = self.model.actor_model.init_hidden().unsqueeze(0).expand(
+            ep_num, self.n_agents, -1)
+        return rnn_h
 
     def predict(self, obs, rnn_h_in):
         """input:
@@ -45,7 +98,12 @@ class Agents(Agent):
         """
         obs = np.expand_dims(obs, 0)
         obs = torch.tensor(obs, dtype=torch.float32).to(self.device)
-        prob, rnn_h_out = self.alg.predict(obs, rnn_h_in)
+
+        with torch.no_grad():
+            policy_logits, rnn_h_out = self.model.policy(obs, rnn_h_in)
+            # input obs shape [1, 42]
+            prob = torch.nn.functional.softmax(policy_logits, dim=-1)
+            # shape [1, 9]
         return prob, rnn_h_out
 
     def sample(self,

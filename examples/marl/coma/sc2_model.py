@@ -6,6 +6,7 @@ LastEditTime: 2022-09-03 10:52:35
 Description:
 Copyright (c) 2022 by jianzhnie@126.com, All Rights Reserved.
 '''
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -54,46 +55,56 @@ class ComaModel(Model):
 
 
 # all agents share one actor network
-class ActorModel(Model):
+class ActorModel(nn.Module):
+    """input: obs, include the agent's id and last action, shape: (batch, obs_shape + n_action + n_agents).
+       output: one agent's q(obs, act)
+    """
 
-    def __init__(self, input_shape, act_dim):
-        """ input : obs, include the agent's id and last action, shape: (batch, obs_shape + n_action + n_agents)
-            output: one agent's q(obs, act)
-        """
+    def __init__(self,
+                 input_shape: int = None,
+                 n_actions: int = None,
+                 rnn_hidden_dim: int = 64):
         super(ActorModel, self).__init__()
-        self.hid_size = 64
+        self.rnn_hidden_dim = rnn_hidden_dim
 
-        self.fc1 = nn.Linear(input_shape, self.hid_size)
-        self.rnn = nn.GRUCell(self.hid_size, self.hid_size)
-        self.fc2 = nn.Linear(self.hid_size, act_dim)
+        self.fc1 = nn.Linear(input_shape, rnn_hidden_dim)
+        self.rnn = nn.GRUCell(rnn_hidden_dim, rnn_hidden_dim)
+        self.fc2 = nn.Linear(rnn_hidden_dim, n_actions)
 
     def init_hidden(self):
         # new hidden states
-        return self.fc1.weight.new(1, self.hid_size).zero_()
+        return self.fc1.weight.new(1, self.rnn_hidden_dim).zero_()
 
-    def forward(self, obs, h0):
-        x = F.relu(self.fc1(obs))
-        h1 = h0.reshape(-1, self.hid_size)
-        h2 = self.rnn(x, h1)
-        policy = self.fc2(h2)
-        return policy, h2
+    def forward(self,
+                obs: torch.Tensor = None,
+                hidden_state: torch.Tensor = None):
+
+        x = F.relu(self.fc1(obs), inplace=True)
+        h_in = hidden_state.reshape(-1, self.rnn_hidden_dim)
+        h = self.rnn(x, h_in)
+        q = self.fc2(h)
+        return q, h
 
 
-class CriticModel(Model):
+class CriticModel(nn.Module):
+    """ inputs: [ s(t), o(t)_a, u(t)_a, agent_a, u(t-1) ], shape: (Batch, input_shape)
+        output: Q,   shape: (Batch, n_actions)
+        Batch = ep_num * n_agents
+    """
 
-    def __init__(self, input_shape, act_dim):
-        """ inputs: [ s(t), o(t)_a, u(t)_a, agent_a, u(t-1) ], shape: (Batch, input_shape)
-            output: Q,   shape: (Batch, n_actions)
-            Batch = ep_num * n_agents
-        """
+    def __init__(self,
+                 input_shape: int = None,
+                 n_actions: int = None,
+                 hidden_size: int = 128):
+
         super(CriticModel, self).__init__()
-        hid_size = 128
-        self.fc1 = nn.Linear(input_shape, hid_size)
-        self.fc2 = nn.Linear(hid_size, hid_size)
-        self.fc3 = nn.Linear(hid_size, act_dim)
+        self.hidden_size = hidden_size
+        self.fc1 = nn.Linear(input_shape, hidden_size)
+        self.fc2 = nn.Linear(hidden_size, hidden_size)
+        self.fc3 = nn.Linear(hidden_size, n_actions)
 
     def forward(self, inputs):
-        hid1 = F.relu(self.fc1(inputs))
-        hid2 = F.relu(self.fc2(hid1))
+        hid1 = F.relu(self.fc1(inputs), inplace=True)
+        hid2 = F.relu(self.fc2(hid1), inplace=True)
         Q = self.fc3(hid2)
         return Q
