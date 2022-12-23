@@ -211,13 +211,11 @@ def main():
             qmix_agent.update_target()
             qmix_agent.target_update_count += 1
         # update exploration
-        qmix_agent.exploration = max(
-            qmix_agent.ep_scheduler.step(),
-            qmix_agent.min_exploration,
-        )
+        qmix_agent.exploration = max(qmix_agent.ep_scheduler.step(),
+                                     qmix_agent.min_exploration)
         # learning rate decay
-        qmix_agent.learning_rate = max(
-            qmix_agent.lr_scheduler.step(1), qmix_agent.min_learning_rate)
+        # qmix_agent.learning_rate = max(
+        #     qmix_agent.lr_scheduler.step(1), qmix_agent.min_learning_rate)
 
         train_results = {
             'env_step': episode_step,

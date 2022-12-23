@@ -250,8 +250,8 @@ class QMixAgent(object):
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
 
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.learning_rate
+        # for param_group in self.optimizer.param_groups:
+        #     param_group['lr'] = self.learning_rate
 
         return loss.item(), mean_td_error.item()
 

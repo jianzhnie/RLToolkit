@@ -15,16 +15,6 @@ def get_common_args():
     parser.add_argument(
         '--total_episode', type=int, default=10000, help='total episode')
     parser.add_argument(
-        '--train_log_interval',
-        type=int,
-        default=1,
-        help='how often to log the training logs')
-    parser.add_argument(
-        '--test_log_interval',
-        type=int,
-        default=10,
-        help='number of the episode to evaluate the agent')
-    parser.add_argument(
         '--log_dir',
         type=str,
         default='./work_dirs',
