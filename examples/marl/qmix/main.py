@@ -7,6 +7,7 @@ from copy import deepcopy
 import mmcv
 import numpy as np
 import torch
+from arguments import get_common_args
 from env_wrapper import SC2EnvWrapper
 from qmix_agent import QMixAgent
 from qmix_config import QMixConfig
@@ -122,6 +123,10 @@ def main():
     config['state_shape'] = env.state_shape
     config['n_agents'] = env.n_agents
     config['n_actions'] = env.n_actions
+
+    common_args = get_common_args()
+    common_dict = vars(common_args)
+    config.update(common_dict)
     args = argparse.Namespace(**config)
 
     # init the logger before other steps
@@ -199,7 +204,19 @@ def main():
     while episode_cnt < config['total_episode']:
         episode_reward, episode_step, is_win, mean_loss, mean_td_error = run_train_episode(
             env, qmix_agent, rpm, config)
+        # update episode
         qmix_agent.global_episode += 1
+        # update target model
+        if qmix_agent.global_episode % qmix_agent.update_target_interval == 0:
+            qmix_agent.update_target()
+            qmix_agent.target_update_count += 1
+        # update exploration
+        qmix_agent.exploration = max(qmix_agent.ep_scheduler.step(),
+                                     qmix_agent.min_exploration)
+        # learning rate decay
+        # qmix_agent.learning_rate = max(
+        #     qmix_agent.lr_scheduler.step(1), qmix_agent.min_learning_rate)
+
         train_results = {
             'env_step': episode_step,
             'rewards': episode_reward,

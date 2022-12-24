@@ -8,6 +8,9 @@ Description:
 Copyright (c) 2022 by jianzhnie, All Rights Reserved.
 '''
 
+from collections import Counter
+from typing import List
+
 import six
 
 __all__ = ['PiecewiseScheduler', 'LinearDecayScheduler']
@@ -91,3 +94,39 @@ class LinearDecayScheduler(object):
                                     ((self.cur_step * 1.0) / self.max_steps))
 
         return value
+
+
+class MultiStepScheduler(object):
+    """step learning rate scheduler."""
+
+    def __init__(self,
+                 start_value: float,
+                 max_steps: int,
+                 milestones: List = None,
+                 decay_factor: float = 0.1):
+        assert max_steps > 0
+        assert isinstance(decay_factor, float)
+        assert decay_factor > 0 and decay_factor < 1
+        self.milestones = Counter(milestones)
+        self.cur_value = start_value
+        self.cur_step = 0
+        self.max_steps = max_steps
+        self.decay_factor = decay_factor
+
+    def step(self, step_num=1):
+        assert isinstance(step_num, int) and step_num >= 1
+        self.cur_step = min(self.cur_step + step_num, self.max_steps)
+
+        if self.cur_step not in self.milestones:
+            return self.cur_value
+        else:
+            self.cur_value *= self.decay_factor**self.milestones[self.cur_step]
+
+        return self.cur_value
+
+
+if __name__ == '__main__':
+    scheduler = MultiStepScheduler(100, 100, [50, 80], 0.5)
+    for i in range(101):
+        value = scheduler.step()
+        print(value)

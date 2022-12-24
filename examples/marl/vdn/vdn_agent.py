@@ -9,8 +9,9 @@ import torch.nn as nn
 sys.path.append('../../../')
 from torch.distributions import Categorical
 
-from rltoolkit.models.utils import check_model_method, hard_target_update
-from rltoolkit.utils.scheduler import LinearDecayScheduler
+from rltoolkit.models.utils import (check_model_method, hard_target_update,
+                                    soft_target_update)
+from rltoolkit.utils.scheduler import LinearDecayScheduler, MultiStepScheduler
 
 
 class VDNAgent(object):
@@ -30,13 +31,13 @@ class VDNAgent(object):
                  mixer_model: nn.Module = None,
                  n_agents: int = None,
                  double_q: bool = True,
-                 total_episode: int = 1e5,
+                 total_steps: int = 1e6,
                  gamma: float = 0.99,
-                 learning_rate: float = 0.001,
+                 learning_rate: float = 0.00005,
                  min_learning_rate: float = 0.00001,
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
-                 update_target_interval: int = 1000,
+                 update_target_interval: int = 100,
                  update_learner_freq: int = 1,
                  clip_grad_norm: float = 10,
                  optim_alpha: float = 0.99,
@@ -55,7 +56,7 @@ class VDNAgent(object):
         self.learning_rate = learning_rate
         self.min_learning_rate = min_learning_rate
         self.clip_grad_norm = clip_grad_norm
-        self.global_episode = 0
+        self.global_steps = 0
         self.exploration = exploration_start
         self.min_exploration = min_exploration
         self.target_update_count = 0
@@ -81,9 +82,14 @@ class VDNAgent(object):
             eps=optim_eps)
 
         self.ep_scheduler = LinearDecayScheduler(exploration_start,
-                                                 total_episode)
+                                                 total_steps * 0.8)
 
-        self.lr_scheduler = LinearDecayScheduler(learning_rate, total_episode)
+        lr_steps = [total_steps * 0.5, total_steps * 0.8]
+        self.lr_scheduler = MultiStepScheduler(
+            start_value=learning_rate,
+            max_steps=total_steps,
+            milestones=lr_steps,
+            decay_factor=0.5)
 
     def reset_agent(self, batch_size=1):
         self._init_hidden_states(batch_size)
@@ -108,18 +114,19 @@ class VDNAgent(object):
             actions (np.ndarray): sampled actions of agents
         '''
         epsilon = np.random.random()
-        if epsilon > self.exploration:
-            actions = self.predict(obs, available_actions)
-        else:
+        if epsilon < self.exploration:
             available_actions = torch.tensor(
                 available_actions, dtype=torch.float32)
             actions_dist = Categorical(available_actions)
             actions = actions_dist.sample().long().cpu().detach().numpy()
 
+        else:
+            actions = self.predict(obs, available_actions)
+
+        # update exploration
         self.exploration = max(
-            self.ep_scheduler.step(),
-            self.min_exploration,
-        )
+            self.ep_scheduler.step(self.update_learner_freq),
+            self.min_exploration)
         return actions
 
     def predict(self, obs, available_actions):
@@ -140,9 +147,13 @@ class VDNAgent(object):
         actions = agents_q.max(dim=1)[1].detach().cpu().numpy()
         return actions
 
-    def update_target(self):
-        hard_target_update(self.agent_model, self.target_agent_model)
-        hard_target_update(self.mixer_model, self.target_mixer_model)
+    def update_target(self, soft_update=False):
+        if soft_update:
+            soft_target_update(self.agent_model, self.target_agent_model)
+            soft_target_update(self.mixer_model, self.target_mixer_model)
+        else:
+            hard_target_update(self.agent_model, self.target_agent_model)
+            hard_target_update(self.mixer_model, self.target_mixer_model)
 
     def learn(self, state_batch, actions_batch, reward_batch, terminated_batch,
               obs_batch, available_actions_batch, filled_batch):
@@ -159,9 +170,6 @@ class VDNAgent(object):
             mean_loss (float): train loss
             mean_td_error (float): train TD error
         '''
-        if self.global_episode % self.update_target_interval == 0:
-            self.update_target()
-            self.target_update_count += 1
 
         # set the actions to torch.Long
         actions_batch = actions_batch.to(self.device, dtype=torch.long)
@@ -169,6 +177,7 @@ class VDNAgent(object):
         batch_size = state_batch.shape[0]
         episode_len = state_batch.shape[1]
 
+        # get the relevant quantitles
         reward_batch = reward_batch[:, :-1, :]
         actions_batch = actions_batch[:, :-1, :].unsqueeze(-1)
         terminated_batch = terminated_batch[:, :-1, :]
@@ -198,12 +207,13 @@ class VDNAgent(object):
             target_local_q = target_local_q.view(batch_size, self.n_agents, -1)
             target_local_qs.append(target_local_q)
 
-        # Concat over time
+        # Concat over time, shape : (batch_size, T, n_agents, n_actions)
         local_qs = torch.stack(local_qs, dim=1)
         # We don't need the first timesteps Q-Value estimate for calculating targets
         target_local_qs = torch.stack(target_local_qs[1:], dim=1)
 
         # Pick the Q-Values for the actions taken by each agent
+        # Remove the last dim
         chosen_action_local_qs = torch.gather(
             local_qs[:, :-1, :, :], dim=3, index=actions_batch).squeeze(3)
 
@@ -215,6 +225,7 @@ class VDNAgent(object):
             # Get actions that maximise live Q (for double q-learning)
             local_qs_detach = local_qs.clone().detach()
             local_qs_detach[available_actions_batch == 0] = -1e10
+            # idx0: value, idx1: index
             cur_max_actions = local_qs_detach[:, 1:].max(
                 dim=3, keepdim=True)[1]
             target_local_max_qs = torch.gather(
@@ -249,9 +260,6 @@ class VDNAgent(object):
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
 
-        # learning rate decay
-        self.learning_rate = max(
-            self.lr_scheduler.step(1), self.min_learning_rate)
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = self.learning_rate
 

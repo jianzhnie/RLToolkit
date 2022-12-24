@@ -10,7 +10,7 @@ sys.path.append('../../../')
 from torch.distributions import Categorical
 
 from rltoolkit.models.utils import check_model_method, hard_target_update
-from rltoolkit.utils.scheduler import LinearDecayScheduler
+from rltoolkit.utils.scheduler import LinearDecayScheduler, MultiStepScheduler
 
 
 class QMixAgent(object):
@@ -36,7 +36,7 @@ class QMixAgent(object):
                  min_learning_rate: float = 0.00001,
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
-                 update_target_interval: int = 1000,
+                 update_target_interval: int = 100,
                  update_learner_freq: int = 1,
                  clip_grad_norm: float = 10,
                  optim_alpha: float = 0.99,
@@ -84,9 +84,14 @@ class QMixAgent(object):
             eps=optim_eps)
 
         self.ep_scheduler = LinearDecayScheduler(exploration_start,
-                                                 total_episode)
+                                                 total_episode * 0.8)
 
-        self.lr_scheduler = LinearDecayScheduler(learning_rate, total_episode)
+        lr_steps = [total_episode * 0.5, total_episode * 0.8]
+        self.lr_scheduler = MultiStepScheduler(
+            start_value=learning_rate,
+            max_steps=total_episode,
+            milestones=lr_steps,
+            decay_factor=0.5)
 
     def reset_agent(self, batch_size=1):
         self._init_hidden_states(batch_size)
@@ -119,10 +124,6 @@ class QMixAgent(object):
             actions_dist = Categorical(available_actions)
             actions = actions_dist.sample().long().cpu().detach().numpy()
 
-        self.exploration = max(
-            self.ep_scheduler.step(),
-            self.min_exploration,
-        )
         return actions
 
     def predict(self, obs, available_actions):
@@ -162,11 +163,6 @@ class QMixAgent(object):
             mean_loss (float): train loss
             mean_td_error (float): train TD error
         '''
-        if self.global_episode % self.update_target_interval == 0:
-            self.update_target()
-            self.target_update_count += 1
-
-        self.global_step += 1
 
         # set the actions to torch.Long
         actions_batch = actions_batch.to(self.device, dtype=torch.long)
@@ -254,11 +250,8 @@ class QMixAgent(object):
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
 
-        # learning rate decay
-        self.learning_rate = max(
-            self.lr_scheduler.step(1), self.min_learning_rate)
-        for param_group in self.optimizer.param_groups:
-            param_group['lr'] = self.learning_rate
+        # for param_group in self.optimizer.param_groups:
+        #     param_group['lr'] = self.learning_rate
 
         return loss.item(), mean_td_error.item()
 
