@@ -200,3 +200,62 @@ class Agents(object):
         self.actor_optimizer.step()
 
         return coma_loss.item()
+
+    def _train_critic(self, state_batch, actions_batch, reward_batch,
+                      terminated_batch, obs_batch, available_actions_batch,
+                      filled_batch):
+
+        reward_batch = reward_batch[:, :-1, :]
+        actions_batch = actions_batch[:, :-1, :].unsqueeze(-1)
+        terminated_batch = terminated_batch[:, :-1, :]
+        filled_batch = filled_batch[:, :-1, :]
+
+        mask = (1 - filled_batch) * (1 - terminated_batch)
+
+        # Optimise critic
+        with torch.no_grad():
+            target_q_vals = self.critic_model(state_batch)
+
+        targets_taken = torch.gather(
+            target_q_vals, dim=3, index=actions_batch).squeeze(3)
+
+        targets = self.nstep_returns(reward_batch, terminated_batch,
+                                     targets_taken, self.q_nstep)
+
+        actions = actions[:, :-1]
+        q_vals = self.critic_model(state_batch)[:, :-1]
+        q_taken = torch.gather(q_vals, dim=3, index=actions).squeeze(3)
+
+        td_error = (q_taken - targets.detach())
+        masked_td_error = td_error * mask
+
+        loss = (masked_td_error**2).sum() / mask.sum()
+        self.critic_optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic_parameters,
+                                       self.grad_norm_clip)
+        self.critic_optimizer.step()
+
+        return q_vals
+
+    def nstep_returns(self, rewards, mask, values, nsteps):
+        nstep_values = torch.zeros_like(values[:, :-1])
+        for t_start in range(rewards.size(1)):
+            nstep_return_t = torch.zeros_like(values[:, 0])
+            for step in range(nsteps + 1):
+                t = t_start + step
+                if t >= rewards.size(1):
+                    break
+                elif step == nsteps:
+                    nstep_return_t += self.gamma**step * values[:, t] * mask[:,
+                                                                             t]
+                elif t == rewards.size(1) - 1 and self.add_value_last_step:
+                    nstep_return_t += self.gamma**step * rewards[:,
+                                                                 t] * mask[:,
+                                                                           t]
+                    nstep_return_t += self.gamma**(step + 1) * values[:, t + 1]
+                else:
+                    nstep_return_t += self.gamma**(
+                        step) * rewards[:, t] * mask[:, t]
+            nstep_values[:, t_start, :] = nstep_return_t
+        return nstep_values
