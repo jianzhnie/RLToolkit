@@ -43,36 +43,40 @@ class QTransModel(nn.Module):
 
         if self.network_size == 'small':
             self.Q = nn.Sequential(
-                nn.Linear(q_input_size, self.mixing_embed_dim), nn.ReLU(),
+                nn.Linear(q_input_size, self.mixing_embed_dim),
+                nn.ReLU(inplace=True),
                 nn.Linear(self.mixing_embed_dim, self.mixing_embed_dim),
-                nn.ReLU(), nn.Linear(self.mixing_embed_dim, 1))
+                nn.ReLU(inplace=True), nn.Linear(self.mixing_embed_dim, 1))
 
             # V(s)
             self.V = nn.Sequential(
-                nn.Linear(self.state_dim, self.mixing_embed_dim), nn.ReLU(),
+                nn.Linear(self.state_dim, self.mixing_embed_dim),
+                nn.ReLU(inplace=True),
                 nn.Linear(self.mixing_embed_dim, self.mixing_embed_dim),
-                nn.ReLU(), nn.Linear(self.mixing_embed_dim, 1))
+                nn.ReLU(inplace=True), nn.Linear(self.mixing_embed_dim, 1))
 
             self.action_encoding = nn.Sequential(
-                nn.Linear(ae_input, ae_input), nn.ReLU(),
+                nn.Linear(ae_input, ae_input), nn.ReLU(inplace=True),
                 nn.Linear(ae_input, ae_input))
 
         elif self.network_size == 'big':
             self.Q = nn.Sequential(
-                nn.Linear(q_input_size, self.mixing_embed_dim), nn.ReLU(),
+                nn.Linear(q_input_size, self.mixing_embed_dim),
+                nn.ReLU(inplace=True),
                 nn.Linear(self.mixing_embed_dim, self.mixing_embed_dim),
-                nn.ReLU(),
+                nn.ReLU(inplace=True),
                 nn.Linear(self.mixing_embed_dim, self.mixing_embed_dim),
-                nn.ReLU(), nn.Linear(self.mixing_embed_dim, 1))
+                nn.ReLU(inplace=True), nn.Linear(self.mixing_embed_dim, 1))
             # V(s)
             self.V = nn.Sequential(
-                nn.Linear(self.state_dim, self.mixing_embed_dim), nn.ReLU(),
+                nn.Linear(self.state_dim, self.mixing_embed_dim),
+                nn.ReLU(inplace=True),
                 nn.Linear(self.mixing_embed_dim, self.mixing_embed_dim),
-                nn.ReLU(),
+                nn.ReLU(inplace=True),
                 nn.Linear(self.mixing_embed_dim, self.mixing_embed_dim),
-                nn.ReLU(), nn.Linear(self.mixing_embed_dim, 1))
+                nn.ReLU(inplace=True), nn.Linear(self.mixing_embed_dim, 1))
             self.action_encoding = nn.Sequential(
-                nn.Linear(ae_input, ae_input), nn.ReLU(),
+                nn.Linear(ae_input, ae_input), nn.ReLU(inplace=True),
                 nn.Linear(ae_input, ae_input))
         else:
             raise Exception('{} is not a valid QTran architecture'.format(
@@ -81,10 +85,12 @@ class QTransModel(nn.Module):
     def forward(self, states, hidden_states, actions=None):
         '''
         Args:
-            agent_qs (torch.Tensor): (batch_size, T, n_agents)
-            states (torch.Tensor):   (batch_size, T, state_shape)
+            states (torch.Tensor):          (batch_size, T, state_dim)
+            hidden_states (torch.Tensor):   (batch_size, T, n_agents, n_actions)
+            actions (torch.Tensor):         (batch_size, T, n_agents, n_actions)
         Returns:
             q_total (torch.Tensor):  (batch_size, T, 1)
+            v_total (torch.Tensor):  (batch_size, T, 1)
         '''
         batch_size = states.size(0)
         episode_len = states.size(1)
