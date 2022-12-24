@@ -2,7 +2,13 @@ import torch.nn as nn
 
 
 def hard_target_update(src: nn.Module, tgt: nn.Module) -> None:
-    """Hard update model parameters."""
+    """Hard update model parameters.
+
+    Params
+    ======
+        src: PyTorch model (weights will be copied from)
+        tgt: PyTorch model (weights will be copied to)
+    """
 
     tgt.load_state_dict(src.state_dict())
 
