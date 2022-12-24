@@ -193,25 +193,24 @@ def main():
             env, qmix_agent, rpm, config)
         progress_bar.update()
 
+    steps_cnt = 0
     episode_cnt = 0
-    progress_bar = mmcv.ProgressBar(config['total_episode'])
-    while episode_cnt < config['total_episode']:
+    progress_bar = mmcv.ProgressBar(config['total_steps'])
+    while steps_cnt < config['total_steps']:
         episode_reward, episode_step, is_win, mean_loss, mean_td_error = run_train_episode(
             env, qmix_agent, rpm, config)
-        # update episode
-        qmix_agent.global_episode += 1
+        # update episodes and steps
+        episode_cnt += 1
+        steps_cnt += episode_step
+        qmix_agent.global_steps += episode_step
         # update target model
-        if qmix_agent.global_episode % qmix_agent.update_target_interval == 0:
+        if qmix_agent.global_steps % qmix_agent.update_target_interval == 0:
             qmix_agent.update_target()
             qmix_agent.target_update_count += 1
-        # update exploration
-        qmix_agent.exploration = max(
-            qmix_agent.ep_scheduler.step(),
-            qmix_agent.min_exploration,
-        )
         # learning rate decay
         qmix_agent.learning_rate = max(
-            qmix_agent.lr_scheduler.step(1), qmix_agent.min_learning_rate)
+            qmix_agent.lr_scheduler.step(episode_step),
+            qmix_agent.min_learning_rate)
 
         train_results = {
             'env_step': episode_step,
@@ -224,7 +223,7 @@ def main():
             'replay_buffer_size': rpm.size(),
             'target_update_count': qmix_agent.target_update_count,
         }
-        logger.log_train_data(train_results, episode_cnt)
+        logger.log_train_data(train_results, steps_cnt)
 
         if episode_cnt % config['train_log_interval'] == 0:
             text_logger.info(
@@ -243,10 +242,10 @@ def main():
                 'rewards': eval_rewards,
                 'win_rate': eval_win_rate
             }
-            logger.log_test_data(test_results, episode_cnt)
+            logger.log_test_data(test_results, steps_cnt)
 
         episode_cnt += 1
-        progress_bar.update()
+        progress_bar.update(episode_step)
 
 
 if __name__ == '__main__':
