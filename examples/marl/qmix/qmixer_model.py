@@ -86,6 +86,3 @@ class QMixerModel(nn.Module):
         # q_total: (batch_size, T, 1)
         q_total = y.view(batch_size, -1, 1)
         return q_total
-
-    def update(self, model):
-        self.load_state_dict(model.state_dict())

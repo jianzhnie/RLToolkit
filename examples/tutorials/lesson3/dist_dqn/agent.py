@@ -6,8 +6,9 @@ import gym
 import numpy as np
 import torch
 import torch.nn.functional as F
-import wandb
 from network import DulingNet, QNet
+
+import wandb
 
 sys.path.append('../../../../')
 from torch.optim import Adam

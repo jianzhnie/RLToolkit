@@ -145,9 +145,12 @@ class Agents(object):
 
         mask = (1 - filled_batch) * (1 - terminated_batch)
 
+        q_vals, critic_train_stats = self.target_critic_model(
+            state_batch, obs_batch, actions_batch, available_actions_batch,
+            reward_batch, terminated_batch, filled_batch)
+
         # Calculate estimated Q-Values
         local_qs = []
-        target_local_qs = []
         self._init_hidden_states(batch_size)
         for t in range(episode_len):
             obs = obs_batch[:, t, :, :]
@@ -160,68 +163,99 @@ class Agents(object):
             local_q = local_q.reshape(batch_size, self.n_agents, -1)
             local_qs.append(local_q)
 
-            # Calculate the Q-Values necessary for the target
-            target_local_q, self.target_hidden_states = self.target_agent_model(
-                obs, self.target_hidden_states)
-            # target_local_q: (batch_size * n_agents, n_actions) -->  (batch_size, n_agents, n_actions)
-            target_local_q = target_local_q.view(batch_size, self.n_agents, -1)
-            target_local_qs.append(target_local_q)
-
         # Concat over time
         local_qs = torch.stack(local_qs, dim=1)
-        # We don't need the first timesteps Q-Value estimate for calculating targets
-        target_local_qs = torch.stack(target_local_qs[1:], dim=1)
 
         # Softmax the agent outputs if they're policy logits
         if self.agent_output_type == 'pi_logits':
             local_qs_prob = torch.softmax(local_qs, dim=-1)
 
-        local_qs_prob[available_actions_batch == 0] = 0.0
+        # Calculated baseline
+        local_qs_prob = local_qs_prob.view(-1, self.n_actions)
+        q_vals = q_vals.reshape(-1, self.n_actions)
+        baseline = (local_qs_prob * q_vals).sum(-1).detach()
 
-        # Pick the Q-Values for the actions taken by each agent
-        chosen_action_local_qs = torch.gather(
-            local_qs[:, :-1, :, :], dim=3, index=actions_batch).squeeze(3)
+        q_taken = torch.gather(
+            q_vals, dim=1, index=actions_batch.reshape(-1, 1)).squeeze(1)
+        pi_taken = torch.gather(
+            local_qs_prob, dim=1, index=actions_batch.reshape(-1,
+                                                              1)).squeeze(1)
 
-        # mask unavailable actions
-        target_local_qs[available_actions_batch[:, 1:, :] == 0] = -1e10
+        pi_taken[mask == 0] = 1.0
+        log_pi_taken = torch.log(pi_taken)
+        advantages = (q_taken - baseline).detach()
 
-        # Max over target Q-Values
-        if self.double_q:
-            # Get actions that maximise live Q (for double q-learning)
-            local_qs_detach = local_qs.clone().detach()
-            local_qs_detach[available_actions_batch == 0] = -1e10
-            cur_max_actions = local_qs_detach[:, 1:].max(
-                dim=3, keepdim=True)[1]
-            target_local_max_qs = torch.gather(
-                target_local_qs, dim=3, index=cur_max_actions).squeeze(3)
-        else:
-            # idx0: value, idx1: index
-            target_local_max_qs = target_local_qs.max(dim=3)[0]
-
-        # Mixing network
-        # mix_net, input: ([Q1, Q2, ...], state), output: Q_total
-        if self.mixer_model is not None:
-            chosen_action_global_qs = self.mixer_model(chosen_action_local_qs,
-                                                       state_batch[:, :-1, :])
-            target_global_max_qs = self.target_mixer_model(
-                target_local_max_qs, state_batch[:, 1:, :])
-
-        # Calculate 1-step Q-Learning targets
-        target = reward_batch + self.gamma * (
-            1 - terminated_batch) * target_global_max_qs
-        #  Td-error
-        td_error = target.detach() - chosen_action_global_qs
-        #  0-out the targets that came from padded data
-        masked_td_error = td_error * mask
-        mean_td_error = masked_td_error.sum() / mask.sum()
-        # Normal L2 loss, take mean over actual data
-        loss = (masked_td_error**2).sum() / mask.sum()
+        entropy = -torch.sum(
+            local_qs_prob * torch.log(local_qs_prob + 1e-10), dim=-1)
+        coma_loss = -(
+            (advantages * log_pi_taken + self.entropy_coef * entropy) *
+            mask).sum() / mask.sum()
 
         # Optimise
-        self.optimizer.zero_grad()
-        loss.backward()
-        if self.clip_grad_norm:
-            torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
-        self.optimizer.step()
+        self.actor_optimizer.zero_grad()
+        coma_loss.backward()
+        if self.grad_norm_clip:
+            torch.nn.utils.clip_grad_norm_(self.actor_parameters,
+                                           self.grad_norm_clip)
+        self.actor_optimizer.step()
 
-        return loss.item(), mean_td_error.item()
+        return coma_loss.item()
+
+    def _train_critic(self, state_batch, actions_batch, reward_batch,
+                      terminated_batch, obs_batch, available_actions_batch,
+                      filled_batch):
+
+        reward_batch = reward_batch[:, :-1, :]
+        actions_batch = actions_batch[:, :-1, :].unsqueeze(-1)
+        terminated_batch = terminated_batch[:, :-1, :]
+        filled_batch = filled_batch[:, :-1, :]
+
+        mask = (1 - filled_batch) * (1 - terminated_batch)
+
+        # Optimise critic
+        with torch.no_grad():
+            target_q_vals = self.critic_model(state_batch)
+
+        targets_taken = torch.gather(
+            target_q_vals, dim=3, index=actions_batch).squeeze(3)
+
+        targets = self.nstep_returns(reward_batch, terminated_batch,
+                                     targets_taken, self.q_nstep)
+
+        actions = actions[:, :-1]
+        q_vals = self.critic_model(state_batch)[:, :-1]
+        q_taken = torch.gather(q_vals, dim=3, index=actions).squeeze(3)
+
+        td_error = (q_taken - targets.detach())
+        masked_td_error = td_error * mask
+
+        loss = (masked_td_error**2).sum() / mask.sum()
+        self.critic_optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic_parameters,
+                                       self.grad_norm_clip)
+        self.critic_optimizer.step()
+
+        return q_vals
+
+    def nstep_returns(self, rewards, mask, values, nsteps):
+        nstep_values = torch.zeros_like(values[:, :-1])
+        for t_start in range(rewards.size(1)):
+            nstep_return_t = torch.zeros_like(values[:, 0])
+            for step in range(nsteps + 1):
+                t = t_start + step
+                if t >= rewards.size(1):
+                    break
+                elif step == nsteps:
+                    nstep_return_t += self.gamma**step * values[:, t] * mask[:,
+                                                                             t]
+                elif t == rewards.size(1) - 1 and self.add_value_last_step:
+                    nstep_return_t += self.gamma**step * rewards[:,
+                                                                 t] * mask[:,
+                                                                           t]
+                    nstep_return_t += self.gamma**(step + 1) * values[:, t + 1]
+                else:
+                    nstep_return_t += self.gamma**(
+                        step) * rewards[:, t] * mask[:, t]
+            nstep_values[:, t_start, :] = nstep_return_t
+        return nstep_values

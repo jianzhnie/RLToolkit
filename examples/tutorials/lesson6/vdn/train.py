@@ -4,8 +4,9 @@ import sys
 import gym
 import numpy as np
 import torch
-import wandb
 from tqdm import tqdm
+
+import wandb
 
 sys.path.append('../../../../')
 from agent import Agent
