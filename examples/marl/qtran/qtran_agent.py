@@ -26,6 +26,7 @@ class QTranAgent(object):
                  agent_model: nn.Module = None,
                  mixer_model: nn.Module = None,
                  n_agents: int = None,
+                 n_actions: int = None,
                  double_q: bool = True,
                  total_episode: int = 1e5,
                  gamma: float = 0.99,
@@ -38,6 +39,8 @@ class QTranAgent(object):
                  clip_grad_norm: float = 10,
                  optim_alpha: float = 0.99,
                  optim_eps: float = 0.00001,
+                 opt_loss_coef: float = 0.1,
+                 nopt_min_los_coef: float = 0.1,
                  device: str = 'cpu'):
 
         check_model_method(agent_model, 'init_hidden', self.__class__.__name__)
@@ -50,6 +53,7 @@ class QTranAgent(object):
         assert isinstance(learning_rate, float)
 
         self.n_agents = n_agents
+        self.n_actions = n_actions
         self.double_q = double_q
         self.gamma = gamma
         self.learning_rate = learning_rate
@@ -61,6 +65,8 @@ class QTranAgent(object):
         self.target_update_count = 0
         self.update_target_interval = update_target_interval
         self.update_learner_freq = update_learner_freq
+        self.opt_loss_coef = opt_loss_coef
+        self.nopt_min_los_coef = nopt_min_los_coef
 
         self.device = device
         self.agent_model = agent_model
@@ -251,9 +257,9 @@ class QTranAgent(object):
             max_actions = torch.zeros(
                 size=(batch_size, episode_len, self.n_agents, self.n_actions),
                 device=self.device)
-            max_actions_onehot = max_actions.scatter(3,
-                                                     target_max_actions[:, :],
-                                                     1)
+            max_actions_onehot = max_actions.scatter(3, target_max_actions, 1)
+
+        # target Joint-action Q-Value estimates
         target_joint_qs, target_vs = self.target_mixer_model(
             state=state_batch[:, :-1],
             hidden_states=target_local_hidden_states[:, 1:],
@@ -275,12 +281,15 @@ class QTranAgent(object):
                 size=(batch_size, episode_len, self.n_agents, self.n_actions),
                 device=self.device)
             max_actions_current_onehot = max_actions_current_.scatter(
-                3, max_actions_current[:, :], 1)
+                3, max_actions_current, 1)
+
+        # Don't use the target network and target agent max actions as per author's email
+        # Joint-action Q-Value estimates
         max_joint_qs, _ = self.mixer_model(
             state_batch,
             local_hidden_states[:, :-1],
             actions=max_actions_current_onehot[:, :-1])
-        # Don't use the target network and target agent max actions as per author's email
+
         # max_actions_qvals = th.gather(mac_out[:, :-1], dim=3, index=max_actions_current[:,:-1])
         opt_error = max_actions_qvals[:, :-1].sum(dim=2).reshape(
             -1, 1) - max_joint_qs.detach() + vs
@@ -298,7 +307,7 @@ class QTranAgent(object):
         nopt_loss = (masked_nopt_error**2).sum() / mask.sum()
         # -- Nopt loss --
 
-        loss = td_loss + self.opt_loss * opt_loss + self.nopt_min_loss * nopt_loss
+        loss = td_loss + self.opt_loss_coef * opt_loss + self.nopt_min_los_coef * nopt_loss
 
         # Optimise
         self.optimizer.zero_grad()
