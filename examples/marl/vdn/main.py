@@ -44,11 +44,12 @@ def run_train_episode(env: StarCraft2Env,
     while not terminated:
         available_actions = env.get_available_actions()
         actions = agent.sample(obs, available_actions)
+        actions_onehot = env._get_actions_one_hot(actions)
         next_state, next_obs, reward, terminated = env.step(actions)
         episode_reward += reward
         episode_step += 1
-        episode_experience.add(state, obs, actions, available_actions, reward,
-                               terminated, 0)
+        episode_experience.add(state, obs, actions, actions_onehot,
+                               available_actions, reward, terminated, 0)
         state = next_state
         obs = next_obs
 
@@ -201,7 +202,6 @@ def main():
         # update episodes and steps
         episode_cnt += 1
         steps_cnt += episode_step
-        qmix_agent.global_steps += episode_step
 
         # learning rate decay
         qmix_agent.learning_rate = max(
@@ -219,12 +219,11 @@ def main():
             'replay_buffer_size': rpm.size(),
             'target_update_count': qmix_agent.target_update_count,
         }
-        logger.log_train_data(train_results, steps_cnt)
-
         if episode_cnt % config['train_log_interval'] == 0:
             text_logger.info(
                 '[Train], episode: {}, train_win_rate: {:.2f}, train_reward: {:.2f}'
                 .format(episode_cnt, is_win, episode_reward))
+            logger.log_train_data(train_results, steps_cnt)
 
         if episode_cnt % config['test_log_interval'] == 0:
             eval_rewards, eval_steps, eval_win_rate = run_evaluate_episode(
@@ -240,7 +239,6 @@ def main():
             }
             logger.log_test_data(test_results, steps_cnt)
 
-        episode_cnt += 1
         progress_bar.update(episode_step)
 
 

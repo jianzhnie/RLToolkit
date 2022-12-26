@@ -12,7 +12,7 @@ VDNConfig = {
     'min_exploration': 0.05,
     'update_target_interval': 2000,
     'batch_size': 32,
-    'total_steps': 100000,
+    'total_steps': 1000000,
     'train_log_interval': 10,  # log every 10 episode
     'test_log_interval': 50,  # log every 100 epidode
     'clip_grad_norm': 10,

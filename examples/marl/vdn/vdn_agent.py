@@ -156,7 +156,7 @@ class VDNAgent(object):
             hard_target_update(self.mixer_model, self.target_mixer_model)
 
     def learn(self, state_batch, actions_batch, reward_batch, terminated_batch,
-              obs_batch, available_actions_batch, filled_batch):
+              obs_batch, available_actions_batch, filled_batch, **kwargs):
         '''
         Args:
             state (np.ndarray):                   (batch_size, T, state_shape)
@@ -174,6 +174,8 @@ class VDNAgent(object):
         if self.global_steps % self.update_target_interval == 0:
             self.update_target()
             self.target_update_count += 1
+
+        self.global_steps += 1
 
         # set the actions to torch.Long
         actions_batch = actions_batch.to(self.device, dtype=torch.long)
