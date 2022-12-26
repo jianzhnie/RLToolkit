@@ -48,8 +48,10 @@ QMixConfig = {
     'hypernet_embed_dim': 64,
     'update_learner_freq': 2,
     'double_q': True,
+    'opt_loss': 1.0,
+    'nopt_min_loss': 0.1,
     'difficulty': '7',
-    'algo': 'qmix',
+    'algo': 'qtran',
     'log_dir': 'work_dirs/',
     'logger': 'wandb'
 }
