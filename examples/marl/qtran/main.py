@@ -45,11 +45,12 @@ def run_train_episode(env: StarCraft2Env,
     while not terminated:
         available_actions = env.get_available_actions()
         actions = agent.sample(obs, available_actions)
+        actions_onehot = env._get_actions_one_hot(actions)
         next_state, next_obs, reward, terminated = env.step(actions)
         episode_reward += reward
         episode_step += 1
-        episode_experience.add(state, obs, actions, available_actions, reward,
-                               terminated, 0)
+        episode_experience.add(state, obs, actions, actions_onehot,
+                               available_actions, reward, terminated, 0)
         state = next_state
         obs = next_obs
 
@@ -63,18 +64,24 @@ def run_train_episode(env: StarCraft2Env,
     is_win = env.win_counted
 
     mean_loss = []
-    mean_td_error = []
+    mean_td_loss = []
+    mean_opt_loss = []
+    mean_nopt_loss = []
     if rpm.size() > config['memory_warmup_size']:
         for _ in range(config['update_learner_freq']):
             batch = rpm.sample_batch(config['batch_size'])
-            loss, td_error = agent.learn(**batch)
+            loss, td_loss, opt_loss, nopt_loss = agent.learn(**batch)
             mean_loss.append(loss)
-            mean_td_error.append(td_error)
+            mean_td_loss.append(td_loss)
+            mean_opt_loss.append(opt_loss)
+            mean_nopt_loss.append(nopt_loss)
 
     mean_loss = np.mean(mean_loss) if mean_loss else None
-    mean_td_error = np.mean(mean_td_error) if mean_td_error else None
+    mean_td_loss = np.mean(mean_td_loss) if mean_td_loss else None
+    mean_opt_loss = np.mean(mean_opt_loss) if mean_opt_loss else None
+    mean_nopt_loss = np.mean(mean_nopt_loss) if mean_nopt_loss else None
 
-    return episode_reward, episode_step, is_win, mean_loss, mean_td_error
+    return episode_reward, episode_step, is_win, mean_loss, mean_td_loss, mean_opt_loss, mean_nopt_loss
 
 
 def run_evaluate_episode(env: StarCraft2Env,
@@ -181,8 +188,9 @@ def main():
         agent_model=agent_model,
         mixer_model=mixer_model,
         n_agents=config['n_agents'],
+        n_actions=config['n_actions'],
         double_q=config['double_q'],
-        total_episode=config['total_episode'],
+        total_steps=config['total_steps'],
         gamma=config['gamma'],
         learning_rate=config['learning_rate'],
         min_learning_rate=config['min_learning_rate'],
@@ -191,44 +199,43 @@ def main():
         update_target_interval=config['update_target_interval'],
         update_learner_freq=config['update_learner_freq'],
         clip_grad_norm=config['clip_grad_norm'],
+        opt_loss_coef=config['opt_loss_coef'],
+        nopt_min_loss_coef=config['nopt_min_loss_coef'],
         device=device)
 
     progress_bar = mmcv.ProgressBar(config['memory_warmup_size'])
     while rpm.size() < config['memory_warmup_size']:
-        episode_reward, episode_step, is_win, mean_loss, mean_td_error = run_train_episode(
-            env, qmix_agent, rpm, config)
+        run_train_episode(env, qmix_agent, rpm, config)
         progress_bar.update()
 
+    steps_cnt = 0
     episode_cnt = 0
-    progress_bar = mmcv.ProgressBar(config['total_episode'])
-    while episode_cnt < config['total_episode']:
-        episode_reward, episode_step, is_win, mean_loss, mean_td_error = run_train_episode(
+    progress_bar = mmcv.ProgressBar(config['total_steps'])
+    while steps_cnt < config['total_steps']:
+        episode_reward, episode_step, is_win, mean_loss, mean_td_loss, mean_opt_loss, mean_nopt_loss = run_train_episode(
             env, qmix_agent, rpm, config)
-        # update episode
-        qmix_agent.global_episode += 1
-        # update target model
-        if qmix_agent.global_episode % qmix_agent.update_target_interval == 0:
-            qmix_agent.update_target()
-            qmix_agent.target_update_count += 1
-        # update exploration
-        qmix_agent.exploration = max(qmix_agent.ep_scheduler.step(),
-                                     qmix_agent.min_exploration)
+        # update episodes and steps
+        episode_cnt += 1
+        steps_cnt += episode_step
+        qmix_agent.global_steps += episode_step
+
         # learning rate decay
-        # qmix_agent.learning_rate = max(
-        #     qmix_agent.lr_scheduler.step(1), qmix_agent.min_learning_rate)
+        qmix_agent.learning_rate = max(
+            qmix_agent.lr_scheduler.step(episode_step),
+            qmix_agent.min_learning_rate)
 
         train_results = {
             'env_step': episode_step,
             'rewards': episode_reward,
             'win_rate': is_win,
             'mean_loss': mean_loss,
-            'mean_td_error': mean_td_error,
+            'mean_td_loss': mean_td_loss,
             'exploration': qmix_agent.exploration,
             'learning_rate': qmix_agent.learning_rate,
             'replay_buffer_size': rpm.size(),
             'target_update_count': qmix_agent.target_update_count,
         }
-        logger.log_train_data(train_results, episode_cnt)
+        logger.log_train_data(train_results, steps_cnt)
 
         if episode_cnt % config['train_log_interval'] == 0:
             text_logger.info(
@@ -247,10 +254,10 @@ def main():
                 'rewards': eval_rewards,
                 'win_rate': eval_win_rate
             }
-            logger.log_test_data(test_results, episode_cnt)
+            logger.log_test_data(test_results, steps_cnt)
 
         episode_cnt += 1
-        progress_bar.update()
+        progress_bar.update(episode_step)
 
 
 if __name__ == '__main__':

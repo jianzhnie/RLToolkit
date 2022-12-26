@@ -28,9 +28,9 @@ class QTranAgent(object):
                  n_agents: int = None,
                  n_actions: int = None,
                  double_q: bool = True,
-                 total_episode: int = 1e5,
+                 total_steps: int = 1e6,
                  gamma: float = 0.99,
-                 learning_rate: float = 0.001,
+                 learning_rate: float = 0.0005,
                  min_learning_rate: float = 0.00001,
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
@@ -40,15 +40,12 @@ class QTranAgent(object):
                  optim_alpha: float = 0.99,
                  optim_eps: float = 0.00001,
                  opt_loss_coef: float = 0.1,
-                 nopt_min_los_coef: float = 0.1,
+                 nopt_min_loss_coef: float = 0.1,
                  device: str = 'cpu'):
 
         check_model_method(agent_model, 'init_hidden', self.__class__.__name__)
         check_model_method(agent_model, 'forward', self.__class__.__name__)
         check_model_method(mixer_model, 'forward', self.__class__.__name__)
-        assert hasattr(mixer_model, 'n_agents') and not callable(
-            getattr(mixer_model, 'n_agents',
-                    None)), 'mixer_model needs to have attribute n_agents'
         assert isinstance(gamma, float)
         assert isinstance(learning_rate, float)
 
@@ -59,6 +56,7 @@ class QTranAgent(object):
         self.learning_rate = learning_rate
         self.min_learning_rate = min_learning_rate
         self.clip_grad_norm = clip_grad_norm
+        self.global_steps = 0
         self.global_episode = 0
         self.exploration = exploration_start
         self.min_exploration = min_exploration
@@ -66,7 +64,7 @@ class QTranAgent(object):
         self.update_target_interval = update_target_interval
         self.update_learner_freq = update_learner_freq
         self.opt_loss_coef = opt_loss_coef
-        self.nopt_min_los_coef = nopt_min_los_coef
+        self.nopt_min_loss_coef = nopt_min_loss_coef
 
         self.device = device
         self.agent_model = agent_model
@@ -87,12 +85,12 @@ class QTranAgent(object):
             eps=optim_eps)
 
         self.ep_scheduler = LinearDecayScheduler(exploration_start,
-                                                 total_episode * 0.8)
+                                                 total_steps * 0.8)
 
-        lr_steps = [total_episode * 0.5, total_episode * 0.8]
+        lr_steps = [total_steps * 0.5, total_steps * 0.8]
         self.lr_scheduler = MultiStepScheduler(
             start_value=learning_rate,
-            max_steps=total_episode,
+            max_steps=total_steps,
             milestones=lr_steps,
             decay_factor=0.5)
 
@@ -119,14 +117,19 @@ class QTranAgent(object):
             actions (np.ndarray): sampled actions of agents
         '''
         epsilon = np.random.random()
-        if epsilon > self.exploration:
-            actions = self.predict(obs, available_actions)
-        else:
+        if epsilon < self.exploration:
             available_actions = torch.tensor(
                 available_actions, dtype=torch.float32)
             actions_dist = Categorical(available_actions)
             actions = actions_dist.sample().long().cpu().detach().numpy()
 
+        else:
+            actions = self.predict(obs, available_actions)
+
+        # update exploration
+        self.exploration = max(
+            self.ep_scheduler.step(self.update_learner_freq),
+            self.min_exploration)
         return actions
 
     def predict(self, obs, available_actions):
@@ -151,8 +154,9 @@ class QTranAgent(object):
         hard_target_update(self.agent_model, self.target_agent_model)
         hard_target_update(self.mixer_model, self.target_mixer_model)
 
-    def learn(self, state_batch, actions_batch, reward_batch, terminated_batch,
-              obs_batch, available_actions_batch, filled_batch):
+    def learn(self, state_batch, actions_batch, actions_onehot_batch,
+              reward_batch, terminated_batch, obs_batch,
+              available_actions_batch, filled_batch):
         '''
         Args:
             state (np.ndarray):                   (batch_size, T, state_shape)
@@ -166,15 +170,23 @@ class QTranAgent(object):
             mean_loss (float): train loss
             mean_td_error (float): train TD error
         '''
+        # update target model
+        if self.global_episode % self.update_target_interval == 0:
+            self.update_target()
+            self.target_update_count += 1
 
         # set the actions to torch.Long
         actions_batch = actions_batch.to(self.device, dtype=torch.long)
+        actions_onehot_batch = actions_onehot_batch.to(
+            self.device, dtype=torch.long)
+
         # get the batch_size and episode_length
         batch_size = state_batch.shape[0]
         episode_len = state_batch.shape[1]
 
         reward_batch = reward_batch[:, :-1, :]
         actions_batch = actions_batch[:, :-1, :].unsqueeze(-1)
+        actions_onehot_batch = actions_onehot_batch[:, :-1]
         terminated_batch = terminated_batch[:, :-1, :]
         filled_batch = filled_batch[:, :-1, :]
 
@@ -263,9 +275,9 @@ class QTranAgent(object):
 
         # Joint-action Q-Value estimates
         joint_qs, vs = self.mixer_model(
-            states=state_batch[:, :-1],
+            state=state_batch[:, :-1],
             hidden_states=local_hidden_states[:, :-1],
-            actions=actions_batch)
+            actions=actions_onehot_batch)
 
         # target Joint-action Q-Value estimates
         target_joint_qs, target_vs = self.target_mixer_model(
@@ -315,7 +327,7 @@ class QTranAgent(object):
         nopt_loss = (masked_nopt_error**2).sum() / mask.sum()
         # -- Nopt loss --
 
-        loss = td_loss + self.opt_loss_coef * opt_loss + self.nopt_min_los_coef * nopt_loss
+        loss = td_loss + self.opt_loss_coef * opt_loss + self.nopt_min_loss_coef * nopt_loss
 
         # Optimise
         self.optimizer.zero_grad()
