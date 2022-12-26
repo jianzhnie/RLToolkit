@@ -8,11 +8,6 @@ def get_common_args():
         '--scenario', type=str, default='5m_vs_6m', help='the map of the game')
     parser.add_argument('--seed', type=int, default=123, help='random seed')
     parser.add_argument(
-        '--algo',
-        type=str,
-        default='qmix',
-        help='the algorithm to train the agent')
-    parser.add_argument(
         '--total_episode', type=int, default=10000, help='total episode')
     parser.add_argument(
         '--log_dir',
