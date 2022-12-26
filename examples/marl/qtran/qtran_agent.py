@@ -196,7 +196,9 @@ class QTranAgent(object):
             #  local_q: (batch_size * n_agents, n_actions) -->  (batch_size, n_agents, n_actions)
             local_q = local_q.reshape(batch_size, self.n_agents, -1)
             local_qs.append(local_q)
-            local_hidden_states.append(self.hidden_states)
+            local_hidden = self.hidden_states.reshape(batch_size,
+                                                      self.n_agents, -1)
+            local_hidden_states.append(local_hidden)
 
             # Calculate the Q-Values necessary for the target
             target_local_q, self.target_hidden_states = self.target_agent_model(
@@ -204,8 +206,13 @@ class QTranAgent(object):
             # target_local_q: (batch_size * n_agents, n_actions) -->  (batch_size, n_agents, n_actions)
             target_local_q = target_local_q.view(batch_size, self.n_agents, -1)
             target_local_qs.append(target_local_q)
-            target_local_hidden_states.append(self.target_hidden_states)
+            traget_local_hidden = self.target_hidden_states.reshape(
+                batch_size, self.n_agents, -1)
+            target_local_hidden_states.append(traget_local_hidden)
 
+        # 得的 local_q 和 target_local_q 是一个列表，列表里装着 episode_len 个数组，
+        # 数组的的维度是 (batch_size, n_agents，n_actions)
+        # 把该列表转化成 (batch_size, episode_len， n_agents，n_actions)的数组
         # Concat over time
         local_qs = torch.stack(local_qs, dim=1)
         # We don't need the first timesteps Q-Value estimate for calculating targets
