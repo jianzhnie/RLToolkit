@@ -7,16 +7,16 @@ from copy import deepcopy
 import mmcv
 import numpy as np
 import torch
-from arguments import get_common_args
-from env_wrapper import SC2EnvWrapper
-from qmix_agent import QMixAgent
-from qmix_config import QMixConfig
-from qmixer_model import QMixerModel
-from rnn_model import RNNModel
+
+sys.path.append('../')
+from qmix.arguments import get_common_args
+from qmix.env_wrapper import SC2EnvWrapper
+from qmix.rnn_model import RNNModel
+from qtran_agent import QTranAgent
+from qtran_config import QMixConfig
+from qtran_mixer import QTransModel
 from smac.env import StarCraft2Env
 from torch.utils.tensorboard import SummaryWriter
-
-sys.path.append('../../')
 
 from rltoolkit.data.buffer.ma_replaybuffer import EpisodeData, ReplayBuffer
 from rltoolkit.utils import TensorboardLogger, WandbLogger
@@ -24,7 +24,7 @@ from rltoolkit.utils.logger.logs import get_outdir, get_root_logger
 
 
 def run_train_episode(env: StarCraft2Env,
-                      agent: QMixAgent,
+                      agent: QTranAgent,
                       rpm: ReplayBuffer,
                       config: dict = None):
 
@@ -78,7 +78,7 @@ def run_train_episode(env: StarCraft2Env,
 
 
 def run_evaluate_episode(env: StarCraft2Env,
-                         agent: QMixAgent,
+                         agent: QTranAgent,
                          num_eval_episodes=5):
     eval_is_win_buffer = []
     eval_reward_buffer = []
@@ -170,14 +170,14 @@ def main():
         input_shape=config['obs_shape'],
         n_actions=config['n_actions'],
         rnn_hidden_dim=config['rnn_hidden_dim'])
-    mixer_model = QMixerModel(
+    mixer_model = QTransModel(
         n_agents=config['n_agents'],
-        state_shape=config['state_shape'],
-        mixing_embed_dim=config['mixing_embed_dim'],
-        hypernet_layers=config['hypernet_layers'],
-        hypernet_embed_dim=config['hypernet_embed_dim'])
+        n_actions=config['n_actions'],
+        state_dim=config['state_shape'],
+        rnn_hidden_dim=config['rnn_hidden_dim'],
+        mixing_embed_dim=config['mixing_embed_dim'])
 
-    qmix_agent = QMixAgent(
+    qmix_agent = QTranAgent(
         agent_model=agent_model,
         mixer_model=mixer_model,
         n_agents=config['n_agents'],
