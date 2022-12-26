@@ -231,7 +231,7 @@ class QtranQ(nn.Module):
         # shape: (batch_size * T, n_agents, rnn_hidden_dim + n_actions)
         hidden_actions_encoding = hidden_actions_encoding.reshape(
             batch_size * episode_len, self.n_agents, -1)
-        # shape: (batch_size, T, rnn_hidden_dim + n_actions)
+        # shape: (batch_size * T, rnn_hidden_dim + n_actions)
         hidden_actions_encoding = hidden_actions_encoding.sum(dim=-2)
         # 编码求和之后输入 state、所有agent的hidden_state 和动作之和
         # shape: (batch_size * T, state + rnn_hidden_dim + n_actions)
@@ -261,6 +261,7 @@ class QtranV(nn.Module):
         self.n_agents = n_agents
         self.n_actions = n_actions
         self.state_dim = state_dim
+        self.rnn_hidden_dim = rnn_hidden_dim
 
         self.hidden_encoder = nn.Sequential(
             nn.Linear(rnn_hidden_dim, rnn_hidden_dim), nn.ReLU(inplace=True),
