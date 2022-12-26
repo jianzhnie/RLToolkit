@@ -8,7 +8,7 @@ def get_common_args():
         '--scenario', type=str, default='3m', help='the map of the game')
     parser.add_argument('--seed', type=int, default=123, help='random seed')
     parser.add_argument(
-        '--total_steps', type=int, default=100000, help='total episode')
+        '--total_steps', type=int, default=1000000, help='total episode')
     parser.add_argument(
         '--log_dir',
         type=str,
