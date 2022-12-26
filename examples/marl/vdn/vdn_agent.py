@@ -33,7 +33,7 @@ class VDNAgent(object):
                  double_q: bool = True,
                  total_steps: int = 1e6,
                  gamma: float = 0.99,
-                 learning_rate: float = 0.00005,
+                 learning_rate: float = 0.0005,
                  min_learning_rate: float = 0.00001,
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
@@ -170,6 +170,10 @@ class VDNAgent(object):
             mean_loss (float): train loss
             mean_td_error (float): train TD error
         '''
+        # update target model
+        if self.global_steps % self.update_target_interval == 0:
+            self.update_target()
+            self.target_update_count += 1
 
         # set the actions to torch.Long
         actions_batch = actions_batch.to(self.device, dtype=torch.long)

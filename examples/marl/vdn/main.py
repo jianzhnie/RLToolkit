@@ -176,7 +176,7 @@ def main():
         mixer_model=mixer_model,
         n_agents=config['n_agents'],
         double_q=config['double_q'],
-        total_episode=config['total_episode'],
+        total_steps=config['total_steps'],
         gamma=config['gamma'],
         learning_rate=config['learning_rate'],
         min_learning_rate=config['min_learning_rate'],
@@ -189,8 +189,7 @@ def main():
 
     progress_bar = mmcv.ProgressBar(config['memory_warmup_size'])
     while rpm.size() < config['memory_warmup_size']:
-        episode_reward, episode_step, is_win, mean_loss, mean_td_error = run_train_episode(
-            env, qmix_agent, rpm, config)
+        run_train_episode(env, qmix_agent, rpm, config)
         progress_bar.update()
 
     steps_cnt = 0
@@ -203,10 +202,7 @@ def main():
         episode_cnt += 1
         steps_cnt += episode_step
         qmix_agent.global_steps += episode_step
-        # update target model
-        if qmix_agent.global_steps % qmix_agent.update_target_interval == 0:
-            qmix_agent.update_target()
-            qmix_agent.target_update_count += 1
+
         # learning rate decay
         qmix_agent.learning_rate = max(
             qmix_agent.lr_scheduler.step(episode_step),

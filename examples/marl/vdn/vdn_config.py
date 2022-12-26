@@ -10,9 +10,9 @@ VDNConfig = {
     'gamma': 0.99,
     'exploration_start': 1.0,
     'min_exploration': 0.05,
-    'update_target_interval': 20,
+    'update_target_interval': 2000,
     'batch_size': 32,
-    'total_episode': 100000,
+    'total_steps': 100000,
     'train_log_interval': 10,  # log every 10 episode
     'test_log_interval': 50,  # log every 100 epidode
     'clip_grad_norm': 10,

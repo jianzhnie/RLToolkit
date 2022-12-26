@@ -8,22 +8,7 @@ def get_common_args():
         '--scenario', type=str, default='5m_vs_6m', help='the map of the game')
     parser.add_argument('--seed', type=int, default=123, help='random seed')
     parser.add_argument(
-        '--algo',
-        type=str,
-        default='vdn',
-        help='the algorithm to train the agent')
-    parser.add_argument(
-        '--total_episode', type=int, default=10000, help='total episode')
-    parser.add_argument(
-        '--train_log_interval',
-        type=int,
-        default=1,
-        help='how often to log the training logs')
-    parser.add_argument(
-        '--test_log_interval',
-        type=int,
-        default=10,
-        help='number of the episode to evaluate the agent')
+        '--total_steps', type=int, default=100000, help='total episode')
     parser.add_argument(
         '--log_dir',
         type=str,
