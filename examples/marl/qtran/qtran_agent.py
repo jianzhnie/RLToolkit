@@ -196,6 +196,7 @@ class QTranAgent(object):
             #  local_q: (batch_size * n_agents, n_actions) -->  (batch_size, n_agents, n_actions)
             local_q = local_q.reshape(batch_size, self.n_agents, -1)
             local_qs.append(local_q)
+            # hidden_states: (batch_size * n_agents, rnn_hidden_dim)
             local_hidden = self.hidden_states.reshape(batch_size,
                                                       self.n_agents, -1)
             local_hidden_states.append(local_hidden)
@@ -219,13 +220,13 @@ class QTranAgent(object):
         target_local_qs = torch.stack(target_local_qs[1:], dim=1)
         # Concat over time
         local_hidden_states = torch.stack(local_hidden_states, dim=1)
-        local_hidden_states = local_hidden_states.reshape(
-            batch_size, self.n_agents, episode_len, -1).transpose(1, 2)  # btav
+        # local_hidden_states = local_hidden_states.reshape(
+        #     batch_size, self.n_agents, episode_len, -1).transpose(1, 2)  # btav
 
         target_local_hidden_states = torch.stack(
             target_local_hidden_states, dim=1)
-        target_local_hidden_states = target_local_hidden_states.reshape(
-            batch_size, self.n_agents, episode_len, -1).transpose(1, 2)  # btav
+        # target_local_hidden_states = target_local_hidden_states.reshape(
+        #     batch_size, self.n_agents, episode_len, -1).transpose(1, 2)  # btav
 
         # Pick the Q-Values for the actions taken by each agent
         chosen_action_local_qs = torch.gather(
@@ -244,12 +245,6 @@ class QTranAgent(object):
         max_actions_qvals, max_actions_current = local_qs_detach.max(
             dim=3, keepdim=True)
 
-        # Joint-action Q-Value estimates
-        joint_qs, vs = self.mixer_model(
-            states=state_batch[:, :-1],
-            hidden_states=local_hidden_states[:, :-1],
-            actions=actions_batch)
-
         # Need to argmax across the target agents' actions to compute target joint-action Q-Values
         # Max over target Q-Values
         if self.double_q:
@@ -265,6 +260,12 @@ class QTranAgent(object):
                 size=(batch_size, episode_len, self.n_agents, self.n_actions),
                 device=self.device)
             max_actions_onehot = max_actions.scatter(3, target_max_actions, 1)
+
+        # Joint-action Q-Value estimates
+        joint_qs, vs = self.mixer_model(
+            states=state_batch[:, :-1],
+            hidden_states=local_hidden_states[:, :-1],
+            actions=actions_batch)
 
         # target Joint-action Q-Value estimates
         target_joint_qs, target_vs = self.target_mixer_model(
@@ -293,7 +294,7 @@ class QTranAgent(object):
         # Don't use the target network and target agent max actions as per author's email
         # Joint-action Q-Value estimates
         max_joint_qs, _ = self.mixer_model(
-            state_batch,
+            state_batch[:, :-1],
             local_hidden_states[:, :-1],
             actions=max_actions_current_onehot[:, :-1])
 
@@ -323,7 +324,7 @@ class QTranAgent(object):
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
 
-        return loss.item()
+        return loss.item(), td_loss.item(), opt_loss.item(), nopt_loss.item()
 
     def save(self,
              save_dir: str = None,
