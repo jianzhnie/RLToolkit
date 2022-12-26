@@ -156,7 +156,7 @@ class QTranAgent(object):
 
     def learn(self, state_batch, actions_batch, actions_onehot_batch,
               reward_batch, terminated_batch, obs_batch,
-              available_actions_batch, filled_batch):
+              available_actions_batch, filled_batch, **kwargs):
         '''
         Args:
             state (np.ndarray):                   (batch_size, T, state_shape)
@@ -171,9 +171,11 @@ class QTranAgent(object):
             mean_td_error (float): train TD error
         '''
         # update target model
-        if self.global_episode % self.update_target_interval == 0:
+        if self.global_steps % self.update_target_interval == 0:
             self.update_target()
             self.target_update_count += 1
+
+        self.global_steps += 1
 
         # set the actions to torch.Long
         actions_batch = actions_batch.to(self.device, dtype=torch.long)
@@ -184,6 +186,7 @@ class QTranAgent(object):
         batch_size = state_batch.shape[0]
         episode_len = state_batch.shape[1]
 
+        # get the relevant quantitles
         reward_batch = reward_batch[:, :-1, :]
         actions_batch = actions_batch[:, :-1, :].unsqueeze(-1)
         actions_onehot_batch = actions_onehot_batch[:, :-1]
@@ -335,6 +338,9 @@ class QTranAgent(object):
         if self.clip_grad_norm:
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
+
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = self.learning_rate
 
         return loss.item(), td_loss.item(), opt_loss.item(), nopt_loss.item()
 

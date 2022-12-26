@@ -217,7 +217,6 @@ def main():
         # update episodes and steps
         episode_cnt += 1
         steps_cnt += episode_step
-        qmix_agent.global_steps += episode_step
 
         # learning rate decay
         qmix_agent.learning_rate = max(
@@ -235,12 +234,11 @@ def main():
             'replay_buffer_size': rpm.size(),
             'target_update_count': qmix_agent.target_update_count,
         }
-        logger.log_train_data(train_results, steps_cnt)
-
         if episode_cnt % config['train_log_interval'] == 0:
             text_logger.info(
                 '[Train], episode: {}, train_win_rate: {:.2f}, train_reward: {:.2f}'
                 .format(episode_cnt, is_win, episode_reward))
+            logger.log_train_data(train_results, steps_cnt)
 
         if episode_cnt % config['test_log_interval'] == 0:
             eval_rewards, eval_steps, eval_win_rate = run_evaluate_episode(
@@ -256,7 +254,6 @@ def main():
             }
             logger.log_test_data(test_results, steps_cnt)
 
-        episode_cnt += 1
         progress_bar.update(episode_step)
 
 
