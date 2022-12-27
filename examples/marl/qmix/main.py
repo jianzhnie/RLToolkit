@@ -115,6 +115,10 @@ def main():
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     config = deepcopy(QMixConfig)
+    common_args = get_common_args()
+    common_dict = vars(common_args)
+    config.update(common_dict)
+
     env = StarCraft2Env(
         map_name=config['scenario'], difficulty=config['difficulty'])
 
@@ -125,9 +129,6 @@ def main():
     config['n_agents'] = env.n_agents
     config['n_actions'] = env.n_actions
 
-    common_args = get_common_args()
-    common_dict = vars(common_args)
-    config.update(common_dict)
     args = argparse.Namespace(**config)
 
     # init the logger before other steps

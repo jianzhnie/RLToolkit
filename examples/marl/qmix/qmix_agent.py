@@ -33,7 +33,7 @@ class QMixAgent(object):
                  total_steps: int = 1e6,
                  gamma: float = 0.99,
                  learning_rate: float = 0.0005,
-                 min_learning_rate: float = 0.00001,
+                 min_learning_rate: float = 0.0001,
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
                  update_target_interval: int = 100,
