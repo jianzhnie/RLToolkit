@@ -45,11 +45,12 @@ def run_train_episode(env: StarCraft2Env,
     while not terminated:
         available_actions = env.get_available_actions()
         actions = agent.sample(obs, available_actions)
+        actions_onehot = env._get_actions_one_hot(actions)
         next_state, next_obs, reward, terminated = env.step(actions)
         episode_reward += reward
         episode_step += 1
-        episode_experience.add(state, obs, actions, available_actions, reward,
-                               terminated, 0)
+        episode_experience.add(state, obs, actions, actions_onehot,
+                               available_actions, reward, terminated, 0)
         state = next_state
         obs = next_obs
 
@@ -114,6 +115,10 @@ def main():
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
     config = deepcopy(QMixConfig)
+    common_args = get_common_args()
+    common_dict = vars(common_args)
+    config.update(common_dict)
+
     env = StarCraft2Env(
         map_name=config['scenario'], difficulty=config['difficulty'])
 
@@ -124,9 +129,6 @@ def main():
     config['n_agents'] = env.n_agents
     config['n_actions'] = env.n_actions
 
-    common_args = get_common_args()
-    common_dict = vars(common_args)
-    config.update(common_dict)
     args = argparse.Namespace(**config)
 
     # init the logger before other steps
@@ -182,7 +184,7 @@ def main():
         mixer_model=mixer_model,
         n_agents=config['n_agents'],
         double_q=config['double_q'],
-        total_episode=config['total_episode'],
+        total_steps=config['total_steps'],
         gamma=config['gamma'],
         learning_rate=config['learning_rate'],
         min_learning_rate=config['min_learning_rate'],
@@ -195,27 +197,23 @@ def main():
 
     progress_bar = mmcv.ProgressBar(config['memory_warmup_size'])
     while rpm.size() < config['memory_warmup_size']:
-        episode_reward, episode_step, is_win, mean_loss, mean_td_error = run_train_episode(
-            env, qmix_agent, rpm, config)
+        run_train_episode(env, qmix_agent, rpm, config)
         progress_bar.update()
 
+    steps_cnt = 0
     episode_cnt = 0
-    progress_bar = mmcv.ProgressBar(config['total_episode'])
-    while episode_cnt < config['total_episode']:
+    progress_bar = mmcv.ProgressBar(config['total_steps'])
+    while steps_cnt < config['total_steps']:
         episode_reward, episode_step, is_win, mean_loss, mean_td_error = run_train_episode(
             env, qmix_agent, rpm, config)
-        # update episode
-        qmix_agent.global_episode += 1
-        # update target model
-        if qmix_agent.global_episode % qmix_agent.update_target_interval == 0:
-            qmix_agent.update_target()
-            qmix_agent.target_update_count += 1
-        # update exploration
-        qmix_agent.exploration = max(qmix_agent.ep_scheduler.step(),
-                                     qmix_agent.min_exploration)
+        # update episodes and steps
+        episode_cnt += 1
+        steps_cnt += episode_step
+
         # learning rate decay
-        # qmix_agent.learning_rate = max(
-        #     qmix_agent.lr_scheduler.step(1), qmix_agent.min_learning_rate)
+        qmix_agent.learning_rate = max(
+            qmix_agent.lr_scheduler.step(episode_step),
+            qmix_agent.min_learning_rate)
 
         train_results = {
             'env_step': episode_step,
@@ -228,12 +226,11 @@ def main():
             'replay_buffer_size': rpm.size(),
             'target_update_count': qmix_agent.target_update_count,
         }
-        logger.log_train_data(train_results, episode_cnt)
-
         if episode_cnt % config['train_log_interval'] == 0:
             text_logger.info(
                 '[Train], episode: {}, train_win_rate: {:.2f}, train_reward: {:.2f}'
                 .format(episode_cnt, is_win, episode_reward))
+            logger.log_train_data(train_results, steps_cnt)
 
         if episode_cnt % config['test_log_interval'] == 0:
             eval_rewards, eval_steps, eval_win_rate = run_evaluate_episode(
@@ -247,10 +244,9 @@ def main():
                 'rewards': eval_rewards,
                 'win_rate': eval_win_rate
             }
-            logger.log_test_data(test_results, episode_cnt)
+            logger.log_test_data(test_results, steps_cnt)
 
-        episode_cnt += 1
-        progress_bar.update()
+        progress_bar.update(episode_step)
 
 
 if __name__ == '__main__':

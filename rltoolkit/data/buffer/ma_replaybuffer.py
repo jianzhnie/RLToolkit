@@ -13,6 +13,8 @@ class EpisodeData(object):
         self.obs_buf = np.zeros((episode_limit, num_agents, obs_shape))
         self.state_buf = np.zeros((episode_limit, state_shape))
         self.action_buf = np.zeros((episode_limit, num_agents))
+        self.action_onehot_buf = np.zeros(
+            (episode_limit, num_agents, num_actions))
         self.available_action_buf = np.zeros(
             (episode_limit, num_agents, num_actions))
         self.reward_buf = np.zeros((episode_limit, 1))
@@ -24,13 +26,15 @@ class EpisodeData(object):
         self._curr_size = 0
         self.episode_limit = episode_limit
 
-    def add(self, state, obs, actions, available_actions, rewards, terminated,
-            filled):
+    def add(self, state, obs, actions, actions_onehot, available_actions,
+            rewards, terminated, filled):
 
         assert self.size() < self.episode_limit
         self.obs_buf[self._curr_ptr] = obs
         self.state_buf[self._curr_ptr] = state
         self.action_buf[self._curr_ptr] = actions
+        self.action_onehot_buf[self._curr_ptr] = actions_onehot
+
         self.available_action_buf[self._curr_ptr] = available_actions
 
         self.reward_buf[self._curr_ptr] = rewards
@@ -53,6 +57,7 @@ class EpisodeData(object):
             state=self.state_buf,
             obs=self.obs_buf,
             actions=self.action_buf,
+            actions_onehot=self.action_onehot_buf,
             rewards=self.reward_buf,
             terminated=self.terminal_buf,
             available_actions=self.available_action_buf,
@@ -74,6 +79,7 @@ class EpisodeExperience(object):
 
         self.episode_state = []
         self.episode_actions = []
+        self.episode_actions_onehot = []
         self.episode_reward = []
         self.episode_terminated = []
         self.episode_obs = []
@@ -84,12 +90,13 @@ class EpisodeExperience(object):
     def count(self):
         return len(self.episode_state)
 
-    def add(self, state, obs, actions, available_actions, reward, terminated,
-            filled):
+    def add(self, state, obs, actions, actions_onehot, available_actions,
+            reward, terminated, filled):
         assert self.count < self.episode_limit
         self.episode_state.append(state)
         self.episode_obs.append(obs)
         self.episode_actions.append(actions)
+        self.episode_actions_onehot.append(actions_onehot)
         self.episode_available_actions.append(available_actions)
         self.episode_reward.append(reward)
         self.episode_terminated.append(terminated)
@@ -126,6 +133,8 @@ class ReplayBuffer(object):
             (max_size, episode_limit, num_agents, obs_shape))
         self.state_buf = np.zeros((max_size, episode_limit, state_shape))
         self.action_buf = np.zeros((max_size, episode_limit, num_agents))
+        self.action_onehot_buf = np.zeros(
+            (max_size, episode_limit, num_agents, num_actions))
         self.available_action_buf = np.zeros(
             (max_size, episode_limit, num_agents, num_actions))
         self.reward_buf = np.zeros((max_size, episode_limit, 1))
@@ -147,12 +156,13 @@ class ReplayBuffer(object):
         self._curr_ptr = 0
         self._curr_size = 0
 
-    def store(self, state, obs, actions, available_actions, rewards,
-              terminated, filled):
+    def store(self, state, obs, actions, actions_onehot, available_actions,
+              rewards, terminated, filled):
 
         self.obs_buf[self._curr_ptr] = obs
         self.state_buf[self._curr_ptr] = state
         self.action_buf[self._curr_ptr] = actions
+        self.action_onehot_buf[self._curr_ptr] = actions_onehot
         self.available_action_buf[self._curr_ptr] = available_actions
 
         self.reward_buf[self._curr_ptr] = rewards
@@ -191,6 +201,7 @@ class ReplayBuffer(object):
             state_batch=self.state_buf[idxs],
             obs_batch=self.obs_buf[idxs],
             actions_batch=self.action_buf[idxs],
+            actions_onehot_batch=self.action_onehot_buf[idxs],
             available_actions_batch=self.available_action_buf[idxs],
             reward_batch=self.reward_buf[idxs],
             terminated_batch=self.terminal_buf[idxs],

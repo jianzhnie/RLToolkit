@@ -30,10 +30,10 @@ class QMixAgent(object):
                  mixer_model: nn.Module = None,
                  n_agents: int = None,
                  double_q: bool = True,
-                 total_episode: int = 1e5,
+                 total_steps: int = 1e6,
                  gamma: float = 0.99,
-                 learning_rate: float = 0.001,
-                 min_learning_rate: float = 0.00001,
+                 learning_rate: float = 0.0005,
+                 min_learning_rate: float = 0.0001,
                  exploration_start: float = 1.0,
                  min_exploration: float = 0.01,
                  update_target_interval: int = 100,
@@ -58,7 +58,7 @@ class QMixAgent(object):
         self.learning_rate = learning_rate
         self.min_learning_rate = min_learning_rate
         self.clip_grad_norm = clip_grad_norm
-        self.global_episode = 0
+        self.global_steps = 0
         self.exploration = exploration_start
         self.min_exploration = min_exploration
         self.target_update_count = 0
@@ -84,12 +84,12 @@ class QMixAgent(object):
             eps=optim_eps)
 
         self.ep_scheduler = LinearDecayScheduler(exploration_start,
-                                                 total_episode * 0.8)
+                                                 total_steps * 0.8)
 
-        lr_steps = [total_episode * 0.5, total_episode * 0.8]
+        lr_steps = [total_steps * 0.5, total_steps * 0.8]
         self.lr_scheduler = MultiStepScheduler(
             start_value=learning_rate,
-            max_steps=total_episode,
+            max_steps=total_steps,
             milestones=lr_steps,
             decay_factor=0.5)
 
@@ -116,14 +116,19 @@ class QMixAgent(object):
             actions (np.ndarray): sampled actions of agents
         '''
         epsilon = np.random.random()
-        if epsilon > self.exploration:
-            actions = self.predict(obs, available_actions)
-        else:
+        if epsilon < self.exploration:
             available_actions = torch.tensor(
                 available_actions, dtype=torch.float32)
             actions_dist = Categorical(available_actions)
             actions = actions_dist.sample().long().cpu().detach().numpy()
 
+        else:
+            actions = self.predict(obs, available_actions)
+
+        # update exploration
+        self.exploration = max(
+            self.ep_scheduler.step(self.update_learner_freq),
+            self.min_exploration)
         return actions
 
     def predict(self, obs, available_actions):
@@ -149,7 +154,7 @@ class QMixAgent(object):
         hard_target_update(self.mixer_model, self.target_mixer_model)
 
     def learn(self, state_batch, actions_batch, reward_batch, terminated_batch,
-              obs_batch, available_actions_batch, filled_batch):
+              obs_batch, available_actions_batch, filled_batch, **kwargs):
         '''
         Args:
             state (np.ndarray):                   (batch_size, T, state_shape)
@@ -163,6 +168,12 @@ class QMixAgent(object):
             mean_loss (float): train loss
             mean_td_error (float): train TD error
         '''
+        # update target model
+        if self.global_steps % self.update_target_interval == 0:
+            self.update_target()
+            self.target_update_count += 1
+
+        self.global_steps += 1
 
         # set the actions to torch.Long
         actions_batch = actions_batch.to(self.device, dtype=torch.long)
@@ -170,6 +181,7 @@ class QMixAgent(object):
         batch_size = state_batch.shape[0]
         episode_len = state_batch.shape[1]
 
+        # get the relevant quantitles
         reward_batch = reward_batch[:, :-1, :]
         actions_batch = actions_batch[:, :-1, :].unsqueeze(-1)
         terminated_batch = terminated_batch[:, :-1, :]
@@ -250,8 +262,8 @@ class QMixAgent(object):
             torch.nn.utils.clip_grad_norm_(self.params, self.clip_grad_norm)
         self.optimizer.step()
 
-        # for param_group in self.optimizer.param_groups:
-        #     param_group['lr'] = self.learning_rate
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = self.learning_rate
 
         return loss.item(), mean_td_error.item()
 
