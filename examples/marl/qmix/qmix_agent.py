@@ -217,6 +217,7 @@ class QMixAgent(object):
         target_local_qs = torch.stack(target_local_qs[1:], dim=1)
 
         # Pick the Q-Values for the actions taken by each agent
+        # Remove the last dim
         chosen_action_local_qs = torch.gather(
             local_qs[:, :-1, :, :], dim=3, index=actions_batch).squeeze(3)
 
