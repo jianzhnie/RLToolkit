@@ -13,7 +13,7 @@ from rltoolkit.models.utils import check_model_method, hard_target_update
 from rltoolkit.utils.scheduler import LinearDecayScheduler, MultiStepScheduler
 
 
-class QMixAgent(object):
+class QattenAgent(object):
     """ QMIX algorithm
     Args:
         agent_model (rltoolkit.Model): agents' local q network for decision making.
@@ -39,6 +39,8 @@ class QMixAgent(object):
                  update_target_interval: int = 100,
                  update_learner_freq: int = 1,
                  clip_grad_norm: float = 10,
+                 q_lambda: bool = False,
+                 td_lambda: float = 0.6,
                  optim_alpha: float = 0.99,
                  optim_eps: float = 0.00001,
                  device: str = 'cpu'):
@@ -59,6 +61,8 @@ class QMixAgent(object):
         self.min_learning_rate = min_learning_rate
         self.clip_grad_norm = clip_grad_norm
         self.global_steps = 0
+        self.q_lambda = q_lambda
+        self.td_lambda = td_lambda
         self.exploration = exploration_start
         self.min_exploration = min_exploration
         self.target_update_count = 0
@@ -126,7 +130,9 @@ class QMixAgent(object):
             actions = self.predict(obs, available_actions)
 
         # update exploration
-        self.exploration = max(self.ep_scheduler.step(), self.min_exploration)
+        self.exploration = max(
+            self.ep_scheduler.step(self.update_learner_freq),
+            self.min_exploration)
         return actions
 
     def predict(self, obs, available_actions):
@@ -243,9 +249,19 @@ class QMixAgent(object):
             target_global_max_qs = self.target_mixer_model(
                 target_local_max_qs, state_batch[:, 1:, :])
 
-        # Calculate 1-step Q-Learning targets
-        target = reward_batch + self.gamma * (
-            1 - terminated_batch) * target_global_max_qs
+        if self.q_lambda:
+            target = self.build_q_lambda_targets(reward_batch,
+                                                 terminated_batch, mask,
+                                                 target_local_max_qs,
+                                                 target_global_max_qs,
+                                                 self.gamma, self.td_lambda)
+
+        else:
+            target = self.build_td_lambda_targets(reward_batch,
+                                                  terminated_batch, mask,
+                                                  target_local_max_qs,
+                                                  self.gamma, self.td_lambda)
+
         #  Td-error
         td_error = target.detach() - chosen_action_global_qs
         #  0-out the targets that came from padded data
@@ -265,6 +281,35 @@ class QMixAgent(object):
             param_group['lr'] = self.learning_rate
 
         return loss.item(), mean_td_error.item()
+
+    def build_td_lambda_targets(self, rewards, terminated, mask, target_qs,
+                                gamma, td_lambda):
+        # Assumes  <target_qs > in B*T*A and <reward >, <terminated >, <mask > in (at least) B*T-1*1
+        # Initialise  last  lambda -return  for  not  terminated  episodes
+        ret = target_qs.new_zeros(*target_qs.shape)
+        ret[:, -1] = target_qs[:, -1] * (1 - torch.sum(terminated, dim=1))
+        # Backwards  recursive  update  of the "forward  view"
+        for t in range(ret.shape[1] - 2, -1, -1):
+            ret[:, t] = td_lambda * gamma * ret[:, t + 1] + mask[:, t] * (
+                rewards[:, t] + (1 - td_lambda) * gamma * target_qs[:, t + 1] *
+                (1 - terminated[:, t]))
+        # Returns lambda-return from t=0 to t=T-1, i.e. in B*T-1*A
+        return ret[:, 0:-1]
+
+    def build_q_lambda_targets(self, rewards, terminated, mask, exp_qvals,
+                               qvals, gamma, td_lambda):
+        # Assumes  <target_qs > in B*T*A and <reward >, <terminated >, <mask > in (at least) B*T-1*1
+        # Initialise  last  lambda -return  for  not  terminated  episodes
+        ret = exp_qvals.new_zeros(*exp_qvals.shape)
+        ret[:, -1] = exp_qvals[:, -1] * (1 - torch.sum(terminated, dim=1))
+        # Backwards  recursive  update  of the "forward  view"
+        for t in range(ret.shape[1] - 2, -1, -1):
+            reward = rewards[:, t] + exp_qvals[:, t] - qvals[:, t]
+            ret[:, t] = td_lambda * gamma * ret[:, t + 1] + mask[:, t] * (
+                reward + (1 - td_lambda) * gamma * exp_qvals[:, t + 1] *
+                (1 - terminated[:, t]))
+        # Returns lambda-return from t=0 to t=T-1, i.e. in B*T-1*A
+        return ret[:, 0:-1]
 
     def save(self,
              save_dir: str = None,
