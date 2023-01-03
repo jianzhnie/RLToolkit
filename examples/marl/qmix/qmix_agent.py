@@ -126,9 +126,7 @@ class QMixAgent(object):
             actions = self.predict(obs, available_actions)
 
         # update exploration
-        self.exploration = max(
-            self.ep_scheduler.step(self.update_learner_freq),
-            self.min_exploration)
+        self.exploration = max(self.ep_scheduler.step(), self.min_exploration)
         return actions
 
     def predict(self, obs, available_actions):
