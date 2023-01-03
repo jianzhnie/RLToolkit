@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 
 
-class QTransModel_(nn.Module):
+class QTransModel(nn.Module):
     """Joint action-value network
        输入: state、所有 agent 的 hidden_states、其他 agent 的动作，
        输出: 所有动作对应的联合Q值
@@ -29,7 +29,6 @@ class QTransModel_(nn.Module):
         self.n_actions = n_actions
         self.state_dim = state_dim
         self.rnn_hidden_dim = rnn_hidden_dim
-        mixing_embed_dim = mixing_embed_dim
         self.qtran_arch = qtran_arch
         self.network_size = network_size
 
@@ -43,11 +42,11 @@ class QTransModel_(nn.Module):
         # Q(s,u)
         if self.qtran_arch == 'coma_critic':
             # Q takes [state, u] as input
-            q_input_size = self.state_dim + (self.n_agents * self.n_actions)
+            q_input_size = state_dim + (n_agents * n_actions)
         elif self.qtran_arch == 'qtran_paper':
             # Q takes [state, agent_action_observation_encodings]
             # 编码求和之后输入 state、所有 agent 的 hidden_states 和动作之和
-            q_input_size = self.state_dim + self.rnn_hidden_dim + self.n_actions
+            q_input_size = state_dim + rnn_hidden_dim + n_actions
         else:
             raise Exception('{} is not a valid QTran architecture'.format(
                 self.qtran_arch))
@@ -61,8 +60,7 @@ class QTransModel_(nn.Module):
 
             # V(s)
             self.V = nn.Sequential(
-                nn.Linear(self.state_dim, mixing_embed_dim),
-                nn.ReLU(inplace=True),
+                nn.Linear(state_dim, mixing_embed_dim), nn.ReLU(inplace=True),
                 nn.Linear(mixing_embed_dim, mixing_embed_dim),
                 nn.ReLU(inplace=True), nn.Linear(mixing_embed_dim, 1))
 
@@ -89,7 +87,7 @@ class QTransModel_(nn.Module):
 
     # 因为所有时刻所有 agent 的 hidden_states 在之前已经计算好了，
     # 所以联合 Q 值可以一次计算所有 transition 的，不需要一条一条计算。
-    def forward(self, state, hidden_states, actions=None):
+    def forward(self, state, hidden_states, actions_onehot=None):
         '''
         Args:
             state (torch.Tensor):          (batch_size, T, state_dim)
@@ -107,14 +105,15 @@ class QTransModel_(nn.Module):
 
         if self.qtran_arch == 'coma_critic':
             # It will arrive as (bs, ts, agents, actions), we need to reshape it
-            actions = actions.reshape(-1, self.n_agents * self.n_actions)
+            actions_onehot = actions_onehot.reshape(
+                -1, self.n_agents * self.n_actions)
 
             inputs = torch.cat([state, actions], dim=1)
 
         elif self.qtran_arch == 'qtran_paper':
             # It will arrive as (bs, ts, agents, actions), we need to reshape it
-            actions = actions.reshape(batch_size * episode_len, self.n_agents,
-                                      self.n_actions)
+            actions = actions_onehot.reshape(batch_size * episode_len,
+                                             self.n_agents, self.n_actions)
 
             hidden_states = hidden_states.reshape(batch_size * episode_len,
                                                   self.n_agents, -1)
@@ -137,7 +136,7 @@ class QTransModel_(nn.Module):
         return q_outputs, v_outputs
 
 
-class QTransModel(nn.Module):
+class QTranBase(nn.Module):
     """Joint action-value network
        输入: state、所有 agent 的 hidden_states、其他 agent 的动作，
        输出: 所有动作对应的联合Q值
@@ -149,7 +148,7 @@ class QTransModel(nn.Module):
                  state_dim: int = None,
                  rnn_hidden_dim: int = 32,
                  mixing_embed_dim: int = 32):
-        super(QTransModel, self).__init__()
+        super(QTranBase, self).__init__()
 
         self.q = QtranQ(n_agents, n_actions, state_dim, rnn_hidden_dim,
                         mixing_embed_dim)

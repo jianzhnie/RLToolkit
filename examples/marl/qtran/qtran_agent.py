@@ -57,7 +57,6 @@ class QTranAgent(object):
         self.min_learning_rate = min_learning_rate
         self.clip_grad_norm = clip_grad_norm
         self.global_steps = 0
-        self.global_episode = 0
         self.exploration = exploration_start
         self.min_exploration = min_exploration
         self.target_update_count = 0
