@@ -38,7 +38,7 @@ QMixConfig = {
     'gamma': 0.99,
     'exploration_start': 1.0,
     'min_exploration': 0.1,
-    'update_target_interval': 2000,
+    'update_target_interval': 1000,
     'batch_size': 32,
     'total_steps': 1000000,
     'train_log_interval': 5,  # log every 10 episode

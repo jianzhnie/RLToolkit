@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 
 
-class QTransModel_(nn.Module):
+class QTransModel(nn.Module):
     """Joint action-value network
        输入: state、所有 agent 的 hidden_states、其他 agent 的动作，
        输出: 所有动作对应的联合Q值
@@ -29,7 +29,6 @@ class QTransModel_(nn.Module):
         self.n_actions = n_actions
         self.state_dim = state_dim
         self.rnn_hidden_dim = rnn_hidden_dim
-        mixing_embed_dim = mixing_embed_dim
         self.qtran_arch = qtran_arch
         self.network_size = network_size
 
@@ -43,11 +42,11 @@ class QTransModel_(nn.Module):
         # Q(s,u)
         if self.qtran_arch == 'coma_critic':
             # Q takes [state, u] as input
-            q_input_size = self.state_dim + (self.n_agents * self.n_actions)
+            q_input_size = state_dim + (n_agents * n_actions)
         elif self.qtran_arch == 'qtran_paper':
             # Q takes [state, agent_action_observation_encodings]
             # 编码求和之后输入 state、所有 agent 的 hidden_states 和动作之和
-            q_input_size = self.state_dim + self.rnn_hidden_dim + self.n_actions
+            q_input_size = state_dim + rnn_hidden_dim + n_actions
         else:
             raise Exception('{} is not a valid QTran architecture'.format(
                 self.qtran_arch))
@@ -61,8 +60,7 @@ class QTransModel_(nn.Module):
 
             # V(s)
             self.V = nn.Sequential(
-                nn.Linear(self.state_dim, mixing_embed_dim),
-                nn.ReLU(inplace=True),
+                nn.Linear(state_dim, mixing_embed_dim), nn.ReLU(inplace=True),
                 nn.Linear(mixing_embed_dim, mixing_embed_dim),
                 nn.ReLU(inplace=True), nn.Linear(mixing_embed_dim, 1))
 
@@ -137,7 +135,7 @@ class QTransModel_(nn.Module):
         return q_outputs, v_outputs
 
 
-class QTransModel(nn.Module):
+class QTranBase(nn.Module):
     """Joint action-value network
        输入: state、所有 agent 的 hidden_states、其他 agent 的动作，
        输出: 所有动作对应的联合Q值
@@ -149,7 +147,7 @@ class QTransModel(nn.Module):
                  state_dim: int = None,
                  rnn_hidden_dim: int = 32,
                  mixing_embed_dim: int = 32):
-        super(QTransModel, self).__init__()
+        super(QTranBase, self).__init__()
 
         self.q = QtranQ(n_agents, n_actions, state_dim, rnn_hidden_dim,
                         mixing_embed_dim)
