@@ -87,7 +87,7 @@ class QTransModel(nn.Module):
 
     # 因为所有时刻所有 agent 的 hidden_states 在之前已经计算好了，
     # 所以联合 Q 值可以一次计算所有 transition 的，不需要一条一条计算。
-    def forward(self, state, hidden_states, actions_onehot=None):
+    def forward(self, state, hidden_states, actions=None):
         '''
         Args:
             state (torch.Tensor):          (batch_size, T, state_dim)
@@ -105,15 +105,14 @@ class QTransModel(nn.Module):
 
         if self.qtran_arch == 'coma_critic':
             # It will arrive as (bs, ts, agents, actions), we need to reshape it
-            actions_onehot = actions_onehot.reshape(
-                -1, self.n_agents * self.n_actions)
+            actions = actions.reshape(-1, self.n_agents * self.n_actions)
 
             inputs = torch.cat([state, actions], dim=1)
 
         elif self.qtran_arch == 'qtran_paper':
             # It will arrive as (bs, ts, agents, actions), we need to reshape it
-            actions = actions_onehot.reshape(batch_size * episode_len,
-                                             self.n_agents, self.n_actions)
+            actions = actions.reshape(batch_size * episode_len, self.n_agents,
+                                      self.n_actions)
 
             hidden_states = hidden_states.reshape(batch_size * episode_len,
                                                   self.n_agents, -1)

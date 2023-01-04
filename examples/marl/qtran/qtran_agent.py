@@ -126,9 +126,7 @@ class QTranAgent(object):
             actions = self.predict(obs, available_actions)
 
         # update exploration
-        self.exploration = max(
-            self.ep_scheduler.step(self.update_learner_freq),
-            self.min_exploration)
+        self.exploration = max(self.ep_scheduler.step(), self.min_exploration)
         return actions
 
     def predict(self, obs, available_actions):
@@ -243,6 +241,7 @@ class QTranAgent(object):
             batch_size, self.n_agents, episode_len, -1).transpose(1, 2)  # btav
 
         # Pick the Q-Values for the actions taken by each agent
+        # Remove the last dim
         chosen_action_local_qs = torch.gather(
             local_qs[:, :-1, :, :], dim=3, index=actions_batch).squeeze(3)
 
