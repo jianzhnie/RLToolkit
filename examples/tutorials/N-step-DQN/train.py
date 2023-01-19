@@ -9,8 +9,7 @@ import torch
 from agent import Agent
 from torch.utils.tensorboard import SummaryWriter
 
-from rltoolkit.data.buffer.replaybuffer import \
-    SimpleReplayBuffer as ReplayBuffer
+from rltoolkit.data.buffer import MultiStepReplayBuffer
 from rltoolkit.utils import TensorboardLogger, WandbLogger
 from rltoolkit.utils.logger.logs import get_outdir, get_root_logger
 
@@ -19,12 +18,13 @@ config = {
     'test_seed': 42,
     'project': 'Classic-Control',
     'env': 'CartPole-v0',
-    'algo': 'ddqn',
+    'algo': 'duling_dqn',
     'hidden_dim': 128,
-    'total_steps': 12000,  # max training steps
+    'total_steps': 10000,  # max training steps
     'memory_size': 10000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'batch_size': 32,  # repaly sample batch size
+    'n_step': 5,
     'update_target_step': 100,  # target model update freq
     'learning_rate': 0.001,  # start learning rate
     'exploration_start': 1.0,
@@ -39,7 +39,7 @@ config = {
 
 
 # train an episode
-def run_train_episode(agent: Agent, env: gym.Env, rpm: ReplayBuffer,
+def run_train_episode(agent: Agent, env: gym.Env, rpm: MultiStepReplayBuffer,
                       memory_warmup_size: int):
     episode_reward = 0
     episode_step = 0
@@ -144,10 +144,12 @@ def main():
 
     obs_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
-    rpm = ReplayBuffer(
+    rpm = MultiStepReplayBuffer(
         max_size=args.memory_size,
         obs_dim=obs_dim,
         batch_size=args.batch_size,
+        n_step=args.n_step,
+        gamma=args.gamma,
         device=device)
 
     # get agent
@@ -161,6 +163,7 @@ def main():
         min_exploration=args.min_exploration,
         learning_rate=args.learning_rate,
         update_target_step=args.update_target_step,
+        n_step=args.n_step,
         device=device)
 
     # start training, memory warm up

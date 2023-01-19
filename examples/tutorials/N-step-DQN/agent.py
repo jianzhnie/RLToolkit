@@ -7,6 +7,7 @@ from network import DulingNet, QNet
 from torch.optim import Adam
 
 from rltoolkit.models.utils import hard_target_update
+from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 
 class Agent(object):
@@ -15,7 +16,7 @@ class Agent(object):
     Args:
         action_dim (int): action space dimension
         total_step (int): total epsilon decay steps
-        start_lr (float): initial learning rate
+        learning_rate (float): initial learning rate
         update_target_step (int): target network update frequency
     """
 
@@ -24,8 +25,10 @@ class Agent(object):
                  hidden_dim: int,
                  action_dim: int,
                  algo: str = 'dqn',
+                 total_steps: int = 10000,
                  gamma: float = 0.99,
-                 epsilon: float = 1.0,
+                 exploration_start: float = 1.0,
+                 min_exploration: float = 0.01,
                  learning_rate: float = 0.001,
                  update_target_step: int = 100,
                  n_step: int = 3,
@@ -34,7 +37,9 @@ class Agent(object):
 
         self.algo = algo
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.exploration = exploration_start
+        self.min_exploration = min_exploration
+        self.learning_rate = learning_rate
         self.global_update_step = 0
         self.update_target_step = update_target_step
         self.action_dim = action_dim
@@ -49,6 +54,8 @@ class Agent(object):
         self.target_qnet = copy.deepcopy(self.qnet)
         # Create an optimizer
         self.optimizer = Adam(self.qnet.parameters(), lr=learning_rate)
+        self.ep_scheduler = LinearDecayScheduler(exploration_start,
+                                                 total_steps * 0.8)
 
         self.device = device
 
@@ -64,11 +71,14 @@ class Agent(object):
             act (int): action
         """
         # Choose a random action with probability epsilon
-        if np.random.rand() <= self.epsilon:
+        if np.random.rand() <= self.exploration:
             act = np.random.randint(self.action_dim)
         else:
             # Choose the action with highest Q-value at the current state
             act = self.predict(obs)
+
+        # update exploration
+        self.exploration = max(self.ep_scheduler.step(), self.min_exploration)
 
         return act
 
