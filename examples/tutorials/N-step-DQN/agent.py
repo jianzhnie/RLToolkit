@@ -123,10 +123,10 @@ class Agent(object):
 
         # Target for Q regression
         # (max, max_indices) = torch.max(input, dim, keepdim=True)
-        if self.algo in ['dqn', 'duling_dqn']:
+        if self.algo in ['n-step_dqn', 'n-step_duling_dqn']:
             next_q_value = self.target_qnet(next_obs).max(1, keepdim=True)[0]
 
-        elif self.algo in ['ddqn', 'duling_ddqn']:
+        elif self.algo in ['n-step_ddqn', 'n-step_duling_ddqn']:
             greedy_action = self.qnet(next_obs).max(dim=1, keepdim=True)[1]
             next_q_value = self.target_qnet(next_obs).gather(1, greedy_action)
 

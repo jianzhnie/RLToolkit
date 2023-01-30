@@ -2,10 +2,9 @@ import copy
 
 import numpy as np
 import torch
-import torch.optim as optim
+from torch.optim import Adam
 
 from rltoolkit.models.noisynet import NoisyDulingNet, NoisyNet
-from rltoolkit.models.utils import check_model_method
 from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 
@@ -13,33 +12,29 @@ class Agent(object):
     """Agent.
 
     Args:
-
         action_dim (int): action space dimension
         total_step (int): total epsilon decay steps
-        start_lr (float): initial learning rate
+        learning_rate (float): initial learning rate
         update_target_step (int): target network update frequency
     """
 
-    def __init__(
-            self,
-            model_name: str,
-            obs_dim: int,
-            action_dim: int,
-            hidden_dim: int,
-            total_step: int,
-            update_target_step: int,
-            start_lr: float = 0.001,
-            end_lr: float = 0.00001,
-            gamma: float = 0.99,
-            batch_size: int = 64,
-            # Categorical DQN parameters
-            std_init: float = 0.1,
-            v_min: float = 0.0,
-            v_max: float = 200.0,
-            atom_size: int = 51,
-            # N-step Learning
-            n_step: int = 1,
-            device: str = 'cpu'):
+    def __init__(self,
+                 model_name: str,
+                 obs_dim: int,
+                 action_dim: int,
+                 hidden_dim: int,
+                 total_steps: int,
+                 update_target_step: int,
+                 start_lr: float = 0.001,
+                 end_lr: float = 0.00001,
+                 gamma: float = 0.99,
+                 batch_size: int = 64,
+                 std_init: float = 0.1,
+                 v_min: float = 0.0,
+                 v_max: float = 200.0,
+                 atom_size: int = 51,
+                 n_step: int = 1,
+                 device: str = 'cpu'):
         super().__init__()
         self.model_name = model_name
         self.global_update_step = 0
@@ -57,28 +52,27 @@ class Agent(object):
         self.support = torch.linspace(self.v_min, self.v_max,
                                       self.atom_size).to(self.device)
 
-        if model_name == 'noisynetwork':
+        if model_name == 'noisy-network':
             print('Using NoisyNet')
             self.model = NoisyNet(
                 obs_dim=obs_dim,
                 action_dim=action_dim,
                 hidden_dim=hidden_dim,
                 std_init=std_init)
-        elif model_name == 'noisydulingnetwork':
-            print('Using NoisyDulingNetwork')
+        elif model_name == 'noisy-duling-network':
+            print('Using Noisy-Duling-Network')
             self.model = NoisyDulingNet(
                 obs_dim=obs_dim,
-                action_dim=action_dim,
                 hidden_dim=hidden_dim,
+                action_dim=action_dim,
                 atom_size=atom_size,
                 std_init=std_init,
                 support=self.support)
         self.target_model = copy.deepcopy(self.model)
-        check_model_method(self.model, 'forward', self.__class__.__name__)
         self.smoothl1_loss = torch.nn.SmoothL1Loss()
         self.mse_loss = torch.nn.MSELoss()
-        self.optimizer = optim.Adam(self.model.parameters(), lr=start_lr)
-        self.lr_scheduler = LinearDecayScheduler(start_lr, total_step)
+        self.optimizer = Adam(self.model.parameters(), lr=start_lr)
+        self.lr_scheduler = LinearDecayScheduler(start_lr, total_steps)
 
     def sample(self, obs) -> int:
         """Sample an action when given an observation,
@@ -131,11 +125,11 @@ class Agent(object):
 
         # calculate dqn loss
         # 1-step Learning loss
-        if self.model_name == 'noisydulingnetwork':
+        if self.model_name == 'noisy-duling-network':
             loss = self._compute_dis_dqn_loss(obs, action, reward, next_obs,
                                               terminal)
 
-        elif self.model_name == 'noisynetwork':
+        elif self.model_name == 'noisy-network':
             loss = self._cumpute_noisy_dqn_loss(obs, action, reward, next_obs,
                                                 terminal)
 

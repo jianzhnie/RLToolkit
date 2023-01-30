@@ -179,8 +179,7 @@ def main():
     progress_bar = mmcv.ProgressBar(args.total_steps)
     while steps_cnt < args.total_steps:
         # start epoch
-        episode_cnt += 1
-        episode_reward, episode_step, loss = run_train_episode(
+        episode_reward, episode_step, episode_loss = run_train_episode(
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
 
         steps_cnt += episode_step
@@ -189,8 +188,7 @@ def main():
         train_results = {
             'env_step': episode_step,
             'rewards': episode_reward,
-            'episode_loss': loss,
-            'exploration': agent.exploration,
+            'episode_loss': episode_loss,
             'learning_rate': agent.learning_rate,
             'replay_buffer_size': rpm.size()
         }
