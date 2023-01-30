@@ -18,15 +18,15 @@ config = {
     'test_seed': 42,
     'project': 'Classic-Control',
     'env': 'CartPole-v0',
-    'algo': 'ddqn',
-    'model_name': 'noisy-duling-network',
+    'algo': 'rainbow',
+    'model_name': 'noisy-network',
     'hidden_dim': 128,
-    'total_steps': 10000,  # max training steps
-    'memory_size': 2000,  # Replay buffer size
+    'total_steps': 12000,  # max training steps
+    'memory_size': 10000,  # Replay buffer size
     'memory_warmup_size': 500,  # Replay buffer memory_warmup_size
     'batch_size': 64,  # repaly sample batch size
     'update_target_step': 100,  # target model update freq
-    'start_lr': 0.003,  # start learning rate
+    'learning_rate': 0.001,  # start learning rate
     'end_lr': 0.00001,  # end learning rate
     'gamma': 0.99,  # discounting factor
     'v_min': 0.0,
@@ -168,7 +168,7 @@ def main():
         hidden_dim=args.hidden_dim,
         total_steps=args.total_steps,
         update_target_step=args.update_target_step,
-        start_lr=args.start_lr,
+        learning_rate=args.learning_rate,
         end_lr=args.end_lr,
         std_init=args.std_init,
         gamma=args.gamma,
@@ -191,8 +191,7 @@ def main():
     progress_bar = mmcv.ProgressBar(args.total_steps)
     while steps_cnt < args.total_steps:
         # start epoch
-        episode_cnt += 1
-        episode_reward, episode_step, loss = run_train_episode(
+        episode_reward, episode_step, episode_loss = run_train_episode(
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
 
         steps_cnt += episode_step
@@ -201,8 +200,7 @@ def main():
         train_results = {
             'env_step': episode_step,
             'rewards': episode_reward,
-            'episode_loss': loss,
-            'exploration': agent.exploration,
+            'episode_loss': episode_loss,
             'learning_rate': agent.learning_rate,
             'replay_buffer_size': rpm.size()
         }

@@ -25,7 +25,7 @@ class Agent(object):
                  hidden_dim: int,
                  total_steps: int,
                  update_target_step: int,
-                 start_lr: float = 0.001,
+                 learning_rate: float = 0.001,
                  end_lr: float = 0.00001,
                  gamma: float = 0.99,
                  batch_size: int = 64,
@@ -39,6 +39,7 @@ class Agent(object):
         self.model_name = model_name
         self.global_update_step = 0
         self.update_target_step = update_target_step
+        self.learning_rate = learning_rate
         self.end_lr = end_lr
         self.gamma = gamma
         self.batch_size = batch_size
@@ -71,8 +72,8 @@ class Agent(object):
         self.target_model = copy.deepcopy(self.model)
         self.smoothl1_loss = torch.nn.SmoothL1Loss()
         self.mse_loss = torch.nn.MSELoss()
-        self.optimizer = Adam(self.model.parameters(), lr=start_lr)
-        self.lr_scheduler = LinearDecayScheduler(start_lr, total_steps)
+        self.optimizer = Adam(self.model.parameters(), lr=learning_rate)
+        self.lr_scheduler = LinearDecayScheduler(learning_rate, total_steps)
 
     def sample(self, obs) -> int:
         """Sample an action when given an observation,
