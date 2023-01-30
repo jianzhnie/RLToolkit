@@ -32,7 +32,7 @@ class QNetwork(nn.Module):
         )
 
     def forward(self, x: torch.Tensor, action: torch.Tensor = None):
-        #     x : batch_size * obs_dim
+        # x : batch_size * obs_dim
         # logits: batch_size * (act_dim * n_atoms)
         logits = self.network(x)
         # logits: batch_size * act_dim * n_atoms

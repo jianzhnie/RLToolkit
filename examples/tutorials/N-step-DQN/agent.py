@@ -7,6 +7,7 @@ from network import DulingNet, QNet
 from torch.optim import Adam
 
 from rltoolkit.models.utils import hard_target_update
+from rltoolkit.utils.scheduler import LinearDecayScheduler
 
 
 class Agent(object):
@@ -24,19 +25,25 @@ class Agent(object):
                  hidden_dim: int,
                  action_dim: int,
                  algo: str = 'dqn',
+                 total_steps: int = 10000,
                  gamma: float = 0.99,
-                 epsilon: float = 1.0,
+                 exploration_start: float = 1.0,
+                 min_exploration: float = 0.01,
                  learning_rate: float = 0.001,
                  update_target_step: int = 100,
+                 n_step: int = 3,
                  device='cpu'):
         super().__init__()
 
         self.algo = algo
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.exploration = exploration_start
+        self.min_exploration = min_exploration
+        self.learning_rate = learning_rate
         self.global_update_step = 0
         self.update_target_step = update_target_step
         self.action_dim = action_dim
+        self.n_step = n_step
 
         # Main network
         if 'duling' in algo:
@@ -47,6 +54,8 @@ class Agent(object):
         self.target_qnet = copy.deepcopy(self.qnet)
         # Create an optimizer
         self.optimizer = Adam(self.qnet.parameters(), lr=learning_rate)
+        self.ep_scheduler = LinearDecayScheduler(exploration_start,
+                                                 total_steps * 0.8)
 
         self.device = device
 
@@ -62,11 +71,14 @@ class Agent(object):
             act (int): action
         """
         # Choose a random action with probability epsilon
-        if np.random.rand() <= self.epsilon:
+        if np.random.rand() <= self.exploration:
             act = np.random.randint(self.action_dim)
         else:
             # Choose the action with highest Q-value at the current state
             act = self.predict(obs)
+
+        # update exploration
+        self.exploration = max(self.ep_scheduler.step(), self.min_exploration)
 
         return act
 
@@ -105,18 +117,27 @@ class Agent(object):
             hard_target_update(self.qnet, self.target_qnet)
 
         action = action.to(self.device, dtype=torch.long)
+
         # Prediction Q(s)
         pred_value = self.qnet(obs).gather(1, action)
 
         # Target for Q regression
-        if self.algo in ['dqn', 'duling_dqn']:
+        # (max, max_indices) = torch.max(input, dim, keepdim=True)
+        if self.algo in ['n-step_dqn', 'n-step_duling_dqn']:
             next_q_value = self.target_qnet(next_obs).max(1, keepdim=True)[0]
 
-        elif self.algo in ['ddqn', 'duling_ddqn']:
+        elif self.algo in ['n-step_ddqn', 'n-step_duling_ddqn']:
             greedy_action = self.qnet(next_obs).max(dim=1, keepdim=True)[1]
             next_q_value = self.target_qnet(next_obs).gather(1, greedy_action)
 
-        target = reward + (1 - terminal) * self.gamma * next_q_value
+        # n-step td algo
+        if self.n_step is not None:
+            gamma = self.gamma**self.n_step
+        else:
+            gamma = self.gamma
+
+        # Target for Q regression
+        target = reward + (1 - terminal) * gamma * next_q_value
 
         # TD误差目标
         loss = F.mse_loss(pred_value, target)
@@ -125,5 +146,6 @@ class Agent(object):
         loss.backward()
         # 反向传播更新参数
         self.optimizer.step()
+
         self.global_update_step += 1
         return loss.item()

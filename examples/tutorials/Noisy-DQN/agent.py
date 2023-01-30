@@ -15,7 +15,7 @@ class Agent(object):
     Args:
         action_dim (int): action space dimension
         total_step (int): total epsilon decay steps
-        start_lr (float): initial learning rate
+        learning_rate (float): initial learning rate
         update_target_step (int): target network update frequency
     """
 
@@ -36,6 +36,7 @@ class Agent(object):
 
         self.algo = algo
         self.gamma = gamma
+        self.learning_rate = learning_rate
         self.global_update_step = 0
         self.update_target_step = update_target_step
         self.action_dim = action_dim
