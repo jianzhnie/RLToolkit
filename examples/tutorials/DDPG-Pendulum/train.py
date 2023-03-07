@@ -131,13 +131,14 @@ def main():
     log_name = os.path.join(args.project, args.env, args.algo, timestamp)
     text_log_path = os.path.join(args.log_dir, args.project, args.env,
                                  args.algo)
-    tensorboard_log_path = get_outdir(text_log_path, 'log_dir')
+    tensorboard_log_path = get_outdir(text_log_path, 'tensorboard_log')
     log_file = os.path.join(text_log_path, f'{timestamp}.log')
     text_logger = get_root_logger(log_file=log_file, log_level='INFO')
     args.video_folder = get_outdir(text_log_path, 'video')
 
     if args.logger == 'wandb':
         logger = WandbLogger(
+            dir=text_log_path,
             train_interval=args.train_log_interval,
             test_interval=args.test_log_interval,
             update_interval=args.train_log_interval,
