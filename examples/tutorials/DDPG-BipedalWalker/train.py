@@ -180,6 +180,7 @@ def main():
         hidden_dim=args.hidden_dim,
         actor_lr=args.actor_lr,
         critic_lr=args.critic_lr,
+        weight_decay=args.weight_decay,
         ou_noise_theta=args.ou_noise_theta,
         ou_noise_sigma=args.ou_noise_sigma,
         action_bound=action_bound,
