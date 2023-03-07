@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, Tuple
 
 import gym
 import numpy as np
@@ -8,34 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
 
+from rltoolkit.models.ounoise import OUNoise
 from rltoolkit.models.utils import soft_target_update
-
-
-class OUNoise(object):
-
-    def __init__(self,
-                 mu: float = 0.0,
-                 sigma: float = 0.3,
-                 theta: float = 0.15,
-                 dt: float = 1e-2,
-                 x0: Optional[Union[float, np.ndarray]] = None):
-        self.mu = mu
-        self.sigma = sigma
-        self.theta = theta
-        self.dt = dt
-        self.x0 = x0
-        self.reset()
-
-    def reset(self):
-        self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(
-            self.mu)
-
-    def __call__(self, size: Sequence[int]):
-        x = self.x_prev + self.theta * (
-            self.mu - self.x_prev) * self.dt + self.sigma * np.sqrt(
-                self.dt) * np.random.normal(size=size)
-        self.x_prev = x
-        return x
 
 
 class PolicyNet(nn.Module):
