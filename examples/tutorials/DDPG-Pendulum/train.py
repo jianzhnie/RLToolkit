@@ -21,14 +21,14 @@ config = {
     'env': 'Pendulum-v1',
     'algo': 'ddpg',
     'hidden_dim': 128,
-    'total_steps': 10000,  # max training steps
+    'total_steps': 20000,  # max training steps
     'memory_size': 5000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
     'actor_lr': 3e-4,  # start learning rate
     'critic_lr': 3e-3,  # end learning rate
     'initial_random_steps': 2000,
-    'ou_noise_theta': 1.0,
-    'ou_noise_sigma': 0.1,
+    'ou_noise_theta': 0.15,
+    'ou_noise_sigma': 0.3,
     'gamma': 0.98,  # discounting factor
     'tau': 0.005,  # 软更新参数,
     'sigma': 0.01,
@@ -227,14 +227,6 @@ def main():
             logger.log_test_data(test_results, steps_cnt)
 
         progress_bar.update(episode_step)
-
-    # render and record video
-    run_evaluate_episodes(
-        agent,
-        test_env,
-        n_eval_episodes=1,
-        render=False,
-        video_folder=args.video_folder)
 
 
 if __name__ == '__main__':
