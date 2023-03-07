@@ -1,6 +1,6 @@
 import copy
 import random
-from typing import Any, Tuple
+from typing import Any, Optional, Sequence, Tuple, Union
 
 import gym
 import numpy as np
@@ -12,7 +12,7 @@ from torch.optim import Adam
 from rltoolkit.models.utils import soft_target_update
 
 
-class OUNoise(object):
+class OUNoise_(object):
     """Ornstein-Uhlenbeck process.
 
     Taken from Udacity deep-reinforcement-learning github repository:
@@ -20,13 +20,11 @@ class OUNoise(object):
     ddpg-pendulum/ddpg_agent.py
     """
 
-    def __init__(
-        self,
-        size: int,
-        mu: float = 0.0,
-        theta: float = 0.15,
-        sigma: float = 0.2,
-    ):
+    def __init__(self,
+                 size: int,
+                 mu: float = 0.0,
+                 theta: float = 0.15,
+                 sigma: float = 0.2):
         """Initialize parameters and noise process."""
         self.state = np.float64(0.0)
         self.mu = mu * np.ones(size)
@@ -45,6 +43,33 @@ class OUNoise(object):
             [random.random() for _ in range(len(x))])
         self.state = x + dx
         return self.state
+
+
+class OUNoise(object):
+
+    def __init__(self,
+                 mu: float = 0.0,
+                 sigma: float = 0.3,
+                 theta: float = 0.15,
+                 dt: float = 1e-2,
+                 x0: Optional[Union[float, np.ndarray]] = None):
+        self.mu = mu
+        self.sigma = sigma
+        self.theta = theta
+        self.dt = dt
+        self.x0 = x0
+        self.reset()
+
+    def reset(self):
+        self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(
+            self.mu)
+
+    def __call__(self, size: Sequence[int]):
+        x = self.x_prev + self.theta * (
+            self.mu - self.x_prev) * self.dt + self.sigma * np.sqrt(
+                self.dt) * np.random.normal(size=size)
+        self.x_prev = x
+        return x
 
 
 class PolicyNet(nn.Module):
@@ -144,7 +169,7 @@ class Agent(object):
 
         # noise
         self.noise = OUNoise(
-            action_dim, theta=ou_noise_theta, sigma=ou_noise_sigma)
+            mu=0.0, sigma=ou_noise_sigma, theta=ou_noise_theta)
 
         # 策略网络
         self.actor = PolicyNet(obs_dim, hidden_dim, action_dim).to(device)
@@ -168,7 +193,7 @@ class Agent(object):
             obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
             selected_action = self.actor(obs).detach().cpu().numpy()
             # add noise for exploration during training
-            noise = self.noise.sample()
+            noise = self.noise(selected_action.shape)
             selected_action = np.clip(selected_action + noise, -1.0, 1.0)
             selected_action *= self.action_bound
         selected_action = selected_action.flatten()
