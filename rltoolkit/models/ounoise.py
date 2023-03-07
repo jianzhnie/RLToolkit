@@ -12,13 +12,11 @@ class OUNoise(object):
     ddpg-pendulum/ddpg_agent.py
     """
 
-    def __init__(
-        self,
-        size: int,
-        mu: float = 0.0,
-        theta: float = 0.15,
-        sigma: float = 0.2,
-    ):
+    def __init__(self,
+                 size: int,
+                 mu: float = 0.0,
+                 theta: float = 0.15,
+                 sigma: float = 0.2):
         """Initialize parameters and noise process."""
         self.state = np.float64(0.0)
         self.mu = mu * np.ones(size)

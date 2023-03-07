@@ -1,6 +1,6 @@
 import copy
 import random
-from typing import Any, Tuple
+from typing import Any, Optional, Sequence, Tuple, Union
 
 import gym
 import numpy as np
@@ -9,8 +9,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
 
+from rltoolkit.models.utils import soft_target_update
 
-class OUNoise(object):
+
+class OUNoise_(object):
     """Ornstein-Uhlenbeck process.
 
     Taken from Udacity deep-reinforcement-learning github repository:
@@ -18,13 +20,11 @@ class OUNoise(object):
     ddpg-pendulum/ddpg_agent.py
     """
 
-    def __init__(
-        self,
-        size: int,
-        mu: float = 0.0,
-        theta: float = 0.15,
-        sigma: float = 0.2,
-    ):
+    def __init__(self,
+                 size: int,
+                 mu: float = 0.0,
+                 theta: float = 0.15,
+                 sigma: float = 0.2):
         """Initialize parameters and noise process."""
         self.state = np.float64(0.0)
         self.mu = mu * np.ones(size)
@@ -43,6 +43,33 @@ class OUNoise(object):
             [random.random() for _ in range(len(x))])
         self.state = x + dx
         return self.state
+
+
+class OUNoise(object):
+
+    def __init__(self,
+                 mu: float = 0.0,
+                 sigma: float = 0.3,
+                 theta: float = 0.15,
+                 dt: float = 1e-2,
+                 x0: Optional[Union[float, np.ndarray]] = None):
+        self.mu = mu
+        self.sigma = sigma
+        self.theta = theta
+        self.dt = dt
+        self.x0 = x0
+        self.reset()
+
+    def reset(self):
+        self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(
+            self.mu)
+
+    def __call__(self, size: Sequence[int]):
+        x = self.x_prev + self.theta * (
+            self.mu - self.x_prev) * self.dt + self.sigma * np.sqrt(
+                self.dt) * np.random.normal(size=size)
+        self.x_prev = x
+        return x
 
 
 class PolicyNet(nn.Module):
@@ -122,13 +149,17 @@ class Agent(object):
                  initial_random_steps: int,
                  ou_noise_theta: float,
                  ou_noise_sigma: float,
-                 tau: float,
-                 gamma: float,
+                 tau: float = 0.05,
+                 gamma: float = 0.99,
+                 update_target_step: int = 100,
                  device: Any = None):
 
         self.env = env
         self.action_dim = action_dim
+        self.actor_lr = actor_lr
+        self.critic_lr = critic_lr
         self.global_update_step = 0
+        self.update_target_step = update_target_step
         self.initial_random_steps = initial_random_steps
         self.gamma = gamma
         # action_bound是环境可以接受的动作最大值
@@ -138,7 +169,7 @@ class Agent(object):
 
         # noise
         self.noise = OUNoise(
-            action_dim, theta=ou_noise_theta, sigma=ou_noise_sigma)
+            mu=0.0, sigma=ou_noise_sigma, theta=ou_noise_theta)
 
         # 策略网络
         self.actor = PolicyNet(obs_dim, hidden_dim, action_dim).to(device)
@@ -162,7 +193,7 @@ class Agent(object):
             obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
             selected_action = self.actor(obs).detach().cpu().numpy()
             # add noise for exploration during training
-            noise = self.noise.sample()
+            noise = self.noise(selected_action.shape)
             selected_action = np.clip(selected_action + noise, -1.0, 1.0)
             selected_action *= self.action_bound
         selected_action = selected_action.flatten()
@@ -173,12 +204,6 @@ class Agent(object):
         selected_action = self.actor(obs).detach().cpu().numpy().flatten()
         selected_action *= self.action_bound
         return selected_action
-
-    def soft_update(self, net, target_net):
-        for param_target, param in zip(target_net.parameters(),
-                                       net.parameters()):
-            param_target.data.copy_(param_target.data * (1.0 - self.tau) +
-                                    param.data * self.tau)
 
     def learn(self, obs: torch.Tensor, action: torch.Tensor,
               reward: torch.Tensor, next_obs: torch.Tensor,
@@ -200,16 +225,20 @@ class Agent(object):
         self.critic_optimizer.step()
 
         # cal policy loss
+        # For the policy function, our objective is to maximize the expected return
+        # To calculate the policy loss, we take the derivative of the objective function with respect to the policy parameter.
+        # Keep in mind that the actor (policy) function is differentiable, so we have to apply the chain rule.
         policy_loss = -torch.mean(self.critic(obs, self.actor(obs)))
         # update policy
         self.actor_optimizer.zero_grad()
         policy_loss.backward()
         self.actor_optimizer.step()
 
-        # 软更新策略网络
-        self.soft_update(self.actor, self.target_actor)
-        # 软更新价值网络
-        self.soft_update(self.critic, self.target_critic)
+        if self.global_update_step % self.update_target_step == 0:
+            # 软更新策略网络
+            soft_target_update(self.actor, self.target_actor, tau=self.tau)
+            # 软更新价值网络
+            soft_target_update(self.critic, self.target_critic, tau=self.tau)
 
         self.global_update_step += 1
         return policy_loss.item(), value_loss.item()
