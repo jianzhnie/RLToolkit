@@ -21,24 +21,21 @@ config = {
     'env': 'Pendulum-v1',
     'algo': 'ddpg',
     'hidden_dim': 128,
-    'total_steps': 20000,  # max training steps
-    'memory_size': 5000,  # Replay buffer size
+    'total_steps': 30000,  # max training steps
+    'memory_size': 10000,  # Replay buffer size
     'memory_warmup_size': 1000,  # Replay buffer memory_warmup_size
-    'actor_lr': 3e-4,  # start learning rate
-    'critic_lr': 3e-3,  # end learning rate
-    'initial_random_steps': 2000,
+    'actor_lr': 5e-4,  # start learning rate
+    'critic_lr': 5e-3,  # end learning rate
     'ou_noise_theta': 0.15,
     'ou_noise_sigma': 0.3,
     'gamma': 0.98,  # discounting factor
     'tau': 0.005,  # 软更新参数,
-    'sigma': 0.01,
     'batch_size': 64,
-    'eval_render': False,  # do eval render
-    'test_every_steps': 1000,  # evaluation freq
     'train_log_interval': 1,
     'test_log_interval': 5,  # evaluation freq
     'log_dir': 'work_dirs',
     'logger': 'wandb',
+    'eval_render': False,  # do eval render
     'video_folder': 'results'
 }
 
@@ -159,6 +156,14 @@ def main():
     action_dim = env.action_space.shape[0]
     action_bound = env.action_space.high[0]  # 动作最大值
 
+    print('---------------------------------------')
+    print('Environment:', args.env)
+    print('Algorithm:', args.algo)
+    print('State dimension:', obs_dim)
+    print('Action dimension:', action_dim)
+    print('Action limit:', action_bound)
+    print('---------------------------------------')
+
     rpm = ReplayBuffer(
         max_size=args.memory_size,
         obs_dim=obs_dim,
@@ -173,7 +178,6 @@ def main():
         hidden_dim=args.hidden_dim,
         actor_lr=args.actor_lr,
         critic_lr=args.critic_lr,
-        initial_random_steps=args.initial_random_steps,
         ou_noise_theta=args.ou_noise_theta,
         ou_noise_sigma=args.ou_noise_sigma,
         action_bound=action_bound,
@@ -204,8 +208,6 @@ def main():
             'rewards': episode_reward,
             'episode_policy_loss': episode_policy_loss,
             'episode_value_loss': episode_value_loss,
-            'actor_learning_rate': agent.actor_lr,
-            'critic_learning_rate': agent.critic_lr,
             'replay_buffer_size': rpm.size()
         }
 
@@ -227,6 +229,14 @@ def main():
             logger.log_test_data(test_results, steps_cnt)
 
         progress_bar.update(episode_step)
+
+    # render and record video
+    run_evaluate_episodes(
+        agent,
+        test_env,
+        n_eval_episodes=1,
+        render=False,
+        video_folder=args.video_folder)
 
 
 if __name__ == '__main__':
