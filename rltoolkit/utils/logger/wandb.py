@@ -30,6 +30,7 @@ class WandbLogger(BaseLogger):
         result = onpolicy_trainer(policy, train_collector, test_collector,
                                   logger=logger)
 
+    :param str dir: An absolute path to a directory where metadata will be stored.
     :param int train_interval: the log interval in log_train_data(). Default to 1000.
     :param int test_interval: the log interval in log_test_data(). Default to 1.
     :param int update_interval: the log interval in log_update_data().
@@ -47,6 +48,7 @@ class WandbLogger(BaseLogger):
 
     def __init__(
         self,
+        dir: str = None,
         train_interval: int = 1000,
         test_interval: int = 1,
         update_interval: int = 1000,
@@ -67,6 +69,7 @@ class WandbLogger(BaseLogger):
             project = os.getenv('WANDB_PROJECT', 'tianshou')
 
         self.wandb_run = wandb.init(
+            dir=dir,
             project=project,
             name=name,
             id=run_id,
