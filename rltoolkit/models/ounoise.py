@@ -1,10 +1,11 @@
 import copy
 import random
+from typing import Optional, Sequence, Union
 
 import numpy as np
 
 
-class OUNoise(object):
+class OUNoise_old(object):
     """Ornstein-Uhlenbeck process.
 
     Taken from Udacity deep-reinforcement-learning github repository:
@@ -35,3 +36,30 @@ class OUNoise(object):
             [random.random() for _ in range(len(x))])
         self.state = x + dx
         return self.state
+
+
+class OUNoise(object):
+
+    def __init__(self,
+                 mu: float = 0.0,
+                 sigma: float = 0.3,
+                 theta: float = 0.15,
+                 dt: float = 1e-2,
+                 x0: Optional[Union[float, np.ndarray]] = None):
+        self.mu = mu
+        self.sigma = sigma
+        self.theta = theta
+        self.dt = dt
+        self.x0 = x0
+        self.reset()
+
+    def reset(self):
+        self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(
+            self.mu)
+
+    def __call__(self, size: Sequence[int]):
+        x = self.x_prev + self.theta * (
+            self.mu - self.x_prev) * self.dt + self.sigma * np.sqrt(
+                self.dt) * np.random.normal(size=size)
+        self.x_prev = x
+        return x

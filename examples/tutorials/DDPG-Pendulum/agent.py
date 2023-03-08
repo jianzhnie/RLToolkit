@@ -1,6 +1,5 @@
 import copy
-import random
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, Tuple
 
 import gym
 import numpy as np
@@ -9,67 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
 
+from rltoolkit.models.ounoise import OUNoise
 from rltoolkit.models.utils import soft_target_update
-
-
-class OUNoise_(object):
-    """Ornstein-Uhlenbeck process.
-
-    Taken from Udacity deep-reinforcement-learning github repository:
-    https://github.com/udacity/deep-reinforcement-learning/blob/master/
-    ddpg-pendulum/ddpg_agent.py
-    """
-
-    def __init__(self,
-                 size: int,
-                 mu: float = 0.0,
-                 theta: float = 0.15,
-                 sigma: float = 0.2):
-        """Initialize parameters and noise process."""
-        self.state = np.float64(0.0)
-        self.mu = mu * np.ones(size)
-        self.theta = theta
-        self.sigma = sigma
-        self.reset()
-
-    def reset(self):
-        """Reset the internal state (= noise) to mean (mu)."""
-        self.state = copy.copy(self.mu)
-
-    def sample(self) -> np.ndarray:
-        """Update internal state and return it as a noise sample."""
-        x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.array(
-            [random.random() for _ in range(len(x))])
-        self.state = x + dx
-        return self.state
-
-
-class OUNoise(object):
-
-    def __init__(self,
-                 mu: float = 0.0,
-                 sigma: float = 0.3,
-                 theta: float = 0.15,
-                 dt: float = 1e-2,
-                 x0: Optional[Union[float, np.ndarray]] = None):
-        self.mu = mu
-        self.sigma = sigma
-        self.theta = theta
-        self.dt = dt
-        self.x0 = x0
-        self.reset()
-
-    def reset(self):
-        self.x_prev = self.x0 if self.x0 is not None else np.zeros_like(
-            self.mu)
-
-    def __call__(self, size: Sequence[int]):
-        x = self.x_prev + self.theta * (
-            self.mu - self.x_prev) * self.dt + self.sigma * np.sqrt(
-                self.dt) * np.random.normal(size=size)
-        self.x_prev = x
-        return x
 
 
 class PolicyNet(nn.Module):
@@ -146,26 +86,24 @@ class Agent(object):
                  actor_lr: float,
                  critic_lr: float,
                  action_bound: float,
-                 initial_random_steps: int,
                  ou_noise_theta: float,
                  ou_noise_sigma: float,
-                 tau: float = 0.05,
+                 tau: float = 0.005,
                  gamma: float = 0.99,
-                 update_target_step: int = 100,
+                 update_target_step: int = 1,
                  device: Any = None):
 
         self.env = env
         self.action_dim = action_dim
         self.actor_lr = actor_lr
         self.critic_lr = critic_lr
-        self.global_update_step = 0
-        self.update_target_step = update_target_step
-        self.initial_random_steps = initial_random_steps
         self.gamma = gamma
-        # action_bound是环境可以接受的动作最大值
-        self.action_bound = action_bound
         # 目标网络软更新参数
         self.tau = tau
+        # action_bound是环境可以接受的动作最大值
+        self.action_bound = action_bound
+        self.global_update_step = 0
+        self.update_target_step = update_target_step
 
         # noise
         self.noise = OUNoise(
@@ -187,15 +125,13 @@ class Agent(object):
         self.device = device
 
     def sample(self, obs: np.ndarray):
-        if self.global_update_step < self.initial_random_steps:
-            selected_action = self.env.action_space.sample()
-        else:
-            obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
-            selected_action = self.actor(obs).detach().cpu().numpy()
-            # add noise for exploration during training
-            noise = self.noise(selected_action.shape)
-            selected_action = np.clip(selected_action + noise, -1.0, 1.0)
-            selected_action *= self.action_bound
+
+        obs = torch.from_numpy(obs).float().unsqueeze(0).to(self.device)
+        selected_action = self.actor(obs).detach().cpu().numpy()
+        # add noise for exploration during training
+        noise = self.noise(selected_action.shape)
+        selected_action = np.clip(selected_action + noise, -1.0, 1.0)
+        selected_action *= self.action_bound
         selected_action = selected_action.flatten()
         return selected_action
 
