@@ -1,7 +1,6 @@
 
 ## for atari
 ale-py
-# gym[all]
 gym[atari,accept-rom-license]==0.21.0
 imageio
 matplotlib

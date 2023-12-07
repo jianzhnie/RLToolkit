@@ -2,7 +2,7 @@ import logging
 import os
 from collections import OrderedDict
 
-from mmcv.utils import get_logger
+from .logging import get_logger
 
 try:
     import wandb
@@ -21,8 +21,9 @@ def get_root_logger(log_file=None, log_level=logging.INFO):
     Returns:
         :obj:`logging.Logger`: The obtained logger
     """
-    logger = get_logger(
-        name='rltoolkit', log_file=log_file, log_level=log_level)
+    logger = get_logger(name='rltoolkit',
+                        log_file=log_file,
+                        log_level=log_level)
 
     return logger
 
