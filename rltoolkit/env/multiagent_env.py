@@ -28,8 +28,8 @@ def MAenv(scenario_name, continuous_actions=False):
     assert scenario_name in env_list, 'Env {} not found (valid envs include {})'.format(
         scenario_name, env_list)
     if scenario_name == 'simple':
-        env = simple_v2.parallel_env(
-            max_cycles=25, continuous_actions=continuous_actions)
+        env = simple_v2.parallel_env(max_cycles=25,
+                                     continuous_actions=continuous_actions)
     elif scenario_name == 'simple_adversary':
         env = simple_adversary_v2.parallel_env(
             N=2, max_cycles=25, continuous_actions=continuous_actions)
@@ -49,12 +49,11 @@ def MAenv(scenario_name, continuous_actions=False):
             max_cycles=25,
             continuous_actions=continuous_actions)
     elif scenario_name == 'simple_tag':
-        env = simple_tag_v2.parallel_env(
-            num_good=1,
-            num_adversaries=3,
-            num_obstacles=2,
-            max_cycles=25,
-            continuous_actions=continuous_actions)
+        env = simple_tag_v2.parallel_env(num_good=1,
+                                         num_adversaries=3,
+                                         num_obstacles=2,
+                                         max_cycles=25,
+                                         continuous_actions=continuous_actions)
     elif scenario_name == 'simple_world_comm':
         env = simple_world_comm_v2.parallel_env(
             num_good=2,

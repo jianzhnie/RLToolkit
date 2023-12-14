@@ -20,9 +20,8 @@ def _extract_patches(x, kernel_size, stride, padding):
     x = x.unfold(2, kernel_size[0], stride[0])
     x = x.unfold(3, kernel_size[1], stride[1])
     x = x.transpose_(1, 2).transpose_(2, 3).contiguous()
-    x = x.view(
-        x.size(0), x.size(1), x.size(2),
-        x.size(3) * x.size(4) * x.size(5))
+    x = x.view(x.size(0), x.size(1), x.size(2),
+               x.size(3) * x.size(4) * x.size(5))
     return x
 
 
@@ -138,10 +137,9 @@ class KFACOptimizer(optim.Optimizer):
         self.Ts = Ts
         self.Tf = Tf
 
-        self.optim = optim.SGD(
-            model.parameters(),
-            lr=self.lr * (1 - self.momentum),
-            momentum=self.momentum)
+        self.optim = optim.SGD(model.parameters(),
+                               lr=self.lr * (1 - self.momentum),
+                               momentum=self.momentum)
 
     def _save_input(self, module, input):
         if torch.is_grad_enabled() and self.steps % self.Ts == 0:
@@ -207,10 +205,10 @@ class KFACOptimizer(optim.Optimizer):
             if self.steps % self.Tf == 0:
                 # My asynchronous implementation exists, I will add it later.
                 # Experimenting with different ways to this in PyTorch.
-                self.d_a[m], self.Q_a[m] = torch.symeig(
-                    self.m_aa[m], eigenvectors=True)
-                self.d_g[m], self.Q_g[m] = torch.symeig(
-                    self.m_gg[m], eigenvectors=True)
+                self.d_a[m], self.Q_a[m] = torch.symeig(self.m_aa[m],
+                                                        eigenvectors=True)
+                self.d_g[m], self.Q_g[m] = torch.symeig(self.m_gg[m],
+                                                        eigenvectors=True)
 
                 self.d_a[m].mul_((self.d_a[m] > 1e-6).float())
                 self.d_g[m].mul_((self.d_g[m] > 1e-6).float())
@@ -221,8 +219,8 @@ class KFACOptimizer(optim.Optimizer):
                 p_grad_mat = p.grad.data
 
             v1 = self.Q_g[m].t() @ p_grad_mat @ self.Q_a[m]
-            v2 = v1 / (
-                self.d_g[m].unsqueeze(1) * self.d_a[m].unsqueeze(0) + la)
+            v2 = v1 / (self.d_g[m].unsqueeze(1) * self.d_a[m].unsqueeze(0) +
+                       la)
             v = self.Q_g[m] @ v2 @ self.Q_a[m].t()
 
             v = v.view(p.grad.data.size())

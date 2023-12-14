@@ -45,10 +45,9 @@ def make_env(env_id, seed, rank, log_dir, allow_early_resets):
             env = TimeLimitMask(env)
 
         if log_dir is not None:
-            env = Monitor(
-                env,
-                os.path.join(log_dir, str(rank)),
-                allow_early_resets=allow_early_resets)
+            env = Monitor(env,
+                          os.path.join(log_dir, str(rank)),
+                          allow_early_resets=allow_early_resets)
 
         if is_atari:
             if len(env.observation_space.shape) == 3:
@@ -227,8 +226,9 @@ class VecPyTorchFrameStack(VecEnvWrapper):
         self.stacked_obs = torch.zeros((venv.num_envs, ) +
                                        low.shape).to(device)
 
-        observation_space = gym.spaces.Box(
-            low=low, high=high, dtype=venv.observation_space.dtype)
+        observation_space = gym.spaces.Box(low=low,
+                                           high=high,
+                                           dtype=venv.observation_space.dtype)
         VecEnvWrapper.__init__(self, venv, observation_space=observation_space)
 
     def step_wait(self):
@@ -264,8 +264,10 @@ class ResizeObservation(gym.ObservationWrapper):
             self.shape = tuple(shape)
 
         obs_shape = self.shape + self.observation_space.shape[2:]
-        self.observation_space = Box(
-            low=0, high=255, shape=obs_shape, dtype=np.uint8)
+        self.observation_space = Box(low=0,
+                                     high=255,
+                                     shape=obs_shape,
+                                     dtype=np.uint8)
 
     def observation(self, observation):
         resize_obs = transform.resize(observation, self.shape)

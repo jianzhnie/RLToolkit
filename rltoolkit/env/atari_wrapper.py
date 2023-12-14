@@ -145,8 +145,8 @@ class WarpFrame(gym.ObservationWrapper):
     def observation(self, frame):
         """returns the current observation from a frame."""
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        return cv2.resize(
-            frame, (self.size, self.size), interpolation=cv2.INTER_AREA)
+        return cv2.resize(frame, (self.size, self.size),
+                          interpolation=cv2.INTER_AREA)
 
 
 class ScaledFloatFrame(gym.ObservationWrapper):
