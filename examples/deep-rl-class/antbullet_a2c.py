@@ -28,22 +28,21 @@ if __name__ == '__main__':
     # Adding this wrapper to normalize the observation and the reward
     env = VecNormalize(env, norm_obs=True, norm_reward=False, clip_obs=10.)
 
-    model = A2C(
-        policy='MlpPolicy',
-        env=env,
-        gae_lambda=0.9,
-        gamma=0.99,
-        learning_rate=0.00096,
-        max_grad_norm=0.5,
-        n_steps=5,
-        vf_coef=0.4,
-        ent_coef=0.0,
-        tensorboard_log=f'work_dirs/{env_id}/tensorboard',
-        policy_kwargs=dict(log_std_init=-2, ortho_init=False),
-        normalize_advantage=False,
-        use_rms_prop=True,
-        use_sde=True,
-        verbose=1)
+    model = A2C(policy='MlpPolicy',
+                env=env,
+                gae_lambda=0.9,
+                gamma=0.99,
+                learning_rate=0.00096,
+                max_grad_norm=0.5,
+                n_steps=5,
+                vf_coef=0.4,
+                ent_coef=0.0,
+                tensorboard_log=f'work_dirs/{env_id}/tensorboard',
+                policy_kwargs=dict(log_std_init=-2, ortho_init=False),
+                normalize_advantage=False,
+                use_rms_prop=True,
+                use_sde=True,
+                verbose=1)
     model.learn(200000)
     # Save the model and  VecNormalize statistics when saving the agent
     model.save(f'work_dirs/{env_id}/a2c-AntBulletEnv-v0')
@@ -67,12 +66,11 @@ if __name__ == '__main__':
     print(f'Mean reward = {mean_reward:.2f} +/- {std_reward:.2f}')
 
     notebook_login()
-    package_to_hub(
-        model=model,
-        model_name=f'a2c-{env_id}',
-        model_architecture='A2C',
-        env_id=env_id,
-        eval_env=eval_env,
-        repo_id=f'jianzhnie/a2c-v1-{env_id}',
-        commit_message='Initial commit',
-        logs=f'work_dirs/{env_id}')
+    package_to_hub(model=model,
+                   model_name=f'a2c-{env_id}',
+                   model_architecture='A2C',
+                   env_id=env_id,
+                   eval_env=eval_env,
+                   repo_id=f'jianzhnie/a2c-v1-{env_id}',
+                   commit_message='Initial commit',
+                   logs=f'work_dirs/{env_id}')

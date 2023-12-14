@@ -71,18 +71,16 @@ class PPO:
         return action.item()
 
     def update(self, transition_dict):
-        states = torch.tensor(
-            transition_dict['states'], dtype=torch.float).to(self.device)
+        states = torch.tensor(transition_dict['states'],
+                              dtype=torch.float).to(self.device)
         actions = torch.tensor(transition_dict['actions']).view(-1, 1).to(
             self.device)
-        rewards = torch.tensor(
-            transition_dict['rewards'],
-            dtype=torch.float).view(-1, 1).to(self.device)
-        next_states = torch.tensor(
-            transition_dict['next_states'], dtype=torch.float).to(self.device)
-        dones = torch.tensor(
-            transition_dict['dones'],
-            dtype=torch.float).view(-1, 1).to(self.device)
+        rewards = torch.tensor(transition_dict['rewards'],
+                               dtype=torch.float).view(-1, 1).to(self.device)
+        next_states = torch.tensor(transition_dict['next_states'],
+                                   dtype=torch.float).to(self.device)
+        dones = torch.tensor(transition_dict['dones'],
+                             dtype=torch.float).view(-1, 1).to(self.device)
 
         td_target = rewards + self.gamma * self.critic(next_states) * (1 -
                                                                        dones)
@@ -123,8 +121,9 @@ if __name__ == '__main__':
     team_size = 2
     grid_size = (15, 15)
     # 创建Combat环境，格子世界的大小为15x15，己方智能体和敌方智能体数量都为2
-    env = Combat(
-        grid_shape=grid_size, n_agents=team_size, n_opponents=team_size)
+    env = Combat(grid_shape=grid_size,
+                 n_agents=team_size,
+                 n_opponents=team_size)
 
     state_dim = env.observation_space[0].shape[0]
     action_dim = env.action_space[0].n
@@ -134,8 +133,8 @@ if __name__ == '__main__':
 
     win_list = []
     for i in range(10):
-        with tqdm(
-                total=int(num_episodes / 10), desc='Iteration %d' % i) as pbar:
+        with tqdm(total=int(num_episodes / 10),
+                  desc='Iteration %d' % i) as pbar:
             for i_episode in range(int(num_episodes / 10)):
                 transition_dict_1 = {
                     'states': [],

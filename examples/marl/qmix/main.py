@@ -4,7 +4,6 @@ import sys
 import time
 from copy import deepcopy
 
-import mmcv
 import numpy as np
 import torch
 from arguments import get_common_args
@@ -19,8 +18,8 @@ from torch.utils.tensorboard import SummaryWriter
 sys.path.append('../../')
 
 from rltoolkit.data.buffer.ma_replaybuffer import EpisodeData, ReplayBuffer
-from rltoolkit.utils import TensorboardLogger, WandbLogger
-from rltoolkit.utils.logger.logs import get_outdir, get_root_logger
+from rltoolkit.utils import (ProgressBar, TensorboardLogger, WandbLogger,
+                             get_outdir, get_root_logger)
 
 
 def run_train_episode(env: StarCraft2Env,
@@ -119,8 +118,8 @@ def main():
     common_dict = vars(common_args)
     config.update(common_dict)
 
-    env = StarCraft2Env(
-        map_name=config['scenario'], difficulty=config['difficulty'])
+    env = StarCraft2Env(map_name=config['scenario'],
+                        difficulty=config['difficulty'])
 
     env = SC2EnvWrapper(env)
     config['episode_limit'] = env.episode_limit
@@ -142,15 +141,14 @@ def main():
     text_logger = get_root_logger(log_file=log_file, log_level='INFO')
 
     if args.logger == 'wandb':
-        logger = WandbLogger(
-            train_interval=args.train_log_interval,
-            test_interval=args.test_log_interval,
-            update_interval=args.train_log_interval,
-            project=args.project,
-            name=log_name.replace(os.path.sep, '_'),
-            save_interval=1,
-            config=args,
-            entity='jianzhnie')
+        logger = WandbLogger(train_interval=args.train_log_interval,
+                             test_interval=args.test_log_interval,
+                             update_interval=args.train_log_interval,
+                             project=args.project,
+                             name=log_name.replace(os.path.sep, '_'),
+                             save_interval=1,
+                             config=args,
+                             entity='jianzhnie')
     writer = SummaryWriter(tensorboard_log_path)
     writer.add_text('args', str(args))
     if args.logger == 'tensorboard':
@@ -158,26 +156,23 @@ def main():
     else:  # wandb
         logger.load(writer)
 
-    rpm = ReplayBuffer(
-        max_size=config['replay_buffer_size'],
-        episode_limit=config['episode_limit'],
-        state_shape=config['state_shape'],
-        obs_shape=config['obs_shape'],
-        num_agents=config['n_agents'],
-        num_actions=config['n_actions'],
-        batch_size=config['batch_size'],
-        device=device)
+    rpm = ReplayBuffer(max_size=config['replay_buffer_size'],
+                       episode_limit=config['episode_limit'],
+                       state_shape=config['state_shape'],
+                       obs_shape=config['obs_shape'],
+                       num_agents=config['n_agents'],
+                       num_actions=config['n_actions'],
+                       batch_size=config['batch_size'],
+                       device=device)
 
-    agent_model = RNNModel(
-        input_shape=config['obs_shape'],
-        n_actions=config['n_actions'],
-        rnn_hidden_dim=config['rnn_hidden_dim'])
-    mixer_model = QMixerModel(
-        n_agents=config['n_agents'],
-        state_shape=config['state_shape'],
-        mixing_embed_dim=config['mixing_embed_dim'],
-        hypernet_layers=config['hypernet_layers'],
-        hypernet_embed_dim=config['hypernet_embed_dim'])
+    agent_model = RNNModel(input_shape=config['obs_shape'],
+                           n_actions=config['n_actions'],
+                           rnn_hidden_dim=config['rnn_hidden_dim'])
+    mixer_model = QMixerModel(n_agents=config['n_agents'],
+                              state_shape=config['state_shape'],
+                              mixing_embed_dim=config['mixing_embed_dim'],
+                              hypernet_layers=config['hypernet_layers'],
+                              hypernet_embed_dim=config['hypernet_embed_dim'])
 
     qmix_agent = QMixAgent(
         agent_model=agent_model,
@@ -195,7 +190,7 @@ def main():
         clip_grad_norm=config['clip_grad_norm'],
         device=device)
 
-    progress_bar = mmcv.ProgressBar(config['memory_warmup_size'])
+    progress_bar = ProgressBar(config['memory_warmup_size'])
     while rpm.size() < config['memory_warmup_size']:
         run_train_episode(env, qmix_agent, rpm, config)
         progress_bar.update()

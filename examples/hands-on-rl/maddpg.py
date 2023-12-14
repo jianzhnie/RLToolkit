@@ -29,11 +29,10 @@ def onehot_from_logits(logits, eps=0.01):
     """生成最优动作的独热(one-hot)形式."""
     argmax_acs = (logits == logits.max(1, keepdim=True)[0]).float()
     # 生成随机动作,转换成独热形式
-    rand_acs = torch.autograd.Variable(
-        torch.eye(logits.shape[1])[[
-            np.random.choice(range(logits.shape[1]), size=logits.shape[0])
-        ]],
-        requires_grad=False).to(logits.device)
+    rand_acs = torch.autograd.Variable(torch.eye(logits.shape[1])[[
+        np.random.choice(range(logits.shape[1]), size=logits.shape[0])
+    ]],
+                                       requires_grad=False).to(logits.device)
     # 通过epsilon-贪婪算法来选择用哪个动作
     return torch.stack([
         argmax_acs[i] if r > eps else rand_acs[i]
@@ -43,15 +42,15 @@ def onehot_from_logits(logits, eps=0.01):
 
 def sample_gumbel(shape, eps=1e-20, tens_type=torch.FloatTensor):
     """从Gumbel(0,1)分布中采样."""
-    U = torch.autograd.Variable(
-        tens_type(*shape).uniform_(), requires_grad=False)
+    U = torch.autograd.Variable(tens_type(*shape).uniform_(),
+                                requires_grad=False)
     return -torch.log(-torch.log(U + eps) + eps)
 
 
 def gumbel_softmax_sample(logits, temperature):
     """从Gumbel-Softmax分布中采样."""
-    y = logits + sample_gumbel(
-        logits.shape, tens_type=type(logits.data)).to(logits.device)
+    y = logits + sample_gumbel(logits.shape, tens_type=type(logits.data)).to(
+        logits.device)
     return F.softmax(y / temperature, dim=1)
 
 

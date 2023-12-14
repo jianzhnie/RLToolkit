@@ -3,7 +3,6 @@ import os
 import time
 
 import gym
-import mmcv
 import numpy as np
 import torch
 from ddpg_agent import Agent
@@ -11,8 +10,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from rltoolkit.data.buffer.replaybuffer import \
     SimpleReplayBuffer as ReplayBuffer
-from rltoolkit.utils import TensorboardLogger, WandbLogger
-from rltoolkit.utils.logger.logs import get_outdir, get_root_logger
+from rltoolkit.utils import (ProgressBar, TensorboardLogger, WandbLogger,
+                             get_outdir, get_root_logger)
 
 config = {
     'train_seed': 42,
@@ -138,15 +137,14 @@ def main():
     args.video_folder = get_outdir(text_log_path, 'video')
 
     if args.logger == 'wandb':
-        logger = WandbLogger(
-            dir=text_log_path,
-            train_interval=args.train_log_interval,
-            test_interval=args.test_log_interval,
-            update_interval=args.train_log_interval,
-            project=args.project,
-            name=log_name.replace(os.path.sep, '_'),
-            config=args,
-            entity='jianzhnie')
+        logger = WandbLogger(dir=text_log_path,
+                             train_interval=args.train_log_interval,
+                             test_interval=args.test_log_interval,
+                             update_interval=args.train_log_interval,
+                             project=args.project,
+                             name=log_name.replace(os.path.sep, '_'),
+                             config=args,
+                             entity='jianzhnie')
     writer = SummaryWriter(tensorboard_log_path)
     writer.add_text('args', str(args))
     if args.logger == 'tensorboard':
@@ -166,30 +164,28 @@ def main():
     print('Action limit:', action_bound)
     print('---------------------------------------')
 
-    rpm = ReplayBuffer(
-        max_size=args.memory_size,
-        obs_dim=obs_dim,
-        action_dim=action_dim,
-        batch_size=args.batch_size,
-        device=device)
+    rpm = ReplayBuffer(max_size=args.memory_size,
+                       obs_dim=obs_dim,
+                       action_dim=action_dim,
+                       batch_size=args.batch_size,
+                       device=device)
 
-    agent = Agent(
-        env=env,
-        obs_dim=obs_dim,
-        action_dim=action_dim,
-        hidden_dim=args.hidden_dim,
-        actor_lr=args.actor_lr,
-        critic_lr=args.critic_lr,
-        weight_decay=args.weight_decay,
-        ou_noise_theta=args.ou_noise_theta,
-        ou_noise_sigma=args.ou_noise_sigma,
-        action_bound=action_bound,
-        tau=args.tau,
-        gamma=args.gamma,
-        device=device)
+    agent = Agent(env=env,
+                  obs_dim=obs_dim,
+                  action_dim=action_dim,
+                  hidden_dim=args.hidden_dim,
+                  actor_lr=args.actor_lr,
+                  critic_lr=args.critic_lr,
+                  weight_decay=args.weight_decay,
+                  ou_noise_theta=args.ou_noise_theta,
+                  ou_noise_sigma=args.ou_noise_sigma,
+                  action_bound=action_bound,
+                  tau=args.tau,
+                  gamma=args.gamma,
+                  device=device)
 
     # start training, memory warm up
-    progress_bar = mmcv.ProgressBar(config['memory_warmup_size'])
+    progress_bar = ProgressBar(config['memory_warmup_size'])
     while rpm.size() < args.memory_warmup_size:
         episode_reward, episode_step, episode_policy_loss, episode_value_loss = run_train_episode(
             agent, env, rpm, memory_warmup_size=args.memory_warmup_size)
@@ -197,7 +193,7 @@ def main():
 
     episode_cnt = 0
     steps_cnt = 0  # this is the current timestep
-    progress_bar = mmcv.ProgressBar(args.total_steps)
+    progress_bar = ProgressBar(args.total_steps)
     while steps_cnt < args.total_steps:
         # start epoch
         episode_reward, episode_step, episode_policy_loss, episode_value_loss = run_train_episode(
@@ -222,8 +218,10 @@ def main():
 
         # perform evaluation
         if episode_cnt % config['test_log_interval'] == 0:
-            eval_rewards, eval_steps = run_evaluate_episodes(
-                agent, test_env, n_eval_episodes=5, render=False)
+            eval_rewards, eval_steps = run_evaluate_episodes(agent,
+                                                             test_env,
+                                                             n_eval_episodes=5,
+                                                             render=False)
             text_logger.info(
                 '[Eval], episode: {},  eval_rewards: {:.2f}'.format(
                     episode_cnt, eval_rewards))
@@ -234,12 +232,11 @@ def main():
         progress_bar.update(episode_step)
 
     # render and record video
-    run_evaluate_episodes(
-        agent,
-        test_env,
-        n_eval_episodes=1,
-        render=False,
-        video_folder=args.video_folder)
+    run_evaluate_episodes(agent,
+                          test_env,
+                          n_eval_episodes=1,
+                          render=False,
+                          video_folder=args.video_folder)
 
 
 if __name__ == '__main__':

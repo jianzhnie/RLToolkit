@@ -62,18 +62,16 @@ class PPO(object):
         return action.item()
 
     def update(self, transition_dict):
-        states = torch.tensor(
-            transition_dict['states'], dtype=torch.float).to(self.device)
+        states = torch.tensor(transition_dict['states'],
+                              dtype=torch.float).to(self.device)
         actions = torch.tensor(transition_dict['actions']).view(-1, 1).to(
             self.device)
-        rewards = torch.tensor(
-            transition_dict['rewards'],
-            dtype=torch.float).view(-1, 1).to(self.device)
-        next_states = torch.tensor(
-            transition_dict['next_states'], dtype=torch.float).to(self.device)
-        dones = torch.tensor(
-            transition_dict['dones'],
-            dtype=torch.float).view(-1, 1).to(self.device)
+        rewards = torch.tensor(transition_dict['rewards'],
+                               dtype=torch.float).view(-1, 1).to(self.device)
+        next_states = torch.tensor(transition_dict['next_states'],
+                                   dtype=torch.float).to(self.device)
+        dones = torch.tensor(transition_dict['dones'],
+                             dtype=torch.float).view(-1, 1).to(self.device)
 
         td_target = rewards + self.gamma * self.critic(next_states) * (1 -
                                                                        dones)
@@ -200,8 +198,9 @@ if __name__ == '__main__':
 
     with tqdm(total=n_iterations, desc='进度条') as pbar:
         for i in range(n_iterations):
-            sample_indices = np.random.randint(
-                low=0, high=expert_s.shape[0], size=batch_size)
+            sample_indices = np.random.randint(low=0,
+                                               high=expert_s.shape[0],
+                                               size=batch_size)
             bc_agent.learn(expert_s[sample_indices], expert_a[sample_indices])
             current_return = test_agent(bc_agent, env, 5)
             test_returns.append(current_return)

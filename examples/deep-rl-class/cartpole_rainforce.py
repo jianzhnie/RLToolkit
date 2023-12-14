@@ -126,9 +126,9 @@ def record_video(env, policy, out_directory, fps=30):
         # We directly put next_state = state for recording logic
         img = env.render(mode='rgb_array')
         images.append(img)
-    imageio.mimsave(
-        out_directory, [np.array(img) for i, img in enumerate(images)],
-        fps=fps)
+    imageio.mimsave(out_directory,
+                    [np.array(img) for i, img in enumerate(images)],
+                    fps=fps)
 
 
 def package_to_hub(repo_id,
@@ -154,8 +154,9 @@ def package_to_hub(repo_id,
 
     # Git pull
     repo_local_path = Path(local_repo_path) / repo_name
-    repo = Repository(
-        repo_local_path, clone_from=repo_url, use_auth_token=True)
+    repo = Repository(repo_local_path,
+                      clone_from=repo_url,
+                      use_auth_token=True)
     repo.git_pull()
 
     repo.lfs_track(['*.mp4'])
@@ -287,8 +288,8 @@ if __name__ == '__main__':
     cartpole_policy = Policy(cartpole_hyperparameters['state_space'],
                              cartpole_hyperparameters['action_space'],
                              cartpole_hyperparameters['h_size']).to(device)
-    cartpole_optimizer = optim.Adam(
-        cartpole_policy.parameters(), lr=cartpole_hyperparameters['lr'])
+    cartpole_optimizer = optim.Adam(cartpole_policy.parameters(),
+                                    lr=cartpole_hyperparameters['lr'])
 
     scores = reinforce(cartpole_policy, cartpole_optimizer,
                        cartpole_hyperparameters['n_training_episodes'],
