@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 
 from rltoolkit.models.utils import hard_target_update
-from rltoolkit.utils.scheduler import LinearDecayScheduler
+from rltoolkit.utils import LinearDecayScheduler
 
 
 class QNet(nn.Module):
@@ -20,9 +20,9 @@ class QNet(nn.Module):
             obs_dim = observation_space[agent_i].shape[0]
             setattr(
                 self, 'agent_{}'.format(agent_i),
-                nn.Sequential(
-                    nn.Linear(obs_dim, 128), nn.ReLU(), nn.Linear(128, 64),
-                    nn.ReLU(), nn.Linear(64, action_space[agent_i].n)))
+                nn.Sequential(nn.Linear(obs_dim, 128), nn.ReLU(),
+                              nn.Linear(128, 64), nn.ReLU(),
+                              nn.Linear(64, action_space[agent_i].n)))
 
     def forward(self, obs):
         q_values = [torch.empty(obs.shape[0], )] * self.num_agents

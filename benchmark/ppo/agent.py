@@ -13,7 +13,7 @@ import numpy as np
 import torch
 
 from rltoolkit.agent.base_agent import Agent
-from rltoolkit.utils.scheduler import LinearDecayScheduler
+from rltoolkit.utils import LinearDecayScheduler
 
 
 class PPOAgent(Agent):

@@ -7,7 +7,7 @@ from network import DulingNet, QNet
 from torch.optim import Adam
 
 from rltoolkit.models.utils import hard_target_update
-from rltoolkit.utils.scheduler import LinearDecayScheduler
+from rltoolkit.utils import LinearDecayScheduler
 
 
 class Agent(object):

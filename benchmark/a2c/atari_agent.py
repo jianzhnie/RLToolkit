@@ -12,7 +12,7 @@ import numpy as np
 import torch
 
 from rltoolkit.agent.base_agent import Agent
-from rltoolkit.utils.scheduler import LinearDecayScheduler, PiecewiseScheduler
+from rltoolkit.utils import LinearDecayScheduler, PiecewiseScheduler
 
 torch.set_num_threads(1)
 

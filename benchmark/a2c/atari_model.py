@@ -18,20 +18,21 @@ class ActorCritic(Model):
 
     def __init__(self, act_dim):
         super(ActorCritic, self).__init__()
-        self.conv1 = nn.Conv2d(
-            in_channels=4, out_channels=32, kernel_size=8, stride=4, padding=1)
-        self.conv2 = nn.Conv2d(
-            in_channels=32,
-            out_channels=64,
-            kernel_size=4,
-            stride=2,
-            padding=2)
-        self.conv3 = nn.Conv2d(
-            in_channels=64,
-            out_channels=64,
-            kernel_size=3,
-            stride=1,
-            padding=0)
+        self.conv1 = nn.Conv2d(in_channels=4,
+                               out_channels=32,
+                               kernel_size=8,
+                               stride=4,
+                               padding=1)
+        self.conv2 = nn.Conv2d(in_channels=32,
+                               out_channels=64,
+                               kernel_size=4,
+                               stride=2,
+                               padding=2)
+        self.conv3 = nn.Conv2d(in_channels=64,
+                               out_channels=64,
+                               kernel_size=3,
+                               stride=1,
+                               padding=0)
 
         self.flatten = nn.Flatten()
         self.fc = nn.Linear(64 * 9 * 9, 512)

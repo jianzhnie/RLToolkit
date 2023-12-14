@@ -97,15 +97,15 @@ class LocalEnv(object):
         elif hasattr(env.action_space, 'n'):
             self.continuous_action = False
             if test:
-                self.env = wrap_deepmind(
-                    env,
-                    dim=ENV_DIM,
-                    obs_format=OBS_FORMAT,
-                    test=True,
-                    test_episodes=1)
+                self.env = wrap_deepmind(env,
+                                         dim=ENV_DIM,
+                                         obs_format=OBS_FORMAT,
+                                         test=True,
+                                         test_episodes=1)
             else:
-                self.env = wrap_deepmind(
-                    env, dim=ENV_DIM, obs_format=OBS_FORMAT)
+                self.env = wrap_deepmind(env,
+                                         dim=ENV_DIM,
+                                         obs_format=OBS_FORMAT)
         else:
             raise AssertionError(
                 'act_space must be instance of gym.spaces.Box or gym.spaces.Discrete'
@@ -139,15 +139,15 @@ class RemoteEnv(object):
         elif hasattr(env.action_space, 'n'):
             self.continuous_action = False
             if test:
-                self.env = wrap_deepmind(
-                    env,
-                    dim=ENV_DIM,
-                    obs_format=OBS_FORMAT,
-                    test=True,
-                    test_episodes=1)
+                self.env = wrap_deepmind(env,
+                                         dim=ENV_DIM,
+                                         obs_format=OBS_FORMAT,
+                                         test=True,
+                                         test_episodes=1)
             else:
-                self.env = wrap_deepmind(
-                    env, dim=ENV_DIM, obs_format=OBS_FORMAT)
+                self.env = wrap_deepmind(env,
+                                         dim=ENV_DIM,
+                                         obs_format=OBS_FORMAT)
         else:
             raise AssertionError(
                 'act_space must be instance of gym.spaces.Box or gym.spaces.Discrete'

@@ -22,26 +22,26 @@ class AtariModel(Model):
 
     def __init__(self, act_dim, dueling=False):
         super().__init__()
-        self.conv1 = nn.Conv2d(
-            in_channels=4, out_channels=32, kernel_size=5, stride=1, padding=2)
-        self.conv2 = nn.Conv2d(
-            in_channels=32,
-            out_channels=32,
-            kernel_size=5,
-            stride=1,
-            padding=2)
-        self.conv3 = nn.Conv2d(
-            in_channels=32,
-            out_channels=64,
-            kernel_size=4,
-            stride=1,
-            padding=1)
-        self.conv4 = nn.Conv2d(
-            in_channels=64,
-            out_channels=64,
-            kernel_size=3,
-            stride=1,
-            padding=1)
+        self.conv1 = nn.Conv2d(in_channels=4,
+                               out_channels=32,
+                               kernel_size=5,
+                               stride=1,
+                               padding=2)
+        self.conv2 = nn.Conv2d(in_channels=32,
+                               out_channels=32,
+                               kernel_size=5,
+                               stride=1,
+                               padding=2)
+        self.conv3 = nn.Conv2d(in_channels=32,
+                               out_channels=64,
+                               kernel_size=4,
+                               stride=1,
+                               padding=1)
+        self.conv4 = nn.Conv2d(in_channels=64,
+                               out_channels=64,
+                               kernel_size=3,
+                               stride=1,
+                               padding=1)
         self.relu = nn.ReLU()
         self.max_pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.flatten = nn.Flatten()
@@ -50,8 +50,8 @@ class AtariModel(Model):
 
         if dueling:
             self.linear_1_adv = nn.Linear(in_features=6400, out_features=512)
-            self.linear_2_adv = nn.Linear(
-                in_features=512, out_features=act_dim)
+            self.linear_2_adv = nn.Linear(in_features=512,
+                                          out_features=act_dim)
             self.linear_1_val = nn.Linear(in_features=6400, out_features=512)
             self.linear_2_val = nn.Linear(in_features=512, out_features=1)
 
@@ -63,8 +63,9 @@ class AtariModel(Model):
     def reset_params(self):
         for m in self.modules():
             if isinstance(m, (nn.Linear, nn.Conv2d)):
-                nn.init.kaiming_normal_(
-                    m.weight, mode='fan_out', nonlinearity='relu')
+                nn.init.kaiming_normal_(m.weight,
+                                        mode='fan_out',
+                                        nonlinearity='relu')
                 nn.init.zeros_(m.bias)
 
     def forward(self, obs):

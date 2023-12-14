@@ -13,10 +13,10 @@ import numpy as np
 class RolloutStorage():
 
     def __init__(self, step_nums, env_num, obs_space, act_space):
-        self.obs = np.zeros(
-            (step_nums, env_num) + obs_space.shape, dtype='float32')
-        self.actions = np.zeros(
-            (step_nums, env_num) + act_space.shape, dtype='float32')
+        self.obs = np.zeros((step_nums, env_num) + obs_space.shape,
+                            dtype='float32')
+        self.actions = np.zeros((step_nums, env_num) + act_space.shape,
+                                dtype='float32')
         self.logprobs = np.zeros((step_nums, env_num), dtype='float32')
         self.rewards = np.zeros((step_nums, env_num), dtype='float32')
         self.dones = np.zeros((step_nums, env_num), dtype='float32')

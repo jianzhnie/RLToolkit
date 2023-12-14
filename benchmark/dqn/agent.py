@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from rltoolkit.agent.base_agent import Agent
-from rltoolkit.utils.scheduler import LinearDecayScheduler
+from rltoolkit.utils import LinearDecayScheduler
 
 
 class AtariAgent(Agent):
@@ -94,12 +94,14 @@ class AtariAgent(Agent):
         terminal = np.expand_dims(terminal, axis=-1)
 
         obs = torch.tensor(obs, dtype=torch.float, device=self.device)
-        next_obs = torch.tensor(
-            next_obs, dtype=torch.float, device=self.device)
+        next_obs = torch.tensor(next_obs,
+                                dtype=torch.float,
+                                device=self.device)
         act = torch.tensor(act, dtype=torch.long, device=self.device)
         reward = torch.tensor(reward, dtype=torch.float, device=self.device)
-        terminal = torch.tensor(
-            terminal, dtype=torch.float, device=self.device)
+        terminal = torch.tensor(terminal,
+                                dtype=torch.float,
+                                device=self.device)
 
         loss = self.alg.learn(obs, act, reward, next_obs, terminal)
 

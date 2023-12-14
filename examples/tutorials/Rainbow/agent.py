@@ -5,7 +5,7 @@ import torch
 from torch.optim import Adam
 
 from rltoolkit.models.noisynet import NoisyDulingNet, NoisyNet
-from rltoolkit.utils.scheduler import LinearDecayScheduler
+from rltoolkit.utils import LinearDecayScheduler
 
 
 class Agent(object):
@@ -55,20 +55,18 @@ class Agent(object):
 
         if model_name == 'noisy-network':
             print('Using NoisyNet')
-            self.model = NoisyNet(
-                obs_dim=obs_dim,
-                action_dim=action_dim,
-                hidden_dim=hidden_dim,
-                std_init=std_init)
+            self.model = NoisyNet(obs_dim=obs_dim,
+                                  action_dim=action_dim,
+                                  hidden_dim=hidden_dim,
+                                  std_init=std_init)
         elif model_name == 'noisy-duling-network':
             print('Using Noisy-Duling-Network')
-            self.model = NoisyDulingNet(
-                obs_dim=obs_dim,
-                hidden_dim=hidden_dim,
-                action_dim=action_dim,
-                atom_size=atom_size,
-                std_init=std_init,
-                support=self.support)
+            self.model = NoisyDulingNet(obs_dim=obs_dim,
+                                        hidden_dim=hidden_dim,
+                                        action_dim=action_dim,
+                                        atom_size=atom_size,
+                                        std_init=std_init,
+                                        support=self.support)
         self.target_model = copy.deepcopy(self.model)
         self.smoothl1_loss = torch.nn.SmoothL1Loss()
         self.mse_loss = torch.nn.MSELoss()
@@ -199,11 +197,10 @@ class Agent(object):
             l = b.floor().long()
             u = b.ceil().long()
 
-            offset = (
-                torch.linspace(0, (self.batch_size - 1) * self.atom_size,
-                               self.batch_size).long().unsqueeze(1).expand(
-                                   self.batch_size,
-                                   self.atom_size).to(self.device))
+            offset = (torch.linspace(
+                0, (self.batch_size - 1) * self.atom_size,
+                self.batch_size).long().unsqueeze(1).expand(
+                    self.batch_size, self.atom_size).to(self.device))
 
             proj_dist = torch.zeros(next_dist.size(), device=self.device)
             proj_dist.view(-1).index_add_(0, (l + offset).view(-1),
