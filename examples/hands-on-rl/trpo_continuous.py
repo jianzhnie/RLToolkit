@@ -62,8 +62,8 @@ class TRPOContinuous:
         self.actor = PolicyNetContinuous(state_dim, hidden_dim,
                                          action_dim).to(device)
         self.critic = ValueNet(state_dim, hidden_dim).to(device)
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.parameters(), lr=critic_lr)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(),
+                                                 lr=critic_lr)
         self.gamma = gamma
         self.lmbda = lmbda
         self.kl_constraint = kl_constraint
@@ -87,8 +87,9 @@ class TRPOContinuous:
         kl = torch.mean(
             torch.distributions.kl.kl_divergence(old_action_dists,
                                                  new_action_dists))
-        kl_grad = torch.autograd.grad(
-            kl, self.actor.parameters(), create_graph=True)
+        kl_grad = torch.autograd.grad(kl,
+                                      self.actor.parameters(),
+                                      create_graph=True)
         kl_grad_vector = torch.cat([grad.view(-1) for grad in kl_grad])
         kl_grad_vector_product = torch.dot(kl_grad_vector, vector)
         grad2 = torch.autograd.grad(kl_grad_vector_product,
@@ -166,19 +167,16 @@ class TRPOContinuous:
             new_para, self.actor.parameters())
 
     def update(self, transition_dict):
-        states = torch.tensor(
-            transition_dict['states'], dtype=torch.float).to(self.device)
-        actions = torch.tensor(
-            transition_dict['actions'],
-            dtype=torch.float).view(-1, 1).to(self.device)
-        rewards = torch.tensor(
-            transition_dict['rewards'],
-            dtype=torch.float).view(-1, 1).to(self.device)
-        next_states = torch.tensor(
-            transition_dict['next_states'], dtype=torch.float).to(self.device)
-        dones = torch.tensor(
-            transition_dict['dones'],
-            dtype=torch.float).view(-1, 1).to(self.device)
+        states = torch.tensor(transition_dict['states'],
+                              dtype=torch.float).to(self.device)
+        actions = torch.tensor(transition_dict['actions'],
+                               dtype=torch.float).view(-1, 1).to(self.device)
+        rewards = torch.tensor(transition_dict['rewards'],
+                               dtype=torch.float).view(-1, 1).to(self.device)
+        next_states = torch.tensor(transition_dict['next_states'],
+                                   dtype=torch.float).to(self.device)
+        dones = torch.tensor(transition_dict['dones'],
+                             dtype=torch.float).view(-1, 1).to(self.device)
         rewards = (rewards + 8.0) / 8.0  # 对奖励进行修改,方便训练
         td_target = rewards + self.gamma * self.critic(next_states) * (1 -
                                                                        dones)

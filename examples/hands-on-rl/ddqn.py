@@ -45,8 +45,8 @@ class DQN:
         # 目标网络
         self.target_q_net = Qnet(state_dim, hidden_dim,
                                  self.action_dim).to(device)
-        self.optimizer = torch.optim.Adam(
-            self.q_net.parameters(), lr=learning_rate)
+        self.optimizer = torch.optim.Adam(self.q_net.parameters(),
+                                          lr=learning_rate)
         self.gamma = gamma
         self.epsilon = epsilon
         self.target_update = target_update
@@ -67,18 +67,16 @@ class DQN:
         return self.q_net(state).max().item()
 
     def update(self, transition_dict):
-        states = torch.tensor(
-            transition_dict['states'], dtype=torch.float).to(self.device)
+        states = torch.tensor(transition_dict['states'],
+                              dtype=torch.float).to(self.device)
         actions = torch.tensor(transition_dict['actions']).view(-1, 1).to(
             self.device)
-        rewards = torch.tensor(
-            transition_dict['rewards'],
-            dtype=torch.float).view(-1, 1).to(self.device)
-        next_states = torch.tensor(
-            transition_dict['next_states'], dtype=torch.float).to(self.device)
-        dones = torch.tensor(
-            transition_dict['dones'],
-            dtype=torch.float).view(-1, 1).to(self.device)
+        rewards = torch.tensor(transition_dict['rewards'],
+                               dtype=torch.float).view(-1, 1).to(self.device)
+        next_states = torch.tensor(transition_dict['next_states'],
+                                   dtype=torch.float).to(self.device)
+        dones = torch.tensor(transition_dict['dones'],
+                             dtype=torch.float).view(-1, 1).to(self.device)
 
         q_values = self.q_net(states).gather(1, actions)  # Q值
         # 下个状态的最大Q值
@@ -108,8 +106,8 @@ def train_DQN(agent, env, num_episodes, replay_buffer, minimal_size,
     max_q_value_list = []
     max_q_value = 0
     for i in range(10):
-        with tqdm(
-                total=int(num_episodes / 10), desc='Iteration %d' % i) as pbar:
+        with tqdm(total=int(num_episodes / 10),
+                  desc='Iteration %d' % i) as pbar:
             for i_episode in range(int(num_episodes / 10)):
                 episode_return = 0
                 state = env.reset()
@@ -151,8 +149,9 @@ def train_DQN(agent, env, num_episodes, replay_buffer, minimal_size,
 def dis_to_con(discrete_action, env, action_dim):  # 离散动作转回连续的函数
     action_lowbound = env.action_space.low[0]  # 连续动作的最小值
     action_upbound = env.action_space.high[0]  # 连续动作的最大值
-    return action_lowbound + (discrete_action / (action_dim - 1)) * (
-        action_upbound - action_lowbound)
+    return action_lowbound + (discrete_action /
+                              (action_dim - 1)) * (action_upbound -
+                                                   action_lowbound)
 
 
 if __name__ == '__main__':

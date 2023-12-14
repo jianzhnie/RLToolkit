@@ -38,8 +38,8 @@ class GAIL:
         self.device = device
 
     def learn(self, expert_s, expert_a, agent_s, agent_a, next_s, dones):
-        expert_states = torch.tensor(
-            expert_s, dtype=torch.float).to(self.device)
+        expert_states = torch.tensor(expert_s,
+                                     dtype=torch.float).to(self.device)
         expert_actions = torch.tensor(expert_a).to(self.device)
         agent_states = torch.tensor(agent_s, dtype=torch.float).to(self.device)
         agent_actions = torch.tensor(agent_a).to(self.device)

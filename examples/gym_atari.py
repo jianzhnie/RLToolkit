@@ -18,8 +18,9 @@ def record_episodes_video(env: gym.Env,
 
     if video_path is not None:
         env = gym.wrappers.RecordEpisodeStatistics(env)
-        env = gym.wrappers.RecordVideo(
-            env, video_folder=video_path, name_prefix=name_prefix)
+        env = gym.wrappers.RecordVideo(env,
+                                       video_folder=video_path,
+                                       name_prefix=name_prefix)
 
     env.seed(np.random.randint(100))
 
@@ -44,8 +45,9 @@ if __name__ == '__main__':
     env_id = 'PongNoFrameskip-v4'
     env = gym.make(env_id)
     env = gym.wrappers.RecordEpisodeStatistics(env)
-    env = gym.wrappers.RecordVideo(
-        env, video_folder='./atari_video', name_prefix=env_id)
+    env = gym.wrappers.RecordVideo(env,
+                                   video_folder='./atari_video',
+                                   name_prefix=env_id)
     env.seed(np.random.randint(100))
     obs = env.reset()
     done = False
@@ -59,5 +61,7 @@ if __name__ == '__main__':
             env.close()
     for env_id in ENVS:
         env = gym.make(env_id)
-        record_episodes_video(
-            env, False, video_path='./atari_video', name_prefix=env_id)
+        record_episodes_video(env,
+                              False,
+                              video_path='./atari_video',
+                              name_prefix=env_id)

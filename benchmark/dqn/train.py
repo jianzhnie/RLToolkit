@@ -85,11 +85,15 @@ def run_evaluate_episodes(agent, env):
 
 def main():
     env = gym.make(args.env)
-    env = wrap_deepmind(
-        env, dim=IMAGE_SIZE[0], framestack=False, obs_format='NCHW')
+    env = wrap_deepmind(env,
+                        dim=IMAGE_SIZE[0],
+                        framestack=False,
+                        obs_format='NCHW')
     test_env = gym.make(args.env)
-    test_env = wrap_deepmind(
-        test_env, dim=IMAGE_SIZE[0], obs_format='NCHW', test=True)
+    test_env = wrap_deepmind(test_env,
+                             dim=IMAGE_SIZE[0],
+                             obs_format='NCHW',
+                             test=True)
 
     # set seed
     torch.manual_seed(args.train_seed)
@@ -114,17 +118,16 @@ def main():
         alg = DDQN(model, gamma=GAMMA, lr=LR_START, device=device)
 
     # get agent
-    agent = AtariAgent(
-        alg,
-        act_dim=act_dim,
-        total_step=TOTAL_STEP,
-        update_target_step=UPDATE_TARGET_STEP,
-        start_lr=LR_START,
-        device=device)
+    agent = AtariAgent(alg,
+                       act_dim=act_dim,
+                       total_step=TOTAL_STEP,
+                       update_target_step=UPDATE_TARGET_STEP,
+                       start_lr=LR_START,
+                       device=device)
 
     # start training, memory warm up
-    with tqdm(
-            total=MEMORY_WARMUP_SIZE, desc='[Replay Memory Warm Up]') as pbar:
+    with tqdm(total=MEMORY_WARMUP_SIZE,
+              desc='[Replay Memory Warm Up]') as pbar:
         while rpm.size() < MEMORY_WARMUP_SIZE:
             total_reward, steps, _ = run_train_episode(agent, env, rpm)
             pbar.update(steps)
@@ -170,33 +173,31 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--env', help='name of the atari env', default='PongNoFrameskip-v4')
+    parser.add_argument('--env',
+                        help='name of the atari env',
+                        default='PongNoFrameskip-v4')
     parser.add_argument(
         '--algo',
         default='DQN',
         type=str,
         help='DQN/DDQN, represent DQN, double DQN respectively')
-    parser.add_argument(
-        '--dueling',
-        default=False,
-        type=bool,
-        help='if True, represent dueling DQN or dueling DDQN')
-    parser.add_argument(
-        '--train_total_steps',
-        type=int,
-        default=int(1e7),
-        help='maximum environmental steps of games')
+    parser.add_argument('--dueling',
+                        default=False,
+                        type=bool,
+                        help='if True, represent dueling DQN or dueling DDQN')
+    parser.add_argument('--train_total_steps',
+                        type=int,
+                        default=int(1e7),
+                        help='maximum environmental steps of games')
     parser.add_argument(
         '--test_every_steps',
         type=int,
         default=100000,
         help='the step interval between two consecutive evaluations')
-    parser.add_argument(
-        '--train_seed',
-        type=int,
-        default=66166616,
-        help='set the random seed for training environment')
+    parser.add_argument('--train_seed',
+                        type=int,
+                        default=66166616,
+                        help='set the random seed for training environment')
     parser.add_argument(
         '--test_seed',
         type=int,

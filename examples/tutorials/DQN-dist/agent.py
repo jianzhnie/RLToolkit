@@ -6,9 +6,8 @@ import gym
 import numpy as np
 import torch
 import torch.nn.functional as F
-from network import DulingNet, QNet
-
 import wandb
+from network import DulingNet, QNet
 
 sys.path.append('../../../../')
 from torch.optim import Adam
@@ -16,7 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from rltoolkit.data.buffer.replaybuffer import ReplayBuffer
 from rltoolkit.models.utils import hard_target_update
-from rltoolkit.utils.scheduler import LinearDecayScheduler
+from rltoolkit.utils import LinearDecayScheduler
 
 
 class Agent(object):

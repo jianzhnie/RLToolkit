@@ -65,18 +65,16 @@ class ActorCritic:
         return action.item()
 
     def update(self, transition_dict):
-        states = torch.tensor(
-            transition_dict['states'], dtype=torch.float).to(self.device)
+        states = torch.tensor(transition_dict['states'],
+                              dtype=torch.float).to(self.device)
         actions = torch.tensor(transition_dict['actions']).view(-1, 1).to(
             self.device)
-        rewards = torch.tensor(
-            transition_dict['rewards'],
-            dtype=torch.float).view(-1, 1).to(self.device)
-        next_states = torch.tensor(
-            transition_dict['next_states'], dtype=torch.float).to(self.device)
-        dones = torch.tensor(
-            transition_dict['dones'],
-            dtype=torch.float).view(-1, 1).to(self.device)
+        rewards = torch.tensor(transition_dict['rewards'],
+                               dtype=torch.float).view(-1, 1).to(self.device)
+        next_states = torch.tensor(transition_dict['next_states'],
+                                   dtype=torch.float).to(self.device)
+        dones = torch.tensor(transition_dict['dones'],
+                             dtype=torch.float).view(-1, 1).to(self.device)
 
         # 时序差分目标
         td_target = rewards + self.gamma * self.critic(next_states) * (1 -
@@ -101,8 +99,8 @@ class ActorCritic:
 def train_on_policy_agent(env, agent, num_episodes):
     return_list = []
     for i in range(10):
-        with tqdm(
-                total=int(num_episodes / 10), desc='Iteration %d' % i) as pbar:
+        with tqdm(total=int(num_episodes / 10),
+                  desc='Iteration %d' % i) as pbar:
             for i_episode in range(int(num_episodes / 10)):
                 episode_return = 0
                 transition_dict = {

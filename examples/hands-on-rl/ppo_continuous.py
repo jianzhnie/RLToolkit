@@ -65,19 +65,16 @@ class PPOContinuous:
         return [action.item()]
 
     def update(self, transition_dict):
-        states = torch.tensor(
-            transition_dict['states'], dtype=torch.float).to(self.device)
-        actions = torch.tensor(
-            transition_dict['actions'],
-            dtype=torch.float).view(-1, 1).to(self.device)
-        rewards = torch.tensor(
-            transition_dict['rewards'],
-            dtype=torch.float).view(-1, 1).to(self.device)
-        next_states = torch.tensor(
-            transition_dict['next_states'], dtype=torch.float).to(self.device)
-        dones = torch.tensor(
-            transition_dict['dones'],
-            dtype=torch.float).view(-1, 1).to(self.device)
+        states = torch.tensor(transition_dict['states'],
+                              dtype=torch.float).to(self.device)
+        actions = torch.tensor(transition_dict['actions'],
+                               dtype=torch.float).view(-1, 1).to(self.device)
+        rewards = torch.tensor(transition_dict['rewards'],
+                               dtype=torch.float).view(-1, 1).to(self.device)
+        next_states = torch.tensor(transition_dict['next_states'],
+                                   dtype=torch.float).to(self.device)
+        dones = torch.tensor(transition_dict['dones'],
+                             dtype=torch.float).view(-1, 1).to(self.device)
 
         rewards = (rewards + 8.0) / 8.0  # 和TRPO一样,对奖励进行修改,方便训练
         td_target = rewards + self.gamma * self.critic(next_states) * (1 -

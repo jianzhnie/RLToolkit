@@ -34,8 +34,8 @@ class REINFORCE(object):
                  device):
         self.policy_net = PolicyNet(state_dim, hidden_dim,
                                     action_dim).to(device)
-        self.optimizer = torch.optim.Adam(
-            self.policy_net.parameters(), lr=learning_rate)
+        self.optimizer = torch.optim.Adam(self.policy_net.parameters(),
+                                          lr=learning_rate)
         # 使用Adam优化器
         self.gamma = gamma
         # 折扣因子

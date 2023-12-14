@@ -115,9 +115,9 @@ def preprocess_obs(
         # Tensor concatenation of one hot encodings of each Categorical sub-space
         return th.cat(
             [
-                F.one_hot(
-                    obs_.long(), num_classes=int(
-                        observation_space.nvec[idx])).float()
+                F.one_hot(obs_.long(),
+                          num_classes=int(
+                              observation_space.nvec[idx])).float()
                 for idx, obs_ in enumerate(th.split(obs.long(), 1, dim=1))
             ],
             dim=-1,

@@ -19,6 +19,6 @@ def load_from_hub(repo_id: str, filename: str) -> str:
 
 
 if __name__ == '__main__':
-    model = load_from_hub(
-        repo_id='unfinity/q-Taxi-v3', filename='q-learning.pkl')
+    model = load_from_hub(repo_id='unfinity/q-Taxi-v3',
+                          filename='q-learning.pkl')
     print(model)

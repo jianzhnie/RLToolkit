@@ -55,12 +55,12 @@ class SAC:
         # 令目标Q网络的初始参数和Q网络一样
         self.target_critic_1.load_state_dict(self.critic_1.state_dict())
         self.target_critic_2.load_state_dict(self.critic_2.state_dict())
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.parameters(), lr=actor_lr)
-        self.critic_1_optimizer = torch.optim.Adam(
-            self.critic_1.parameters(), lr=critic_lr)
-        self.critic_2_optimizer = torch.optim.Adam(
-            self.critic_2.parameters(), lr=critic_lr)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(),
+                                                lr=actor_lr)
+        self.critic_1_optimizer = torch.optim.Adam(self.critic_1.parameters(),
+                                                   lr=critic_lr)
+        self.critic_2_optimizer = torch.optim.Adam(self.critic_2.parameters(),
+                                                   lr=critic_lr)
         # 使用alpha的log值,可以使训练结果比较稳定
         self.log_alpha = torch.tensor(np.log(0.01), dtype=torch.float)
         self.log_alpha.requires_grad = True  # 可以对alpha求梯度
@@ -85,8 +85,9 @@ class SAC:
         entropy = -torch.sum(next_probs * next_log_probs, dim=1, keepdim=True)
         q1_value = self.target_critic_1(next_states)
         q2_value = self.target_critic_2(next_states)
-        min_qvalue = torch.sum(
-            next_probs * torch.min(q1_value, q2_value), dim=1, keepdim=True)
+        min_qvalue = torch.sum(next_probs * torch.min(q1_value, q2_value),
+                               dim=1,
+                               keepdim=True)
         next_value = min_qvalue + self.log_alpha.exp() * entropy
         td_target = rewards + self.gamma * next_value * (1 - dones)
         return td_target
@@ -98,18 +99,16 @@ class SAC:
                                     param.data * self.tau)
 
     def update(self, transition_dict):
-        states = torch.tensor(
-            transition_dict['states'], dtype=torch.float).to(self.device)
+        states = torch.tensor(transition_dict['states'],
+                              dtype=torch.float).to(self.device)
         actions = torch.tensor(transition_dict['actions']).view(-1, 1).to(
             self.device)  # 动作不再是float类型
-        rewards = torch.tensor(
-            transition_dict['rewards'],
-            dtype=torch.float).view(-1, 1).to(self.device)
-        next_states = torch.tensor(
-            transition_dict['next_states'], dtype=torch.float).to(self.device)
-        dones = torch.tensor(
-            transition_dict['dones'],
-            dtype=torch.float).view(-1, 1).to(self.device)
+        rewards = torch.tensor(transition_dict['rewards'],
+                               dtype=torch.float).view(-1, 1).to(self.device)
+        next_states = torch.tensor(transition_dict['next_states'],
+                                   dtype=torch.float).to(self.device)
+        dones = torch.tensor(transition_dict['dones'],
+                             dtype=torch.float).view(-1, 1).to(self.device)
 
         # 更新两个Q网络
         td_target = self.calc_target(rewards, next_states, dones)
@@ -133,9 +132,9 @@ class SAC:
         entropy = -torch.sum(probs * log_probs, dim=1, keepdim=True)  #
         q1_value = self.critic_1(states)
         q2_value = self.critic_2(states)
-        min_qvalue = torch.sum(
-            probs * torch.min(q1_value, q2_value), dim=1,
-            keepdim=True)  # 直接根据概率计算期望
+        min_qvalue = torch.sum(probs * torch.min(q1_value, q2_value),
+                               dim=1,
+                               keepdim=True)  # 直接根据概率计算期望
         actor_loss = torch.mean(-self.log_alpha.exp() * entropy - min_qvalue)
         self.actor_optimizer.zero_grad()
         actor_loss.backward()

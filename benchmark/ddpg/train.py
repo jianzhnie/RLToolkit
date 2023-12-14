@@ -96,17 +96,19 @@ def main():
 
     # Initialize model, algorithm, agent, replay_memory
     model = MujocoModel(obs_dim, action_dim)
-    algorithm = DDPG(
-        model,
-        gamma=GAMMA,
-        tau=TAU,
-        actor_lr=ACTOR_LR,
-        critic_lr=CRITIC_LR,
-        device=device)
-    agent = MujocoAgent(
-        algorithm, action_dim, expl_noise=EXPL_NOISE, device=device)
-    rpm = ReplayMemory(
-        max_size=MEMORY_SIZE, obs_dim=obs_dim, act_dim=action_dim)
+    algorithm = DDPG(model,
+                     gamma=GAMMA,
+                     tau=TAU,
+                     actor_lr=ACTOR_LR,
+                     critic_lr=CRITIC_LR,
+                     device=device)
+    agent = MujocoAgent(algorithm,
+                        action_dim,
+                        expl_noise=EXPL_NOISE,
+                        device=device)
+    rpm = ReplayMemory(max_size=MEMORY_SIZE,
+                       obs_dim=obs_dim,
+                       act_dim=action_dim)
 
     total_steps = 0
     test_flag = 0
@@ -134,18 +136,17 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--env', default='HalfCheetah-v2', help='OpenAI gym environment name')
-    parser.add_argument(
-        '--seed',
-        default=0,
-        type=int,
-        help='Sets Gym, PyTorch and Numpy seeds')
-    parser.add_argument(
-        '--train_total_steps',
-        default=5e6,
-        type=int,
-        help='Max time steps to run environment')
+    parser.add_argument('--env',
+                        default='HalfCheetah-v2',
+                        help='OpenAI gym environment name')
+    parser.add_argument('--seed',
+                        default=0,
+                        type=int,
+                        help='Sets Gym, PyTorch and Numpy seeds')
+    parser.add_argument('--train_total_steps',
+                        default=5e6,
+                        type=int,
+                        help='Max time steps to run environment')
     parser.add_argument(
         '--test_every_steps',
         type=int,

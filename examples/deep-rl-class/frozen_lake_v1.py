@@ -123,9 +123,9 @@ def record_video(env, Qtable, out_directory, fps=1):
         img = env.render(mode='rgb_array')
         images.append(img)
 
-    imageio.mimsave(
-        out_directory, [np.array(img) for i, img in enumerate(images)],
-        fps=fps)
+    imageio.mimsave(out_directory,
+                    [np.array(img) for i, img in enumerate(images)],
+                    fps=fps)
 
 
 def push_to_hub(repo_name,
@@ -149,8 +149,9 @@ def push_to_hub(repo_name,
 
     # Git pull
     repo_local_path = Path(local_repo_path) / repo_name
-    repo = Repository(
-        repo_local_path, clone_from=repo_url, use_auth_token=True)
+    repo = Repository(repo_local_path,
+                      clone_from=repo_url,
+                      use_auth_token=True)
     repo.git_pull()
 
     repo.lfs_track(['*.mp4'])

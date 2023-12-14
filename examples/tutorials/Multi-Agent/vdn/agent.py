@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 
 from rltoolkit.models.utils import hard_target_update
-from rltoolkit.utils.scheduler import LinearDecayScheduler
+from rltoolkit.utils import LinearDecayScheduler
 
 
 class QNet(nn.Module):
@@ -26,9 +26,8 @@ class QNet(nn.Module):
             obs_dim = observation_space[agent_i].shape[0]
             setattr(
                 self, 'agent_feature_{}'.format(agent_i),
-                nn.Sequential(
-                    nn.Linear(obs_dim, 64), nn.ReLU(),
-                    nn.Linear(64, hidden_size)))
+                nn.Sequential(nn.Linear(obs_dim, 64), nn.ReLU(),
+                              nn.Linear(64, hidden_size)))
 
             if recurrent:
                 setattr(self, 'agent_gru_{}'.format(agent_i),
@@ -41,8 +40,8 @@ class QNet(nn.Module):
         next_hidden = [torch.empty(obs.shape[0], 1, self.hidden_size)
                        ] * self.num_agents
         for agent_i in range(self.num_agents):
-            x = getattr(self, 'agent_feature_{}'.format(agent_i))(
-                obs[:, agent_i, :])
+            x = getattr(self,
+                        'agent_feature_{}'.format(agent_i))(obs[:, agent_i, :])
             if self.recurrent:
                 x = getattr(self,
                             'agent_gru_{}'.format(agent_i))(x,
@@ -91,9 +90,9 @@ class Agent(object):
         self._chunk_size = chunk_size if recurrent else 1
 
         # Main network
-        self.qnet = QNet(
-            env.observation_space, env.action_space,
-            recurrent=recurrent).to(device)
+        self.qnet = QNet(env.observation_space,
+                         env.action_space,
+                         recurrent=recurrent).to(device)
         # Target network
         self.target_qnet = copy.deepcopy(self.qnet)
         # Create an optimizer
@@ -166,8 +165,9 @@ class Agent(object):
 
         self.optimizer.zero_grad()
         loss.backward()
-        nn.utils.clip_grad_norm_(
-            self.qnet.parameters(), self.grad_clip_norm, norm_type=2)
+        nn.utils.clip_grad_norm_(self.qnet.parameters(),
+                                 self.grad_clip_norm,
+                                 norm_type=2)
         self.optimizer.step()
 
         self.global_update_step += 1

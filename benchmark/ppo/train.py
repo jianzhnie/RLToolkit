@@ -59,12 +59,11 @@ def main():
     act_space = eval_env.act_space
 
     model = AtariModel(obs_space, act_space)
-    ppo = PPO(
-        model,
-        clip_param=config['clip_param'],
-        entropy_coef=config['entropy_coef'],
-        initial_lr=config['initial_lr'],
-        continuous_action=config['continuous_action'])
+    ppo = PPO(model,
+              clip_param=config['clip_param'],
+              entropy_coef=config['entropy_coef'],
+              initial_lr=config['initial_lr'],
+              continuous_action=config['continuous_action'])
     agent = PPOAgent(ppo, config, device=device)
 
     rollout = RolloutStorage(config['step_nums'], config['env_num'], obs_space,
@@ -118,20 +117,22 @@ def main():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--env',
-        type=str,
-        default='PongNoFrameskip-v4',
-        help='OpenAI gym environment name')
-    parser.add_argument(
-        '--seed', type=int, default=None, help='seed of the experiment')
-    parser.add_argument(
-        '--env_num', type=int, default=2, help='number of the environment.')
-    parser.add_argument(
-        '--continuous_action',
-        action='store_true',
-        default=False,
-        help='action type of the environment')
+    parser.add_argument('--env',
+                        type=str,
+                        default='PongNoFrameskip-v4',
+                        help='OpenAI gym environment name')
+    parser.add_argument('--seed',
+                        type=int,
+                        default=None,
+                        help='seed of the experiment')
+    parser.add_argument('--env_num',
+                        type=int,
+                        default=2,
+                        help='number of the environment.')
+    parser.add_argument('--continuous_action',
+                        action='store_true',
+                        default=False,
+                        help='action type of the environment')
     parser.add_argument(
         '--test_every_steps',
         type=int,
